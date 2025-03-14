@@ -1,41 +1,274 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
   body {
-    @apply bg-light text-dark;
+    @apply bg-light text-text-primary font-sans;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-medium tracking-tight;
+  }
+
+  /* Modern button reset */
+  button {
+    @apply select-none focus:outline-none;
   }
 }
 
 @layer components {
+  /* Modern UI components */
+  .container {
+    @apply mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+  }
+
+  /* Section styling */
+  .section {
+    @apply py-16 md:py-24;
+  }
+
+  /* Typography */
+  .heading-xl {
+    @apply text-5xl md:text-7xl font-display font-bold tracking-tight;
+  }
+
+  .heading-lg {
+    @apply text-4xl md:text-5xl font-display font-bold tracking-tight;
+  }
+
+  .heading-md {
+    @apply text-2xl md:text-3xl font-display font-medium tracking-tight;
+  }
+
+  .heading-sm {
+    @apply text-xl md:text-2xl font-display font-medium tracking-tight;
+  }
+
+  .body-lg {
+    @apply text-lg leading-relaxed;
+  }
+
+  .body-md {
+    @apply text-base leading-relaxed;
+  }
+
+  .body-sm {
+    @apply text-sm leading-relaxed;
+  }
+
+  /* Buttons */
   .btn {
-    @apply px-4 py-2 rounded-md font-medium transition-colors;
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-none border border-transparent font-medium transition-all duration-200 focus:outline-none;
   }
   
   .btn-primary {
-    @apply bg-primary text-white hover:bg-primary/90;
+    @apply btn bg-accent text-light hover:bg-highlight;
   }
   
   .btn-secondary {
-    @apply bg-secondary text-white hover:bg-secondary/90;
+    @apply btn bg-transparent border border-accent text-accent hover:bg-accent hover:text-light;
+  }
+
+  .btn-text {
+    @apply inline-flex items-center font-medium text-accent hover:text-highlight transition-colors duration-200 focus:outline-none;
+  }
+
+  /* Input fields */
+  .input {
+    @apply w-full px-4 py-3 bg-light border border-border rounded-none focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-all duration-200;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-light p-6 transition-all duration-300 hover:shadow-medium;
+  }
+
+  /* Navigation */
+  .nav-link {
+    @apply relative px-2 py-1 text-text-primary hover:text-accent transition-colors duration-200;
   }
   
-  .container {
-    @apply mx-auto px-4 sm:px-6 lg:px-8;
+  .nav-link-active {
+    @apply text-accent;
+  }
+  
+  .nav-link-active::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-full h-0.5 bg-accent;
+  }
+
+  /* 3D hover effect */
+  .hover-3d {
+    @apply transition-transform duration-300 ease-out;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+
+  .hover-3d:hover {
+    transform: translateY(-5px) rotateX(2deg) rotateY(2deg);
+  }
+
+  /* Parallax container */
+  .parallax-container {
+    @apply relative overflow-hidden;
+    perspective: 1000px;
+  }
+
+  .parallax-element {
+    @apply absolute transition-transform duration-300 ease-out;
+    transform-style: preserve-3d;
+  }
+
+  /* Image reveal effect */
+  .image-reveal {
+    @apply relative overflow-hidden;
+  }
+
+  .image-reveal img {
+    @apply transition-transform duration-700 ease-out;
+  }
+
+  .image-reveal:hover img {
+    transform: scale(1.05);
+  }
+
+  /* Divider */
+  .divider {
+    @apply h-px w-full my-8 bg-border;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 text-xs font-medium bg-accent bg-opacity-10 text-accent;
   }
 }
 
-/* Custom animations */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
 }
 
-.animate-spin-slow {
-  animation: spin 8s linear infinite;
+/* Custom cursor */
+.custom-cursor {
+  @apply fixed w-6 h-6 rounded-full bg-accent bg-opacity-30 pointer-events-none z-50 transition-transform duration-100 ease-out;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: difference;
+}
+
+/* Text reveal animation */
+.text-reveal {
+  @apply overflow-hidden relative;
+}
+
+.text-reveal span {
+  @apply block transform transition-transform duration-700 ease-out;
+}
+
+.text-reveal:hover span {
+  transform: translateY(-100%);
+}
+
+.text-reveal span + span {
+  @apply absolute top-0 left-0 transform translate-y-full;
+}
+
+.text-reveal:hover span + span {
+  transform: translateY(0);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-light;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-accent bg-opacity-20 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-accent bg-opacity-40;
+}
+
+/* Locomotive scroll */
+html.has-scroll-smooth {
+  overflow: hidden;
+}
+
+html.has-scroll-dragging {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.has-scroll-smooth body {
+  overflow: hidden;
+}
+
+.has-scroll-smooth [data-scroll-container] {
+  min-height: 100vh;
+}
+
+[data-scroll-direction="horizontal"] [data-scroll-container] {
+  height: 100vh;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+[data-scroll-direction="horizontal"] [data-scroll-section] {
+  display: inline-block;
+  vertical-align: top;
+  white-space: nowrap;
+  height: 100%;
+}
+
+.c-scrollbar {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 11px;
+  height: 100%;
+  transform-origin: center right;
+  transition: transform 0.3s, opacity 0.3s;
+  opacity: 0;
+}
+
+.c-scrollbar:hover {
+  transform: scaleX(1.45);
+}
+
+.c-scrollbar:hover, .has-scroll-scrolling .c-scrollbar, .has-scroll-dragging .c-scrollbar {
+  opacity: 1;
+}
+
+.c-scrollbar_thumb {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: #000000;
+  opacity: 0.2;
+  width: 7px;
+  border-radius: 10px;
+  margin: 2px;
+  cursor: -webkit-grab;
+  cursor: grab;
+}
+
+.has-scroll-dragging .c-scrollbar_thumb {
+  cursor: -webkit-grabbing;
+  cursor: grabbing;
 } 

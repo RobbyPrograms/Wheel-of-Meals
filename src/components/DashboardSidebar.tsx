@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaHome, FaUtensils, FaDharmachakra, FaCalendarAlt, FaLightbulb, FaCog } from 'react-icons/fa';
+import { FaUtensils, FaCalendarAlt, FaRandom, FaChartPie, FaChevronRight } from 'react-icons/fa';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
@@ -11,61 +11,72 @@ export default function DashboardSidebar() {
     return pathname === path;
   };
 
-  const navItems = [
+  const menuItems = [
     {
       name: 'Dashboard',
       path: '/dashboard',
-      icon: <FaHome className="mr-3" />,
+      icon: <FaChartPie className="text-lg" />,
     },
     {
       name: 'My Foods',
       path: '/dashboard/foods',
-      icon: <FaUtensils className="mr-3" />,
+      icon: <FaUtensils className="text-lg" />,
     },
     {
-      name: 'Meal Wheel',
-      path: '/dashboard/wheel',
-      icon: <FaDharmachakra className="mr-3" />,
+      name: 'Meal Plans',
+      path: '/dashboard/meal-plans',
+      icon: <FaCalendarAlt className="text-lg" />,
     },
     {
-      name: 'Meal Planning',
-      path: '/dashboard/meal-plan',
-      icon: <FaCalendarAlt className="mr-3" />,
-    },
-    {
-      name: 'AI Suggestions',
-      path: '/dashboard/suggestions',
-      icon: <FaLightbulb className="mr-3" />,
+      name: 'Random Meal',
+      path: '/dashboard/random',
+      icon: <FaRandom className="text-lg" />,
     },
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
-      <nav className="space-y-2">
-        {navItems.map((item) => (
-          <Link
-            key={item.path}
-            href={item.path}
-            className={`flex items-center px-4 py-2 rounded-md ${
-              isActive(item.path)
-                ? 'bg-secondary/10 text-secondary'
-                : 'hover:bg-gray-100'
-            }`}
-          >
-            {item.icon}
-            {item.name}
-          </Link>
-        ))}
-        <div className="border-t my-4"></div>
-        <Link
-          href="/setup"
-          className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100"
-        >
-          <FaCog className="mr-3" />
-          Database Setup
-        </Link>
+    <div className="border border-border p-6">
+      <h2 className="text-lg font-medium mb-6 text-primary">
+        Menu
+      </h2>
+      
+      <nav>
+        <ul className="space-y-4">
+          {menuItems.map((item) => (
+            <li key={item.path}>
+              <Link
+                href={item.path}
+                className={`
+                  flex items-center py-2 transition-colors duration-200
+                  ${isActive(item.path) 
+                    ? 'text-accent font-medium' 
+                    : 'text-text-primary hover:text-accent'}
+                `}
+              >
+                <span className={`mr-3 ${isActive(item.path) ? 'text-accent' : 'text-text-secondary'}`}>
+                  {item.icon}
+                </span>
+                <span>{item.name}</span>
+                {isActive(item.path) && (
+                  <FaChevronRight className="ml-auto text-accent text-sm" />
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </nav>
+      
+      <div className="mt-8 pt-6 border-t border-border">
+        <div className="bg-accent bg-opacity-5 p-4">
+          <div className="text-xs uppercase tracking-wider text-text-secondary mb-2">
+            SAVED MEALS
+          </div>
+          <div className="flex justify-between items-center">
+            <div className="text-2xl font-medium text-accent">12</div>
+            <div className="badge bg-accent bg-opacity-10 text-accent px-2 py-0.5">+3 this week</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 

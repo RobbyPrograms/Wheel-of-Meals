@@ -1,125 +1,445 @@
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { useAuth } from '@/lib/auth-context';
+import Navbar from '@/components/Navbar';
+import { FaArrowDown, FaUtensils, FaDharmachakra, FaCalendarAlt, FaLightbulb } from 'react-icons/fa';
 
-export default function Home() {
+export default function HomePage() {
+  const { user, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const heroRef = useRef<HTMLDivElement>(null);
+  const aboutRef = useRef<HTMLDivElement>(null);
+  const featuresRef = useRef<HTMLDivElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(0);
+  const backgroundElementsRef = useRef<Array<{
+    x: number;
+    y: number;
+    size: number;
+    speed: number;
+    opacity: number;
+    direction: number;
+    color: string;
+    phase: number;
+    amplitude: number;
+  }>>([]);
+
+  // Initialize background elements
+  useEffect(() => {
+    // Create random floating elements
+    backgroundElementsRef.current = Array.from({ length: 15 }, () => ({
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: 20 + Math.random() * 100,
+      speed: 0.5 + Math.random() * 1.5,
+      opacity: 0.03 + Math.random() * 0.07,
+      direction: Math.random() > 0.5 ? 1 : -1,
+      color: [
+        '#255F38', // primary
+        '#1F7D53', // accent
+        '#18230F', // secondary
+        '#4A7856', // highlight
+      ][Math.floor(Math.random() * 4)],
+      phase: Math.random() * Math.PI * 2, // Random starting phase
+      amplitude: 2 + Math.random() * 3 // Random amplitude for movement
+    }));
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({
+        x: e.clientX / window.innerWidth,
+        y: e.clientY / window.innerHeight
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  // Parallax effect for hero section
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!heroRef.current) return;
+      
+      const elements = heroRef.current.querySelectorAll('.parallax-element');
+      const x = e.clientX / window.innerWidth;
+      const y = e.clientY / window.innerHeight;
+      
+      elements.forEach((el) => {
+        const depth = parseFloat((el as HTMLElement).dataset.depth || '0');
+        const moveX = (x - 0.5) * depth * 50;
+        const moveY = (y - 0.5) * depth * 50;
+        (el as HTMLElement).style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  // Animate background elements with time-based animation
+  useEffect(() => {
+    const animateBackgroundElements = (timestamp: number) => {
+      if (!lastTimeRef.current) {
+        lastTimeRef.current = timestamp;
+      }
+      
+      // Calculate time delta for smooth animation regardless of frame rate
+      const deltaTime = timestamp - lastTimeRef.current;
+      lastTimeRef.current = timestamp;
+      
+      const elements = document.querySelectorAll('.floating-element');
+      
+      elements.forEach((el, index) => {
+        if (index < backgroundElementsRef.current.length) {
+          const element = backgroundElementsRef.current[index];
+          
+          // Time-based continuous movement using sine waves for smooth oscillation
+          // This ensures animation continues even without cursor movement
+          const time = timestamp * 0.001; // Convert to seconds
+          const baseY = element.y;
+          
+          // Calculate new position using sine wave for smooth oscillation
+          const newY = baseY + Math.sin(time * element.speed + element.phase) * element.amplitude;
+          
+          // Apply subtle mouse influence (reduced effect)
+          const mouseInfluenceX = (mousePosition.x - 0.5) * 2;
+          const mouseInfluenceY = (mousePosition.y - 0.5) * 2;
+          
+          // Apply styles with hardware acceleration
+          const el3d = el as HTMLElement;
+          el3d.style.transform = `translate3d(${element.x + mouseInfluenceX}%, ${newY + mouseInfluenceY}%, 0) rotate(${Math.sin(time * 0.5) * 2}deg)`;
+          el3d.style.willChange = 'transform';
+        }
+      });
+      
+      animationFrameRef.current = requestAnimationFrame(animateBackgroundElements);
+    };
+    
+    animationFrameRef.current = requestAnimationFrame(animateBackgroundElements);
+    
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [mousePosition]);
+
+  const features = [
+    {
+      title: 'Food Management',
+      description: 'Keep track of your favorite foods and their ingredients.',
+      icon: <FaUtensils className="text-4xl text-accent mb-6" />,
+    },
+    {
+      title: 'Meal Wheel',
+      description: 'Spin the wheel to randomly select your next meal from your favorites.',
+      icon: <FaDharmachakra className="text-4xl text-highlight mb-6" />,
+    },
+    {
+      title: 'Meal Planning',
+      description: 'Plan your meals for the week or month ahead.',
+      icon: <FaCalendarAlt className="text-4xl text-accent mb-6" />,
+    },
+    {
+      title: 'AI Suggestions',
+      description: 'Get AI-powered recipe suggestions based on your favorite foods.',
+      icon: <FaLightbulb className="text-4xl text-highlight mb-6" />,
+    },
+  ];
+
   return (
-    <main className="flex min-h-screen flex-col items-center">
-      <div className="w-full bg-primary py-6">
-        <div className="container flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white">Wheel of Meals</h1>
-          <div className="flex gap-4">
-            <Link href="/login" className="btn bg-white text-primary hover:bg-white/90">
-              Login
-            </Link>
-            <Link href="/signup" className="btn bg-accent text-dark hover:bg-accent/90">
-              Sign Up
-            </Link>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen">
+      <Navbar />
 
-      <section className="container py-16 flex flex-col items-center text-center">
-        <h2 className="text-4xl md:text-5xl font-bold mb-6">Discover Your Next Favorite Meal</h2>
-        <p className="text-xl max-w-2xl mb-10">
-          Wheel of Meals helps you find exciting new meal ideas based on your favorite foods.
-          Spin the wheel, get personalized suggestions, and never wonder "what's for dinner?" again.
-        </p>
-        <Link href="/signup" className="btn btn-primary text-lg px-8 py-3">
-          Get Started
-        </Link>
-      </section>
+      <main>
+        {/* Hero Section - Full Screen */}
+        <section 
+          ref={heroRef}
+          className="min-h-screen flex items-center justify-center relative overflow-hidden" 
+          style={{ 
+            perspective: '1000px',
+            transformStyle: 'preserve-3d'
+          }}
+        >
+          {/* Floating background elements */}
+          {backgroundElementsRef.current.map((element, index) => (
+            <div
+              key={`hero-float-${index}`}
+              className="floating-element absolute rounded-full"
+              style={{
+                left: `${element.x}%`,
+                top: `${element.y}%`,
+                width: `${element.size}px`,
+                height: `${element.size}px`,
+                backgroundColor: element.color,
+                opacity: element.opacity,
+                transition: 'none', // Remove transition for smoother animation
+              }}
+            />
+          ))}
 
-      <section className="w-full bg-secondary/10 py-16">
-        <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold mb-4">1</div>
-              <h3 className="text-xl font-semibold mb-2">Create Your Profile</h3>
-              <p>Sign up and save your favorite foods and meal preferences.</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold mb-4">2</div>
-              <h3 className="text-xl font-semibold mb-2">Spin the Wheel</h3>
-              <p>Use our interactive meal wheel to randomly select your next meal.</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold mb-4">3</div>
-              <h3 className="text-xl font-semibold mb-2">Get Meal Plans</h3>
-              <p>Generate weekly meal plans with complete ingredient lists.</p>
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="max-w-4xl mx-auto text-center">
+              <h1 className="text-7xl md:text-9xl font-bold tracking-tight mb-8 transform transition-transform duration-500"
+                  style={{ 
+                    transform: `translateZ(${scrollY * 0.1}px) rotateX(${mousePosition.y * 5 - 2.5}deg) rotateY(${mousePosition.x * 5 - 2.5}deg)`,
+                  }}>
+                <span className="block text-primary">WHEEL</span>
+                <span className="block text-accent">OF</span>
+                <span className="block text-primary">MEALS</span>
+              </h1>
+              <p className="text-lg md:text-xl mb-12 text-text-secondary max-w-2xl mx-auto transform transition-transform duration-500"
+                 style={{ 
+                   transform: `translateZ(${scrollY * 0.05}px)`,
+                 }}>
+                Discover your next favorite meal with our intelligent food selection and meal planning platform. 
+                No more decision fatigue when it comes to what to eat.
+              </p>
+              {mounted && (
+                <div className="flex flex-col sm:flex-row justify-center gap-4 transform transition-transform duration-500"
+                     style={{ 
+                       transform: `translateZ(${scrollY * 0.02}px)`,
+                     }}>
+                  {user ? (
+                    <Link
+                      href="/dashboard"
+                      className="btn-primary hover-3d"
+                    >
+                      Go to Dashboard
+                    </Link>
+                  ) : (
+                    <>
+                      <Link
+                        href="/signup"
+                        className="btn-primary hover-3d"
+                      >
+                        Get Started
+                      </Link>
+                      <Link
+                        href="/login"
+                        className="btn-secondary hover-3d"
+                      >
+                        Log In
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </section>
+          
+          {/* Parallax elements */}
+          <div className="parallax-element" data-depth="0.2" style={{position: 'absolute', top: '15%', right: '10%', width: '300px', height: '300px', backgroundColor: '#255F38', opacity: 0.1, borderRadius: '50%'}}></div>
+          <div className="parallax-element" data-depth="0.4" style={{position: 'absolute', bottom: '10%', left: '5%', width: '200px', height: '200px', backgroundColor: '#1F7D53', opacity: 0.1, borderRadius: '50%'}}></div>
+          <div className="parallax-element" data-depth="0.3" style={{position: 'absolute', top: '60%', right: '20%', width: '150px', height: '150px', backgroundColor: '#18230F', opacity: 0.1, borderRadius: '50%'}}></div>
+          
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-accent animate-bounce">
+            <FaArrowDown />
+            <span className="sr-only">Scroll down</span>
+          </div>
+        </section>
 
-      <section className="container py-16">
-        <h2 className="text-3xl font-bold text-center mb-12">Features</h2>
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="flex gap-4">
-            <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center text-white shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-2">User Authentication</h3>
-              <p>Create your account and securely store your preferences.</p>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center text-white shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Interactive Meal Wheel</h3>
-              <p>A fun, visual way to randomly select your next meal.</p>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center text-white shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Meal Planning</h3>
-              <p>Generate one or two-week meal plans with complete ingredient lists.</p>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center text-white shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 1-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-2">AI-Powered Suggestions</h3>
-              <p>Get creative recipe ideas based on your favorite foods.</p>
-            </div>
-          </div>
-        </div>
-      </section>
+        {/* About Section */}
+        <section 
+          ref={aboutRef}
+          className="py-32 bg-primary text-light relative"
+          style={{ 
+            perspective: '1000px',
+            transformStyle: 'preserve-3d'
+          }}
+        >
+          {/* Floating background elements for About section */}
+          {backgroundElementsRef.current.slice(0, 8).map((element, index) => (
+            <div
+              key={`about-float-${index}`}
+              className="floating-element absolute rounded-full"
+              style={{
+                left: `${element.x}%`,
+                top: `${element.y}%`,
+                width: `${element.size * 0.8}px`,
+                height: `${element.size * 0.8}px`,
+                backgroundColor: '#fff',
+                opacity: element.opacity * 0.5,
+                transition: 'none', // Remove transition for smoother animation
+              }}
+            />
+          ))}
 
-      <footer className="w-full bg-dark text-white py-8">
-        <div className="container">
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="max-w-3xl mx-auto text-center transform transition-all duration-700"
+                 style={{ 
+                   transform: `translateZ(${Math.max(0, (scrollY - 500) * 0.1)}px) rotateX(${Math.max(0, Math.min(10, (scrollY - 500) * 0.01))}deg)`,
+                   opacity: Math.min(1, Math.max(0, (scrollY - 400) / 300))
+                 }}>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">( ABOUT )</h2>
+              <p className="text-lg md:text-xl mb-8 leading-relaxed">
+                Wheel of Meals, founded in 2024, specializes in helping you decide what to eat. 
+                As a meal planning tool, it offers premium food selection and organization features 
+                for those seeking an authentic and mindful eating experience.
+              </p>
+              <Link href="/about" className="inline-flex items-center text-light hover:text-highlight transition-colors font-medium">
+                EXPLORE
+              </Link>
+            </div>
+          </div>
+          
+          {/* 3D elements */}
+          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-accent opacity-5 rounded-full transform"
+               style={{ transform: `translateZ(${(scrollY - 500) * 0.2}px) translateX(${(scrollY - 500) * -0.1}px)` }}></div>
+          <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-highlight opacity-5 rounded-full transform"
+               style={{ transform: `translateZ(${(scrollY - 500) * 0.15}px) translateX(${(scrollY - 500) * 0.05}px)` }}></div>
+        </section>
+
+        {/* Features Section */}
+        <section 
+          ref={featuresRef}
+          className="py-32 bg-light relative"
+          style={{ 
+            perspective: '1000px',
+            transformStyle: 'preserve-3d'
+          }}
+        >
+          {/* Floating background elements for Features section */}
+          {backgroundElementsRef.current.slice(5, 12).map((element, index) => (
+            <div
+              key={`features-float-${index}`}
+              className="floating-element absolute rounded-full"
+              style={{
+                left: `${element.x}%`,
+                top: `${element.y}%`,
+                width: `${element.size * 0.7}px`,
+                height: `${element.size * 0.7}px`,
+                backgroundColor: element.color,
+                opacity: element.opacity,
+                transition: 'none', // Remove transition for smoother animation
+              }}
+            />
+          ))}
+
+          <div className="container mx-auto px-4 relative z-10">
+            <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 text-primary transform transition-all duration-700"
+                style={{ 
+                  transform: `translateZ(${Math.max(0, (scrollY - 1000) * 0.1)}px)`,
+                  opacity: Math.min(1, Math.max(0, (scrollY - 900) / 300))
+                }}>
+              How It Works
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+              {features.map((feature, index) => (
+                <div
+                  key={index}
+                  className="hover-3d transform transition-all duration-700"
+                  style={{ 
+                    transform: `translateZ(${Math.max(0, (scrollY - 1000) * 0.05)}px) translateY(${Math.max(0, (scrollY - 1000) * 0.1 * (index % 2 === 0 ? -1 : 1))}px)`,
+                    opacity: Math.min(1, Math.max(0, (scrollY - 900 - index * 50) / 300))
+                  }}
+                >
+                  <div className="flex flex-col items-center">
+                    {feature.icon}
+                    <h3 className="text-xl md:text-2xl font-medium mb-4 text-center text-primary">{feature.title}</h3>
+                    <p className="text-text-secondary text-center">{feature.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* 3D elements */}
+          <div className="absolute top-1/3 left-10 w-24 h-24 bg-accent opacity-5 rounded-full transform"
+               style={{ transform: `translateZ(${(scrollY - 1000) * 0.2}px) translateY(${(scrollY - 1000) * -0.1}px)` }}></div>
+          <div className="absolute bottom-1/3 right-10 w-36 h-36 bg-highlight opacity-5 rounded-full transform"
+               style={{ transform: `translateZ(${(scrollY - 1000) * 0.15}px) translateY(${(scrollY - 1000) * 0.05}px)` }}></div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-20 bg-secondary text-light relative overflow-hidden">
+          {/* Floating background elements for CTA section */}
+          {backgroundElementsRef.current.slice(3, 7).map((element, index) => (
+            <div
+              key={`cta-float-${index}`}
+              className="floating-element absolute rounded-full"
+              style={{
+                left: `${element.x}%`,
+                top: `${element.y}%`,
+                width: `${element.size * 0.6}px`,
+                height: `${element.size * 0.6}px`,
+                backgroundColor: '#fff',
+                opacity: element.opacity * 0.3,
+                transition: 'none', // Remove transition for smoother animation
+              }}
+            />
+          ))}
+
+          <div className="container mx-auto px-4 text-center relative z-10">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Transform Your Meal Planning?</h2>
+            <p className="text-lg md:text-xl mb-12 max-w-3xl mx-auto">
+              Join Wheel of Meals today and take the guesswork out of "What's for dinner?"
+            </p>
+            {mounted && (
+              <div className="flex justify-center">
+                {user ? (
+                  <Link
+                    href="/dashboard"
+                    className="btn-primary hover-3d"
+                  >
+                    Go to Dashboard
+                  </Link>
+                ) : (
+                  <Link
+                    href="/signup"
+                    className="btn-primary hover-3d"
+                  >
+                    Sign Up Now
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+
+      <footer className="bg-primary text-light py-12">
+        <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <h2 className="text-xl font-bold">Wheel of Meals</h2>
-              <p className="text-white/70">Never wonder what's for dinner again.</p>
+            <div className="mb-8 md:mb-0">
+              <h3 className="text-xl font-display font-bold text-light">WHEEL OF MEALS</h3>
+              <p className="text-light text-opacity-70">© {new Date().getFullYear()} All rights reserved</p>
             </div>
-            <div className="flex gap-6">
-              <Link href="/about" className="text-white/70 hover:text-white">About</Link>
-              <Link href="/contact" className="text-white/70 hover:text-white">Contact</Link>
-              <Link href="/privacy" className="text-white/70 hover:text-white">Privacy</Link>
+            <div className="flex gap-8">
+              <Link href="/about" className="text-light hover:text-highlight transition-colors">
+                About
+              </Link>
+              <Link href="/setup" className="text-light hover:text-highlight transition-colors">
+                Setup
+              </Link>
+              {mounted && user && (
+                <Link href="/dashboard" className="text-light hover:text-highlight transition-colors">
+                  Dashboard
+                </Link>
+              )}
             </div>
-          </div>
-          <div className="mt-8 pt-8 border-t border-white/20 text-center text-white/50">
-            <p>© {new Date().getFullYear()} Wheel of Meals. All rights reserved.</p>
           </div>
         </div>
       </footer>
-    </main>
+    </div>
   );
 } 
