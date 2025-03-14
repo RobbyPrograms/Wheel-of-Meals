@@ -14,8 +14,7 @@ export default function HomePage() {
   const heroRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number>(0);
+  const animationStartTimeRef = useRef<number>(Date.now());
   const backgroundElementsRef = useRef<Array<{
     x: number;
     y: number;
@@ -24,8 +23,8 @@ export default function HomePage() {
     opacity: number;
     direction: number;
     color: string;
-    phase: number;
-    amplitude: number;
+    xOffset: number;
+    yOffset: number;
   }>>([]);
 
   // Initialize background elements
@@ -44,8 +43,8 @@ export default function HomePage() {
         '#18230F', // secondary
         '#4A7856', // highlight
       ][Math.floor(Math.random() * 4)],
-      phase: Math.random() * Math.PI * 2, // Random starting phase
-      amplitude: 2 + Math.random() * 3 // Random amplitude for movement
+      xOffset: Math.random() * 10,
+      yOffset: Math.random() * 10
     }));
   }, []);
 
@@ -95,54 +94,6 @@ export default function HomePage() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Animate background elements with time-based animation
-  useEffect(() => {
-    const animateBackgroundElements = (timestamp: number) => {
-      if (!lastTimeRef.current) {
-        lastTimeRef.current = timestamp;
-      }
-      
-      // Calculate time delta for smooth animation regardless of frame rate
-      const deltaTime = timestamp - lastTimeRef.current;
-      lastTimeRef.current = timestamp;
-      
-      const elements = document.querySelectorAll('.floating-element');
-      
-      elements.forEach((el, index) => {
-        if (index < backgroundElementsRef.current.length) {
-          const element = backgroundElementsRef.current[index];
-          
-          // Time-based continuous movement using sine waves for smooth oscillation
-          // This ensures animation continues even without cursor movement
-          const time = timestamp * 0.001; // Convert to seconds
-          const baseY = element.y;
-          
-          // Calculate new position using sine wave for smooth oscillation
-          const newY = baseY + Math.sin(time * element.speed + element.phase) * element.amplitude;
-          
-          // Apply subtle mouse influence (reduced effect)
-          const mouseInfluenceX = (mousePosition.x - 0.5) * 2;
-          const mouseInfluenceY = (mousePosition.y - 0.5) * 2;
-          
-          // Apply styles with hardware acceleration
-          const el3d = el as HTMLElement;
-          el3d.style.transform = `translate3d(${element.x + mouseInfluenceX}%, ${newY + mouseInfluenceY}%, 0) rotate(${Math.sin(time * 0.5) * 2}deg)`;
-          el3d.style.willChange = 'transform';
-        }
-      });
-      
-      animationFrameRef.current = requestAnimationFrame(animateBackgroundElements);
-    };
-    
-    animationFrameRef.current = requestAnimationFrame(animateBackgroundElements);
-    
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [mousePosition]);
-
   const features = [
     {
       title: 'Food Management',
@@ -181,21 +132,29 @@ export default function HomePage() {
           }}
         >
           {/* Floating background elements */}
-          {backgroundElementsRef.current.map((element, index) => (
-            <div
-              key={`hero-float-${index}`}
-              className="floating-element absolute rounded-full"
-              style={{
-                left: `${element.x}%`,
-                top: `${element.y}%`,
-                width: `${element.size}px`,
-                height: `${element.size}px`,
-                backgroundColor: element.color,
-                opacity: element.opacity,
-                transition: 'none', // Remove transition for smoother animation
-              }}
-            />
-          ))}
+          {backgroundElementsRef.current.map((element, index) => {
+            // Calculate position based on time for continuous animation
+            const time = (Date.now() - animationStartTimeRef.current) / 1000;
+            const yMovement = Math.sin(time * element.speed + index) * 5;
+            const xMovement = Math.cos(time * element.speed * 0.5 + index) * 3;
+            
+            return (
+              <div
+                key={`hero-float-${index}`}
+                className="floating-element absolute rounded-full"
+                style={{
+                  left: `calc(${element.x}% + ${xMovement + element.xOffset}px)`,
+                  top: `calc(${element.y}% + ${yMovement + element.yOffset}px)`,
+                  width: `${element.size}px`,
+                  height: `${element.size}px`,
+                  backgroundColor: element.color,
+                  opacity: element.opacity,
+                  transform: `rotate(${time * 10 * element.direction}deg)`,
+                  transition: 'none',
+                }}
+              />
+            );
+          })}
 
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
@@ -268,21 +227,29 @@ export default function HomePage() {
           }}
         >
           {/* Floating background elements for About section */}
-          {backgroundElementsRef.current.slice(0, 8).map((element, index) => (
-            <div
-              key={`about-float-${index}`}
-              className="floating-element absolute rounded-full"
-              style={{
-                left: `${element.x}%`,
-                top: `${element.y}%`,
-                width: `${element.size * 0.8}px`,
-                height: `${element.size * 0.8}px`,
-                backgroundColor: '#fff',
-                opacity: element.opacity * 0.5,
-                transition: 'none', // Remove transition for smoother animation
-              }}
-            />
-          ))}
+          {backgroundElementsRef.current.slice(0, 8).map((element, index) => {
+            // Calculate position based on time for continuous animation
+            const time = (Date.now() - animationStartTimeRef.current) / 1000;
+            const yMovement = Math.sin(time * element.speed + index + 10) * 5;
+            const xMovement = Math.cos(time * element.speed * 0.5 + index + 10) * 3;
+            
+            return (
+              <div
+                key={`about-float-${index}`}
+                className="floating-element absolute rounded-full"
+                style={{
+                  left: `calc(${element.x}% + ${xMovement + element.xOffset}px)`,
+                  top: `calc(${element.y}% + ${yMovement + element.yOffset}px)`,
+                  width: `${element.size * 0.8}px`,
+                  height: `${element.size * 0.8}px`,
+                  backgroundColor: '#fff',
+                  opacity: element.opacity * 0.5,
+                  transform: `rotate(${time * 10 * element.direction}deg)`,
+                  transition: 'none',
+                }}
+              />
+            );
+          })}
 
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-3xl mx-auto text-center transform transition-all duration-700"
@@ -319,21 +286,29 @@ export default function HomePage() {
           }}
         >
           {/* Floating background elements for Features section */}
-          {backgroundElementsRef.current.slice(5, 12).map((element, index) => (
-            <div
-              key={`features-float-${index}`}
-              className="floating-element absolute rounded-full"
-              style={{
-                left: `${element.x}%`,
-                top: `${element.y}%`,
-                width: `${element.size * 0.7}px`,
-                height: `${element.size * 0.7}px`,
-                backgroundColor: element.color,
-                opacity: element.opacity,
-                transition: 'none', // Remove transition for smoother animation
-              }}
-            />
-          ))}
+          {backgroundElementsRef.current.slice(5, 12).map((element, index) => {
+            // Calculate position based on time for continuous animation
+            const time = (Date.now() - animationStartTimeRef.current) / 1000;
+            const yMovement = Math.sin(time * element.speed + index + 20) * 5;
+            const xMovement = Math.cos(time * element.speed * 0.5 + index + 20) * 3;
+            
+            return (
+              <div
+                key={`features-float-${index}`}
+                className="floating-element absolute rounded-full"
+                style={{
+                  left: `calc(${element.x}% + ${xMovement + element.xOffset}px)`,
+                  top: `calc(${element.y}% + ${yMovement + element.yOffset}px)`,
+                  width: `${element.size * 0.7}px`,
+                  height: `${element.size * 0.7}px`,
+                  backgroundColor: element.color,
+                  opacity: element.opacity,
+                  transform: `rotate(${time * 10 * element.direction}deg)`,
+                  transition: 'none',
+                }}
+              />
+            );
+          })}
 
           <div className="container mx-auto px-4 relative z-10">
             <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 text-primary transform transition-all duration-700"
@@ -373,21 +348,29 @@ export default function HomePage() {
         {/* CTA Section */}
         <section className="py-20 bg-secondary text-light relative overflow-hidden">
           {/* Floating background elements for CTA section */}
-          {backgroundElementsRef.current.slice(3, 7).map((element, index) => (
-            <div
-              key={`cta-float-${index}`}
-              className="floating-element absolute rounded-full"
-              style={{
-                left: `${element.x}%`,
-                top: `${element.y}%`,
-                width: `${element.size * 0.6}px`,
-                height: `${element.size * 0.6}px`,
-                backgroundColor: '#fff',
-                opacity: element.opacity * 0.3,
-                transition: 'none', // Remove transition for smoother animation
-              }}
-            />
-          ))}
+          {backgroundElementsRef.current.slice(3, 7).map((element, index) => {
+            // Calculate position based on time for continuous animation
+            const time = (Date.now() - animationStartTimeRef.current) / 1000;
+            const yMovement = Math.sin(time * element.speed + index + 30) * 5;
+            const xMovement = Math.cos(time * element.speed * 0.5 + index + 30) * 3;
+            
+            return (
+              <div
+                key={`cta-float-${index}`}
+                className="floating-element absolute rounded-full"
+                style={{
+                  left: `calc(${element.x}% + ${xMovement + element.xOffset}px)`,
+                  top: `calc(${element.y}% + ${yMovement + element.yOffset}px)`,
+                  width: `${element.size * 0.6}px`,
+                  height: `${element.size * 0.6}px`,
+                  backgroundColor: '#fff',
+                  opacity: element.opacity * 0.3,
+                  transform: `rotate(${time * 10 * element.direction}deg)`,
+                  transition: 'none',
+                }}
+              />
+            );
+          })}
 
           <div className="container mx-auto px-4 text-center relative z-10">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Transform Your Meal Planning?</h2>
