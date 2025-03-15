@@ -1,14 +1,25 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { FaUtensils, FaCalendarAlt, FaRandom, FaChartPie, FaChevronRight } from 'react-icons/fa';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const isActive = (path: string) => {
     return pathname === path;
+  };
+
+  const handleNavigation = (path: string) => {
+    if (path === '/dashboard/foods') {
+      router.push('/dashboard?panel=foods');
+    } else if (path === '/dashboard/meal-plans') {
+      router.push('/dashboard?panel=meal-plans');
+    } else {
+      router.push(path);
+    }
   };
 
   const menuItems = [
@@ -44,10 +55,10 @@ export default function DashboardSidebar() {
         <ul className="space-y-4">
           {menuItems.map((item) => (
             <li key={item.path}>
-              <Link
-                href={item.path}
+              <button
+                onClick={() => handleNavigation(item.path)}
                 className={`
-                  flex items-center py-2 transition-colors duration-200
+                  flex items-center py-2 transition-colors duration-200 w-full text-left
                   ${isActive(item.path) 
                     ? 'text-accent font-medium' 
                     : 'text-text-primary hover:text-accent'}
@@ -60,7 +71,7 @@ export default function DashboardSidebar() {
                 {isActive(item.path) && (
                   <FaChevronRight className="ml-auto text-accent text-sm" />
                 )}
-              </Link>
+              </button>
             </li>
           ))}
         </ul>

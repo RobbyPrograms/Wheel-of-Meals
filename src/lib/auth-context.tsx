@@ -1,8 +1,9 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { autoSetupDatabase } from './auto-setup';
 
 type AuthContextType = {
   session: Session | null;
@@ -34,6 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (data.session?.user) {
         console.log('User authenticated:', data.session.user.id);
+        // Automatically set up database tables when user is authenticated
+        await autoSetupDatabase();
       } else {
         console.log('No authenticated user');
       }
@@ -50,10 +53,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: AuthChangeEvent, session) => {
         console.log('Auth state changed:', event);
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // If user just signed in or signed up, set up database
+        if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
+          await autoSetupDatabase();
+        }
+        
         setLoading(false);
       }
     );

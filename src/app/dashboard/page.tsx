@@ -1,62 +1,114 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import DashboardLayout from '@/components/DashboardLayout';
 import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight } from 'react-icons/fa';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { autoSetupDatabase } from '@/lib/auto-setup';
+import FoodsPanel from '@/components/FoodsPanel';
+import MealPlansPanel from '@/components/MealPlansPanel';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [foodCount, setFoodCount] = useState<number | null>(null);
   const [mealPlanCount, setMealPlanCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [recentFoods, setRecentFoods] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isSettingUpDatabase, setIsSettingUpDatabase] = useState(false);
+  const [isFoodsPanelOpen, setIsFoodsPanelOpen] = useState(false);
+  const [isMealPlansPanelOpen, setIsMealPlansPanelOpen] = useState(false);
+
+  // Check for query parameters to open panels
+  useEffect(() => {
+    const panel = searchParams.get('panel');
+    if (panel === 'foods') {
+      setIsFoodsPanelOpen(true);
+    } else if (panel === 'meal-plans') {
+      setIsMealPlansPanelOpen(true);
+    }
+  }, [searchParams]);
+
+  const fetchDashboardData = useCallback(async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Get food count
+      const { count: foodCountResult, error: foodError } = await supabase
+        .from('favorite_foods')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      
+      if (foodError) {
+        // Check if this is a table doesn't exist error
+        if (foodError.code === '42P01') {
+          throw new Error('Database tables not set up properly. Please try refreshing the page.');
+        }
+        throw foodError;
+      }
+      setFoodCount(foodCountResult);
+      
+      // Get meal plan count
+      const { count: mealPlanCountResult, error: mealPlanError } = await supabase
+        .from('meal_plans')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      
+      if (mealPlanError) throw mealPlanError;
+      setMealPlanCount(mealPlanCountResult);
+      
+      // Get recent foods
+      const { data: recentFoodsData, error: recentFoodsError } = await supabase
+        .from('favorite_foods')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      
+      if (recentFoodsError) throw recentFoodsError;
+      setRecentFoods(recentFoodsData || []);
+    } catch (error: any) {
+      setError(error.message || 'Failed to load dashboard data. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    async function fetchDashboardData() {
-      if (!user) return;
-      
-      setIsLoading(true);
-      try {
-        // Get food count
-        const { count: foodCountResult, error: foodError } = await supabase
-          .from('favorite_foods')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-        
-        if (foodError) throw foodError;
-        setFoodCount(foodCountResult);
-        
-        // Get meal plan count
-        const { count: mealPlanCountResult, error: mealPlanError } = await supabase
-          .from('meal_plans')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-        
-        if (mealPlanError) throw mealPlanError;
-        setMealPlanCount(mealPlanCountResult);
-        
-        // Get recent foods
-        const { data: recentFoodsData, error: recentFoodsError } = await supabase
-          .from('favorite_foods')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(3);
-        
-        if (recentFoodsError) throw recentFoodsError;
-        setRecentFoods(recentFoodsData || []);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    
     fetchDashboardData();
-  }, [user]);
+  }, [fetchDashboardData]);
+
+  const handleRetryWithSetup = async () => {
+    setIsSettingUpDatabase(true);
+    setError(null);
+    
+    try {
+      // Attempt to automatically set up the database
+      const setupSuccess = await autoSetupDatabase();
+      
+      if (setupSuccess) {
+        // If setup was successful, reload dashboard data
+        await fetchDashboardData();
+      } else {
+        setError('Unable to set up database. Please try again later.');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to set up database. Please try again later.');
+    } finally {
+      setIsSettingUpDatabase(false);
+    }
+  };
+
+  const handleDataUpdated = () => {
+    // Refresh dashboard data when data is added, edited, or deleted
+    fetchDashboardData();
+  };
 
   return (
     <DashboardLayout>
@@ -69,7 +121,10 @@ export default function Dashboard() {
 
       {/* Feature Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <Link href="/dashboard/foods" className="border border-border hover:shadow-medium transition-all duration-300">
+        <button 
+          onClick={() => setIsFoodsPanelOpen(true)}
+          className="border border-border hover:shadow-medium transition-all duration-300 text-left"
+        >
           <div className="p-6">
             <div className="bg-accent text-light w-12 h-12 flex items-center justify-center rounded-full mb-4">
               <FaUtensils className="text-xl" />
@@ -81,9 +136,12 @@ export default function Dashboard() {
               <FaChevronRight className="ml-2 text-xs" />
             </div>
           </div>
-        </Link>
+        </button>
 
-        <Link href="/dashboard/meal-plans" className="border border-border hover:shadow-medium transition-all duration-300">
+        <button 
+          onClick={() => setIsMealPlansPanelOpen(true)}
+          className="border border-border hover:shadow-medium transition-all duration-300 text-left"
+        >
           <div className="p-6">
             <div className="bg-highlight text-light w-12 h-12 flex items-center justify-center rounded-full mb-4">
               <FaCalendarAlt className="text-xl" />
@@ -95,7 +153,7 @@ export default function Dashboard() {
               <FaChevronRight className="ml-2 text-xs" />
             </div>
           </div>
-        </Link>
+        </button>
 
         <Link href="/dashboard/random" className="border border-border hover:shadow-medium transition-all duration-300">
           <div className="p-6">
@@ -118,9 +176,22 @@ export default function Dashboard() {
           <div className="border border-border p-6">
             <h2 className="text-lg font-medium mb-6 text-primary">Activity Overview</h2>
             
-            {isLoading ? (
+            {isLoading || isSettingUpDatabase ? (
               <div className="flex justify-center items-center h-40">
                 <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+                {isSettingUpDatabase && (
+                  <p className="ml-4 text-text-secondary">Setting up database...</p>
+                )}
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button 
+                  onClick={handleRetryWithSetup}
+                  className="bg-accent text-light px-4 py-2 inline-block hover:bg-highlight transition-colors"
+                >
+                  Retry with Auto-Setup
+                </button>
               </div>
             ) : (
               <div>
@@ -161,9 +232,12 @@ export default function Dashboard() {
           <div className="border border-border p-6 h-full">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-medium text-primary">Recent Foods</h2>
-              <Link href="/dashboard/foods" className="text-accent hover:text-highlight text-sm flex items-center">
+              <button 
+                onClick={() => setIsFoodsPanelOpen(true)}
+                className="text-accent hover:text-highlight text-sm flex items-center"
+              >
                 View All <FaChevronRight className="ml-1 text-xs" />
-              </Link>
+              </button>
             </div>
             
             {isLoading ? (
@@ -184,17 +258,30 @@ export default function Dashboard() {
             ) : (
               <div className="text-center py-8">
                 <p className="text-text-secondary mb-4">No foods added yet</p>
-                <Link 
-                  href="/dashboard/foods" 
+                <button 
+                  onClick={() => setIsFoodsPanelOpen(true)}
                   className="bg-accent text-light px-4 py-2 inline-block hover:bg-highlight transition-colors"
                 >
                   Add Your First Food
-                </Link>
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Panels */}
+      <FoodsPanel 
+        isOpen={isFoodsPanelOpen} 
+        onClose={() => setIsFoodsPanelOpen(false)} 
+        onFoodAdded={handleDataUpdated}
+      />
+      
+      <MealPlansPanel 
+        isOpen={isMealPlansPanelOpen} 
+        onClose={() => setIsMealPlansPanelOpen(false)} 
+        onMealPlanAdded={handleDataUpdated}
+      />
     </DashboardLayout>
   );
 } 

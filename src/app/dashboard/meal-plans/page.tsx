@@ -3,12 +3,12 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function FoodsRedirectPage() {
+export default function MealPlansRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to dashboard with a query parameter to open the foods panel
-    router.replace('/dashboard?panel=foods');
+    // Redirect to dashboard with a query parameter to open the meal plans panel
+    router.replace('/dashboard?panel=meal-plans');
   }, [router]);
 
   return (

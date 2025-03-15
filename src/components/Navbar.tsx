@@ -1,19 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { FaUser, FaBars, FaTimes, FaCog, FaChevronDown } from 'react-icons/fa';
+import { FaUser, FaBars, FaTimes, FaCog, FaChevronDown, FaUserCircle } from 'react-icons/fa';
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const toggleAccountMenu = () => {
+    setIsAccountMenuOpen(!isAccountMenuOpen);
   };
 
   useEffect(() => {
@@ -27,6 +33,20 @@ export default function Navbar() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    // Close the account menu when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const isActive = (path: string) => {
@@ -73,33 +93,43 @@ export default function Navbar() {
               Dashboard
             </Link>
             {user ? (
-              <div className="relative group">
-                <button className="flex items-center nav-link">
+              <div className="relative" ref={accountMenuRef}>
+                <button 
+                  className="flex items-center nav-link"
+                  onClick={toggleAccountMenu}
+                  aria-expanded={isAccountMenuOpen}
+                  aria-haspopup="true"
+                >
                   <span>Account</span>
-                  <FaChevronDown className="ml-1 text-xs opacity-70" />
+                  <FaChevronDown className={`ml-1 text-xs opacity-70 transition-transform duration-200 ${isAccountMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
-                <div className="absolute right-0 mt-2 w-48 origin-top-right bg-light border border-border shadow-medium py-1 z-10 hidden group-hover:block transition-all duration-150 transform opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100">
-                  <Link
-                    href="/dashboard"
-                    className="block px-4 py-2 text-sm text-text-primary hover:bg-accent hover:bg-opacity-5 hover:text-accent"
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
-                    href="/setup"
-                    className="block px-4 py-2 text-sm text-text-primary hover:bg-accent hover:bg-opacity-5 hover:text-accent"
-                  >
-                    <FaCog className="inline mr-2 text-accent" />
-                    Database Setup
-                  </Link>
-                  <div className="divider my-1 mx-4"></div>
-                  <button
-                    onClick={() => signOut()}
-                    className="block w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-accent hover:bg-opacity-5 hover:text-accent"
-                  >
-                    Sign Out
-                  </button>
-                </div>
+                {isAccountMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 origin-top-right bg-light border border-border rounded-md shadow-medium py-1 z-10">
+                    <Link
+                      href="/profile"
+                      className="block px-4 py-2 text-sm text-text-primary hover:bg-accent hover:bg-opacity-5 hover:text-accent"
+                    >
+                      <FaUserCircle className="inline mr-2 text-accent" />
+                      Profile
+                    </Link>
+                    <Link
+                      href="/dashboard"
+                      className="block px-4 py-2 text-sm text-text-primary hover:bg-accent hover:bg-opacity-5 hover:text-accent"
+                    >
+                      Dashboard
+                    </Link>
+                    <div className="divider my-1 mx-4"></div>
+                    <button
+                      onClick={() => {
+                        signOut();
+                        setIsAccountMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-accent hover:bg-opacity-5 hover:text-accent"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <Link
@@ -140,12 +170,12 @@ export default function Navbar() {
               {user ? (
                 <>
                   <Link
-                    href="/setup"
+                    href="/profile"
                     className="px-2 py-1 text-text-primary hover:text-accent"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <FaCog className="inline mr-2 text-accent" />
-                    Database Setup
+                    <FaUserCircle className="inline mr-2 text-accent" />
+                    Profile
                   </Link>
                   <div className="divider my-2"></div>
                   <button
