@@ -24,6 +24,7 @@ export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) 
     setLoading(true);
     setError(null);
     setSuggestions([]);
+    setAddedMeals(new Set());
 
     try {
       console.log('Sending request to AI...');
@@ -122,13 +123,6 @@ export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) 
       recipe: suggestion.recipe.join('\n')
     });
     setAddedMeals(prev => new Set([...Array.from(prev), suggestion.name]));
-    setTimeout(() => {
-      setAddedMeals(prev => {
-        const newSet = new Set(Array.from(prev));
-        newSet.delete(suggestion.name);
-        return newSet;
-      });
-    }, 3000);
   };
 
   return (

@@ -226,6 +226,55 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
     );
   };
 
+  const handleEditFood = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !editingFood) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { error: updateError } = await supabase
+        .from('favorite_foods')
+        .update({
+          name: editingFood.name.trim(),
+          ingredients: editingFood.ingredients.trim(),
+          recipe: editingFood.recipe.trim(),
+          rating: editingFood.rating,
+          meal_types: editingFood.meal_types,
+        })
+        .eq('id', editingFood.id);
+
+      if (updateError) throw updateError;
+
+      setSuccess('Food updated successfully!');
+      setEditingFood(null);
+      await fetchFoods();
+    } catch (err) {
+      console.error('Error updating food:', err);
+      setError('Failed to update food. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditMealTypeToggle = (type: MealType) => {
+    if (!editingFood) return;
+    
+    setEditingFood(prev => {
+      if (!prev) return prev;
+      const types = prev.meal_types.includes(type)
+        ? prev.meal_types.filter(t => t !== type)
+        : [...prev.meal_types, type];
+      return { ...prev, meal_types: types };
+    });
+  };
+
+  const handleEditRatingChange = (rating: number) => {
+    if (!editingFood) return;
+    setEditingFood(prev => prev ? { ...prev, rating } : prev);
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -471,38 +520,66 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                       {filteredFoods.map((food) => (
                         <div
                           key={food.id}
-                          className="bg-white border border-border rounded-lg p-4 hover:border-accent transition-colors duration-200"
+                          className="bg-white border border-border rounded-lg hover:border-accent transition-colors duration-200"
                         >
-                          <div className="flex justify-between items-start">
+                          <div 
+                            className="p-4 cursor-pointer"
+                            onClick={() => setSelectedFood(food)}
+                          >
                             <div className="flex-1">
-                              <h3 className="font-medium text-primary">{food.name}</h3>
-                              <p className="text-sm text-text-secondary line-clamp-1">
-                                {food.ingredients || 'No ingredients listed'}
+                              <h3 className="text-lg font-medium text-primary mb-1">{food.name}</h3>
+                              <div className="flex items-center gap-4 mb-2">
+                                <div className="flex items-center">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <FaStarSolid
+                                      key={star}
+                                      className={`text-sm ${
+                                        star <= food.rating ? 'text-yellow-400' : 'text-gray-200'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {food.meal_types.map((type) => (
+                                    <span
+                                      key={type}
+                                      className="px-2 py-0.5 bg-accent/10 text-accent rounded-full text-xs"
+                                    >
+                                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                              <p className="text-sm text-text-secondary line-clamp-2">
+                                {food.ingredients}
                               </p>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => setSelectedFood(food)}
-                                className="p-2 text-accent hover:bg-accent/10 rounded-full transition-colors"
-                                title="View Details"
-                              >
-                                <FaBook />
-                              </button>
-                              <button
-                                onClick={() => startEditing(food)}
-                                className="p-2 text-accent hover:bg-accent/10 rounded-full transition-colors"
-                                title="Edit"
-                              >
-                                <FaEdit />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteFood(food.id)}
-                                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                                title="Delete"
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
+                          </div>
+                          <div className="border-t border-border px-4 py-2 bg-gray-50 flex justify-end gap-2">
+                            <button
+                              onClick={() => setSelectedFood(food)}
+                              className="p-2 text-text-secondary hover:text-primary transition-colors flex items-center gap-1 text-sm"
+                              title="View details"
+                            >
+                              <FaBook className="text-base" />
+                              <span>View</span>
+                            </button>
+                            <button
+                              onClick={() => startEditing(food)}
+                              className="p-2 text-text-secondary hover:text-primary transition-colors flex items-center gap-1 text-sm"
+                              title="Edit food"
+                            >
+                              <FaEdit className="text-base" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteFood(food.id)}
+                              className="p-2 text-text-secondary hover:text-red-500 transition-colors flex items-center gap-1 text-sm"
+                              title="Delete food"
+                            >
+                              <FaTrash className="text-base" />
+                              <span>Delete</span>
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -601,6 +678,136 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Edit Food Modal */}
+          <AnimatePresence>
+            {editingFood && (
+              <motion.div
+                className="fixed inset-0 z-50 overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setEditingFood(null)}></div>
+                <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <motion.div
+                    className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-y-auto max-h-[90vh]"
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="p-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold text-primary">Edit Food</h2>
+                        <button
+                          onClick={() => setEditingFood(null)}
+                          className="text-text-secondary hover:text-primary transition-colors"
+                        >
+                          <FaTimes />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleEditFood} className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-text-secondary mb-1" htmlFor="edit-name">
+                            Food Name
+                          </label>
+                          <input
+                            id="edit-name"
+                            type="text"
+                            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                            value={editingFood.name}
+                            onChange={(e) => setEditingFood({ ...editingFood, name: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-text-secondary mb-1">
+                            Meal Type
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {mealTypeOptions.map((type) => (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => handleEditMealTypeToggle(type)}
+                                className={`px-3 py-1 rounded-full text-sm ${
+                                  editingFood.meal_types.includes(type)
+                                    ? 'bg-accent text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                              >
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-text-secondary mb-1">
+                            Rating
+                          </label>
+                          <StarRating rating={editingFood.rating} onRatingChange={handleEditRatingChange} />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-text-secondary mb-1" htmlFor="edit-ingredients">
+                            Main Ingredients
+                          </label>
+                          <textarea
+                            id="edit-ingredients"
+                            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                            value={editingFood.ingredients}
+                            onChange={(e) => setEditingFood({ ...editingFood, ingredients: e.target.value })}
+                            rows={3}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-text-secondary mb-1" htmlFor="edit-recipe">
+                            Recipe Instructions
+                          </label>
+                          <textarea
+                            id="edit-recipe"
+                            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                            value={editingFood.recipe}
+                            onChange={(e) => setEditingFood({ ...editingFood, recipe: e.target.value })}
+                            rows={5}
+                          />
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-4">
+                          <button
+                            type="button"
+                            onClick={() => setEditingFood(null)}
+                            className="px-4 py-2 border border-border rounded-md text-text-primary hover:bg-gray-50 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent/90 transition-colors"
+                            disabled={loading}
+                          >
+                            {loading ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                Saving...
+                              </>
+                            ) : (
+                              'Save Changes'
+                            )}
+                          </button>
+                        </div>
+                      </form>
                     </div>
                   </motion.div>
                 </div>

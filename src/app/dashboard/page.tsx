@@ -178,7 +178,7 @@ export default function Dashboard() {
           </div>
         </button>
 
-        <button 
+        <button
           onClick={() => setIsMealPlansPanelOpen(true)}
           className="border border-border hover:shadow-medium transition-all duration-300 text-left"
         >
@@ -227,118 +227,100 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Activity Overview */}
-        <div className="lg:col-span-2">
-          <div className="border border-border p-6">
-            <h2 className="text-lg font-medium mb-6 text-primary">Activity Overview</h2>
-            
-            {isLoading || isSettingUpDatabase ? (
-              <div className="flex justify-center items-center h-40">
-                <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
-                {isSettingUpDatabase && (
-                  <p className="ml-4 text-text-secondary">Setting up database...</p>
-                )}
-              </div>
-            ) : error ? (
-              <div className="text-center py-8">
-                <p className="text-red-500 mb-4">{error}</p>
-                <button 
-                  onClick={handleRetryWithSetup}
-                  className="bg-accent text-light px-4 py-2 inline-block hover:bg-highlight transition-colors"
-                >
-                  Retry with Auto-Setup
-                </button>
-              </div>
-            ) : (
-              <div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="border border-border p-4">
-                    <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-2">TOTAL FOODS</h3>
-                    <div className="text-4xl font-medium text-accent">{foodCount || 0}</div>
-                    <p className="text-text-secondary text-sm mt-2">Saved favorite meals</p>
-                  </div>
-                  
-                  <div className="border border-border p-4">
-                    <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-2">MEAL PLANS</h3>
-                    <div className="text-4xl font-medium text-highlight">{mealPlanCount || 0}</div>
-                    <p className="text-text-secondary text-sm mt-2">Created meal schedules</p>
-                  </div>
-                </div>
-                
-                <div className="border border-border p-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xs uppercase tracking-wider text-text-secondary">PROGRESS</h3>
-                    <div className="bg-accent bg-opacity-10 text-accent text-xs px-2 py-0.5">Level 1</div>
-                  </div>
-                  <div className="w-full bg-border h-2 mb-2">
-                    <div 
-                      className="bg-accent h-2"
-                      style={{ width: '25%' }}
-                    ></div>
-                  </div>
-                  <p className="text-text-secondary text-sm">25% to Level 2 - Add more meals to level up!</p>
-                </div>
-              </div>
-            )}
+      {/* Activity Overview */}
+      <div className="mb-10">
+        <h2 className="text-lg font-medium text-primary mb-6">Activity Overview</h2>
+        {error ? (
+          <div className="text-center py-8 border border-border">
+            <p className="text-red-500 mb-4">{error}</p>
+            <button
+              onClick={handleRetryWithSetup}
+              className="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent-dark transition-colors"
+              disabled={isSettingUpDatabase}
+            >
+              {isSettingUpDatabase ? 'Setting up...' : 'Retry with Setup'}
+            </button>
           </div>
-        </div>
-        
-        {/* Recent Foods */}
-        <div className="lg:col-span-1">
-          <div className="border border-border p-6 h-full">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-medium text-primary">Recent Foods</h2>
-              <button 
-                onClick={() => setIsFoodsPanelOpen(true)}
-                className="text-accent hover:text-highlight text-sm flex items-center"
+        ) : isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : (
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="border border-border p-4">
+                <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-2">TOTAL FOODS</h3>
+                <div className="text-4xl font-medium text-accent">{foodCount || 0}</div>
+                <p className="text-text-secondary text-sm mt-2">Saved favorite meals</p>
+              </div>
+              
+              <div 
+                className="border border-border p-4 cursor-pointer hover:border-highlight transition-colors"
+                onClick={() => setIsMealPlansPanelOpen(true)}
               >
-                View All <FaChevronRight className="ml-1 text-xs" />
-              </button>
+                <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-2">MEAL PLANS</h3>
+                <div className="text-4xl font-medium text-highlight">{mealPlanCount || 0}</div>
+                <p className="text-text-secondary text-sm mt-2">Created meal schedules</p>
+              </div>
             </div>
             
-            {isLoading ? (
-              <div className="flex justify-center items-center h-40">
-                <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+            <div className="border border-border p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xs uppercase tracking-wider text-text-secondary">PROGRESS</h3>
+                <div className="bg-accent bg-opacity-10 text-accent text-xs px-2 py-0.5">Level 1</div>
               </div>
-            ) : recentFoods.length > 0 ? (
-              <div className="space-y-4">
-                {recentFoods.map((food) => (
-                  <div key={food.id} className="border-b border-border pb-4">
-                    <h3 className="font-medium text-primary">{food.name}</h3>
-                    <p className="text-sm text-text-secondary truncate">
-                      {food.ingredients || 'No ingredients listed'}
-                    </p>
-                  </div>
-                ))}
+              <div className="w-full bg-border h-2 mb-2">
+                <div 
+                  className="bg-accent h-2"
+                  style={{ width: '25%' }}
+                ></div>
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-text-secondary mb-4">No foods added yet</p>
-                <button 
-                  onClick={() => setIsFoodsPanelOpen(true)}
-                  className="bg-accent text-light px-4 py-2 inline-block hover:bg-highlight transition-colors"
-                >
-                  Add Your First Food
-                </button>
-              </div>
-            )}
+              <p className="text-text-secondary text-sm">25% to Level 2 - Add more meals to level up!</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Recent Meal Plans */}
-      <div className="mt-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium text-primary">Recent Meal Plans</h2>
-          <button 
-            onClick={() => setIsMealPlansPanelOpen(true)}
-            className="text-accent hover:text-highlight text-sm flex items-center"
-          >
-            View All <FaChevronRight className="ml-1 text-xs" />
-          </button>
+      {/* Recent Foods Section */}
+      <div className="mb-10">
+        <div className="border border-border p-6 h-full">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-medium text-primary">Recent Foods</h2>
+            <button 
+              onClick={() => setIsFoodsPanelOpen(true)}
+              className="text-accent hover:text-highlight text-sm flex items-center"
+            >
+              View All <FaChevronRight className="ml-1 text-xs" />
+            </button>
+          </div>
+          
+          {isLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : recentFoods.length > 0 ? (
+            <div className="space-y-4">
+              {recentFoods.map((food) => (
+                <div key={food.id} className="border-b border-border pb-4">
+                  <h3 className="font-medium text-primary">{food.name}</h3>
+                  <p className="text-sm text-text-secondary truncate">
+                    {food.ingredients || 'No ingredients listed'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-text-secondary mb-4">No foods added yet</p>
+              <button 
+                onClick={() => setIsFoodsPanelOpen(true)}
+                className="bg-accent text-light px-4 py-2 inline-block hover:bg-highlight transition-colors"
+              >
+                Add Your First Food
+              </button>
+            </div>
+          )}
         </div>
-        <MealPlansDashboard onRefresh={handleDataUpdated} />
       </div>
 
       {/* Panels */}

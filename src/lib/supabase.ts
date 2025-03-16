@@ -13,15 +13,18 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type User = {
   id: string;
-  email: string;
-  created_at: string;
+  email?: string;
+  created_at?: string;
 };
 
 export type FavoriteFood = {
   id: string;
   user_id: string;
   name: string;
-  ingredients: string[];
+  ingredients: string;
+  recipe: string;
+  rating: number;
+  meal_types: string[];
   created_at: string;
 };
 
