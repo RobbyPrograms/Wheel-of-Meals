@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { FaPlus, FaTrash, FaCalendarAlt, FaTimes, FaEdit, FaSave, FaChevronLeft, FaRandom, FaUtensils, FaExclamationTriangle } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Dialog, Transition } from '@headlessui/react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 type FavoriteFood = {
   id: string;
@@ -24,9 +27,11 @@ type WeeklyPlan = {
 
 type MealPlan = {
   id: string;
+  user_id: string;
   name: string;
   created_at: string;
-  duration: 'one_week' | 'two_weeks';
+  start_date: string;
+  end_date: string;
   plan: WeeklyPlan;
   no_repeat: boolean;
 };
@@ -49,10 +54,15 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
   const [selectedPlan, setSelectedPlan] = useState<MealPlan | null>(null);
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [newPlanName, setNewPlanName] = useState('');
-  const [duration, setDuration] = useState<'one_week' | 'two_weeks'>('one_week');
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [noRepeat, setNoRepeat] = useState(false);
   const [currentMealPlan, setCurrentMealPlan] = useState<WeeklyPlan | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedMealTypes, setSelectedMealTypes] = useState({
+    breakfast: true,
+    lunch: true,
+    dinner: true
+  });
   const panelRef = useRef<HTMLDivElement>(null);
 
   const days = [
@@ -120,21 +130,30 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
   };
 
   const generateMealPlan = () => {
-    if (isGenerating || favoriteFoods.length === 0) return;
+    const [start, end] = dateRange;
+    if (isGenerating || favoriteFoods.length === 0 || !start || !end) return;
     
     setIsGenerating(true);
     setCurrentMealPlan(null);
     setError(null);
     
-    // Determine how many days to generate
-    const daysToGenerate = duration === 'one_week' ? 7 : 14;
+    // Calculate number of days between start and end dates
+    const daysToGenerate = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     
-    // Calculate total meals needed
-    const totalMealsNeeded = daysToGenerate * 3; // 3 meals per day
+    // Calculate total meals needed based on selected meal types
+    const mealsPerDay = Object.values(selectedMealTypes).filter(Boolean).length;
+    const totalMealsNeeded = daysToGenerate * mealsPerDay;
     
     // Check if we have enough foods when no-repeat is enabled
     if (noRepeat && favoriteFoods.length < totalMealsNeeded) {
       setError(`Not enough foods for a no-repeat plan. You need at least ${totalMealsNeeded} different foods, but you only have ${favoriteFoods.length}.`);
+      setIsGenerating(false);
+      return;
+    }
+
+    // Check if at least one meal type is selected
+    if (mealsPerDay === 0) {
+      setError('Please select at least one meal type (breakfast, lunch, or dinner).');
       setIsGenerating(false);
       return;
     }
@@ -145,26 +164,51 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
     // If no-repeat is enabled, create a copy of foods array to remove items as they're used
     let availableFoods = [...favoriteFoods];
     
-    for (let i = 0; i < daysToGenerate; i++) {
-      const day = days[i];
+    // Generate meals for each day in the date range
+    let currentDate = new Date(start);
+    while (currentDate <= end) {
+      const day = currentDate.toLocaleDateString('en-US', { 
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric'
+      });
       
-      // Randomly select meals for each time of day
-      const breakfast = getRandomFood(availableFoods);
-      if (noRepeat && breakfast) {
-        availableFoods = availableFoods.filter(food => food.id !== breakfast.id);
+      // Initialize meals for this day
+      const dayMeals: DayMeal = {
+        breakfast: null,
+        lunch: null,
+        dinner: null
+      };
+      
+      // Generate meals only for selected types
+      if (selectedMealTypes.breakfast) {
+        const breakfast = getRandomFood(availableFoods);
+        if (noRepeat && breakfast) {
+          availableFoods = availableFoods.filter(food => food.id !== breakfast.id);
+        }
+        dayMeals.breakfast = breakfast;
       }
       
-      const lunch = getRandomFood(availableFoods);
-      if (noRepeat && lunch) {
-        availableFoods = availableFoods.filter(food => food.id !== lunch.id);
+      if (selectedMealTypes.lunch) {
+        const lunch = getRandomFood(availableFoods);
+        if (noRepeat && lunch) {
+          availableFoods = availableFoods.filter(food => food.id !== lunch.id);
+        }
+        dayMeals.lunch = lunch;
       }
       
-      const dinner = getRandomFood(availableFoods);
-      if (noRepeat && dinner) {
-        availableFoods = availableFoods.filter(food => food.id !== dinner.id);
+      if (selectedMealTypes.dinner) {
+        const dinner = getRandomFood(availableFoods);
+        if (noRepeat && dinner) {
+          availableFoods = availableFoods.filter(food => food.id !== dinner.id);
+        }
+        dayMeals.dinner = dinner;
       }
       
-      plan[day] = { breakfast, lunch, dinner };
+      plan[day] = dayMeals;
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
     }
     
     setCurrentMealPlan(plan);
@@ -178,41 +222,89 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
   };
 
   const saveMealPlan = async () => {
-    if (!currentMealPlan || !user || !newPlanName.trim()) {
-      setError('Please provide a name for your meal plan');
+    const [start, end] = dateRange;
+    if (!currentMealPlan || !user || !newPlanName.trim() || !start || !end) {
+      const missingFields = [];
+      if (!currentMealPlan) missingFields.push('meal plan');
+      if (!user) missingFields.push('user');
+      if (!newPlanName.trim()) missingFields.push('plan name');
+      if (!start || !end) missingFields.push('date range');
+      
+      const errorMessage = `Missing required fields: ${missingFields.join(', ')}`;
+      console.error(errorMessage);
+      setError(errorMessage);
       return;
     }
     
     try {
       setIsSaving(true);
       setError(null);
-      
-      const { data, error } = await supabase
-        .from('meal_plans')
-        .insert({
-          user_id: user.id,
-          name: newPlanName.trim(),
-          duration: duration,
-          plan: currentMealPlan,
-          no_repeat: noRepeat
-        })
-        .select();
 
-      if (error) {
-        console.error('Error saving meal plan:', error);
-        setError(`Failed to save meal plan: ${error.message}`);
+      // Create the meal plan object
+      const mealPlanData = {
+        user_id: user.id,
+        name: newPlanName.trim(),
+        start_date: start.toISOString(),
+        end_date: end.toISOString(),
+        plan: currentMealPlan,
+        no_repeat: noRepeat
+      };
+
+      console.log('Attempting to save meal plan with data:', JSON.stringify(mealPlanData, null, 2));
+
+      // Insert the meal plan and return the inserted data
+      const { data: insertedData, error: insertError } = await supabase
+        .from('meal_plans')
+        .insert(mealPlanData)
+        .select('*')
+        .single();
+
+      if (insertError) {
+        console.error('Supabase error saving meal plan:', insertError);
+        console.error('Error details:', {
+          code: insertError.code,
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint
+        });
+        
+        // Check for specific error types
+        if (insertError.code === '42501') {
+          setError('Permission denied. Please check your database access rights.');
+        } else if (insertError.code === '23505') {
+          setError('A meal plan with this name already exists.');
+        } else {
+          setError(`Failed to save meal plan: ${insertError.message || 'Unknown error'}`);
+        }
         return;
       }
 
+      if (!insertedData) {
+        console.error('No data returned after saving meal plan');
+        setError('Failed to save meal plan: No data returned from server');
+        return;
+      }
+
+      console.log('Meal plan saved successfully:', insertedData);
+      
+      // Reset form state
       setSuccess('Meal plan saved successfully!');
       setNewPlanName('');
       setIsCreatingPlan(false);
       setCurrentMealPlan(null);
       setNoRepeat(false);
+      setDateRange([null, null]);
+      
+      // Notify parent component immediately
+      if (onMealPlanAdded) {
+        await onMealPlanAdded();
+      }
+      
+      // Fetch fresh data
       await fetchMealPlans();
-      if (onMealPlanAdded) onMealPlanAdded();
     } catch (err: any) {
       console.error('Unexpected error saving meal plan:', err);
+      console.error('Error stack:', err.stack);
       setError(`An unexpected error occurred: ${err.message}`);
     } finally {
       setIsSaving(false);
@@ -237,12 +329,20 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
         return;
       }
 
-      setSuccess('Meal plan deleted successfully!');
+      // Update local state immediately
+      setMealPlans(prevPlans => prevPlans.filter(plan => plan.id !== id));
+      
+      // Close the selected plan view if we just deleted it
       if (selectedPlan?.id === id) {
         setSelectedPlan(null);
       }
-      await fetchMealPlans();
-      if (onMealPlanAdded) onMealPlanAdded();
+      
+      setSuccess('Meal plan deleted successfully!');
+      
+      // Notify parent component immediately
+      if (onMealPlanAdded) {
+        await onMealPlanAdded();
+      }
     } catch (err: any) {
       console.error('Unexpected error deleting meal plan:', err);
       setError(`An unexpected error occurred: ${err.message}`);
@@ -263,402 +363,686 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
     setSelectedPlan(null);
   };
 
+  // Add a new function for exporting existing meal plans
+  const exportMealPlan = async (plan: MealPlan) => {
+    try {
+      let csvContent = 'Date,Day,Breakfast,Lunch,Dinner\n';
+      
+      // Generate meals for each day in the date range
+      let currentDate = new Date(plan.start_date);
+      const endDate = new Date(plan.end_date);
+      
+      while (currentDate <= endDate) {
+        const dayKey = currentDate.toLocaleDateString('en-US', { 
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric'
+        });
+        
+        const meals = plan.plan[dayKey];
+        const formattedDate = currentDate.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        
+        const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
+        
+        // Escape any commas in meal names
+        const breakfast = meals?.breakfast?.name ? `"${meals.breakfast.name}"` : '';
+        const lunch = meals?.lunch?.name ? `"${meals.lunch.name}"` : '';
+        const dinner = meals?.dinner?.name ? `"${meals.dinner.name}"` : '';
+        
+        csvContent += `${formattedDate},${dayOfWeek},${breakfast},${lunch},${dinner}\n`;
+        
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Create blob and download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${plan.name}_meal_plan.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setSuccess('Meal plan exported successfully!');
+    } catch (err: any) {
+      console.error('Unexpected error exporting meal plan:', err);
+      setError(`An unexpected error occurred: ${err.message}`);
+    }
+  };
+
+  // Add a new function to handle meal changes
+  const handleMealChange = (day: string, mealType: 'breakfast' | 'lunch' | 'dinner', currentPlan: WeeklyPlan) => {
+    if (!currentPlan || !favoriteFoods.length) return;
+
+    // Get a random food different from the current one
+    const currentFood = currentPlan[day][mealType];
+    let availableFoods = [...favoriteFoods];
+    if (currentFood) {
+      availableFoods = availableFoods.filter(food => food.id !== currentFood.id);
+    }
+    
+    if (availableFoods.length === 0) {
+      setError('No other foods available to swap with');
+      return;
+    }
+
+    const newFood = getRandomFood(availableFoods);
+    const updatedPlan = { ...currentPlan };
+    updatedPlan[day] = {
+      ...updatedPlan[day],
+      [mealType]: newFood
+    };
+
+    if (selectedPlan) {
+      // If we're editing an existing plan, update it in the database
+      updateMealPlan(selectedPlan.id, updatedPlan);
+    } else {
+      // If we're creating a new plan, just update the current plan
+      setCurrentMealPlan(updatedPlan);
+    }
+  };
+
+  // Add function to update meal plan in database
+  const updateMealPlan = async (planId: string, updatedPlan: WeeklyPlan) => {
+    try {
+      const { error } = await supabase
+        .from('meal_plans')
+        .update({ plan: updatedPlan })
+        .eq('id', planId)
+        .eq('user_id', user?.id);
+
+      if (error) {
+        console.error('Error updating meal plan:', error);
+        setError(`Failed to update meal plan: ${error.message}`);
+        return;
+      }
+
+      // Update the selected plan in state
+      setSelectedPlan(prev => prev ? { ...prev, plan: updatedPlan } : null);
+      setSuccess('Meal updated successfully!');
+    } catch (err: any) {
+      console.error('Unexpected error updating meal plan:', err);
+      setError(`An unexpected error occurred: ${err.message}`);
+    }
+  };
+
+  const handleClose = useCallback(() => {
+    // Reset form state
+    setCurrentMealPlan(null);
+    setNewPlanName('');
+    setDateRange([null, null]);
+    setError(null);
+    setSuccess(null);
+    
+    // Trigger refresh before closing
+    if (onMealPlanAdded) {
+      onMealPlanAdded();
+    }
+    
+    // Close the panel
+    onClose();
+  }, [onClose, onMealPlanAdded]);
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div 
-          className="fixed inset-0 z-50 overflow-hidden"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+    <Transition show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={handleClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-in-out duration-500"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in-out duration-500"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
         >
-          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
-          
-          <motion.div
-            ref={panelRef}
-            className="absolute inset-y-0 right-0 max-w-full flex"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-          >
-            <div className="relative w-screen max-w-md">
-              <div className="h-full flex flex-col bg-white shadow-xl overflow-y-auto">
-                <div className="p-6 border-b border-border">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-primary">
-                      {selectedPlan ? selectedPlan.name : 'Meal Plans'}
-                    </h2>
-                    <button 
-                      onClick={selectedPlan ? closeSelectedPlan : onClose}
-                      className="text-text-secondary hover:text-primary transition-colors"
-                    >
-                      {selectedPlan ? <FaChevronLeft className="text-lg" /> : <FaTimes className="text-lg" />}
-                    </button>
-                  </div>
-                </div>
+          <div className="fixed inset-0 bg-black/30 transition-opacity" />
+        </Transition.Child>
 
-                <div className="flex-1 p-6">
-                  {/* Notification Messages */}
-                  <AnimatePresence>
-                    {error && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mb-6 flex justify-between items-center"
-                      >
-                        <span>{error}</span>
-                        <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
-                          <FaTimes />
-                        </button>
-                      </motion.div>
-                    )}
-                    
-                    {success && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded mb-6 flex justify-between items-center"
-                      >
-                        <span>{success}</span>
-                        <button onClick={() => setSuccess(null)} className="text-green-500 hover:text-green-700">
-                          <FaTimes />
-                        </button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {selectedPlan ? (
-                    /* Meal Plan Detail View */
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <p className="text-sm text-text-secondary">
-                            {selectedPlan.duration === 'one_week' ? '1 Week Plan' : '2 Weeks Plan'}
-                            {selectedPlan.no_repeat && ' • No Repeats'}
-                          </p>
-                          <p className="text-sm text-text-secondary">
-                            Created: {new Date(selectedPlan.created_at).toLocaleDateString()}
-                          </p>
+        <div className="fixed inset-0 overflow-hidden">
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+              <Transition.Child
+                as={Fragment}
+                enter="transform transition ease-in-out duration-500"
+                enterFrom="translate-x-full"
+                enterTo="translate-x-0"
+                leave="transform transition ease-in-out duration-500"
+                leaveFrom="translate-x-0"
+                leaveTo="translate-x-full"
+              >
+                <Dialog.Panel className="pointer-events-auto w-screen max-w-4xl">
+                  <div className="flex h-full flex-col overflow-y-auto bg-light shadow-xl">
+                    <div className="px-6 pt-6 pb-4 border-b border-border">
+                      <div className="flex items-start justify-between">
+                        <Dialog.Title className="text-xl font-medium text-primary">
+                          Meal Plans
+                        </Dialog.Title>
+                        <div className="ml-3 flex h-7 items-center">
+                          <button
+                            type="button"
+                            className="text-text-secondary hover:text-primary"
+                            onClick={handleClose}
+                          >
+                            <span className="sr-only">Close panel</span>
+                            <FaTimes className="h-5 w-5" aria-hidden="true" />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => deleteMealPlan(selectedPlan.id)}
-                          className="bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
-                        >
-                          <FaTrash className="mr-1" />
-                          Delete
-                        </button>
-                      </div>
-
-                      <div className="space-y-6 mt-6">
-                        {Object.entries(selectedPlan.plan).map(([day, meals]) => (
-                          <div key={day} className="border border-border rounded-lg overflow-hidden">
-                            <div className="bg-gray-50 px-4 py-3 border-b border-border">
-                              <h3 className="font-medium text-primary">{day}</h3>
-                            </div>
-                            <div className="p-4 space-y-4">
-                              <div className="flex items-center">
-                                <div className="w-24 text-sm font-medium text-text-secondary">Breakfast:</div>
-                                <div className="flex-1 text-primary">{meals.breakfast?.name || 'None'}</div>
-                              </div>
-                              <div className="flex items-center">
-                                <div className="w-24 text-sm font-medium text-text-secondary">Lunch:</div>
-                                <div className="flex-1 text-primary">{meals.lunch?.name || 'None'}</div>
-                              </div>
-                              <div className="flex items-center">
-                                <div className="w-24 text-sm font-medium text-text-secondary">Dinner:</div>
-                                <div className="flex-1 text-primary">{meals.dinner?.name || 'None'}</div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
                       </div>
                     </div>
-                  ) : isCreatingPlan ? (
-                    /* Create New Plan View */
-                    <div>
-                      <div className="mb-6">
-                        <button
-                          onClick={() => setIsCreatingPlan(false)}
-                          className="text-accent hover:text-highlight flex items-center text-sm"
-                        >
-                          <FaChevronLeft className="mr-1" />
-                          Back to Meal Plans
-                        </button>
-                      </div>
-
-                      <div className="bg-light border border-border rounded-lg p-5 mb-6">
-                        <h3 className="font-medium text-primary mb-4">Create New Meal Plan</h3>
-                        
-                        <div className="mb-4">
-                          <label className="block text-sm font-medium text-text-secondary mb-1" htmlFor="planName">
-                            Plan Name
-                          </label>
-                          <input
-                            id="planName"
-                            type="text"
-                            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                            value={newPlanName}
-                            onChange={(e) => setNewPlanName(e.target.value)}
-                            placeholder="e.g., Weekly Family Meals"
-                            required
-                          />
-                        </div>
-                        
-                        <div className="mb-4">
-                          <label className="block text-sm font-medium text-text-secondary mb-2">
-                            Duration
-                          </label>
-                          <div className="flex space-x-4">
-                            <label className="inline-flex items-center">
-                              <input
-                                type="radio"
-                                className="form-radio text-accent"
-                                name="duration"
-                                value="one_week"
-                                checked={duration === 'one_week'}
-                                onChange={() => setDuration('one_week')}
-                              />
-                              <span className="ml-2">One Week</span>
-                            </label>
-                            <label className="inline-flex items-center">
-                              <input
-                                type="radio"
-                                className="form-radio text-accent"
-                                name="duration"
-                                value="two_weeks"
-                                checked={duration === 'two_weeks'}
-                                onChange={() => setDuration('two_weeks')}
-                              />
-                              <span className="ml-2">Two Weeks</span>
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="mb-4">
-                          <label className="inline-flex items-center">
-                            <input
-                              type="checkbox"
-                              className="form-checkbox text-accent"
-                              checked={noRepeat}
-                              onChange={() => setNoRepeat(!noRepeat)}
-                            />
-                            <span className="ml-2">No Repeat Meals</span>
-                          </label>
-                          {noRepeat && (
-                            <div className="mt-2 text-xs text-amber-600 flex items-start">
-                              <FaExclamationTriangle className="mr-1 mt-0.5 flex-shrink-0" />
-                              <span>
-                                This requires {duration === 'one_week' ? '21' : '42'} different foods 
-                                (you have {favoriteFoods.length})
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <button
-                          onClick={generateMealPlan}
-                          disabled={isGenerating || favoriteFoods.length === 0}
-                          className="w-full bg-accent hover:bg-accent-dark text-white px-4 py-2 rounded-md flex items-center justify-center mb-4 transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
-                        >
-                          {isGenerating ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <FaRandom className="mr-2" />
-                              Generate Random Plan
-                            </>
-                          )}
-                        </button>
-                        
-                        {favoriteFoods.length === 0 && (
-                          <div className="text-sm text-red-500 mb-4 flex items-center">
-                            <FaExclamationTriangle className="mr-1" />
-                            You need to add some favorite foods before generating a meal plan.
-                          </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                      {/* Notification Messages */}
+                      <AnimatePresence>
+                        {error && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mb-6 flex justify-between items-center"
+                          >
+                            <span>{error}</span>
+                            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+                              <FaTimes />
+                            </button>
+                          </motion.div>
                         )}
-                      </div>
+                        
+                        {success && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded mb-6 flex justify-between items-center"
+                          >
+                            <span>{success}</span>
+                            <button onClick={() => setSuccess(null)} className="text-green-500 hover:text-green-700">
+                              <FaTimes />
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
 
-                      {currentMealPlan && (
+                      {selectedPlan ? (
+                        /* Meal Plan Detail View */
                         <div>
-                          <h3 className="font-medium text-primary mb-4">Generated Meal Plan</h3>
-                          
-                          <div className="space-y-4 mb-6">
-                            {Object.entries(currentMealPlan)
-                              .slice(0, duration === 'one_week' ? 7 : 14)
-                              .map(([day, meals]) => (
-                                <div key={day} className="border border-border rounded-lg overflow-hidden">
-                                  <div className="bg-gray-50 px-4 py-2 border-b border-border">
-                                    <h4 className="font-medium text-primary">{day}</h4>
-                                  </div>
-                                  <div className="p-3 space-y-3">
-                                    <div className="flex items-center">
-                                      <div className="w-20 text-xs font-medium text-text-secondary">Breakfast:</div>
-                                      <div className="flex-1 text-sm text-primary">{meals.breakfast?.name || 'None'}</div>
-                                    </div>
-                                    <div className="flex items-center">
-                                      <div className="w-20 text-xs font-medium text-text-secondary">Lunch:</div>
-                                      <div className="flex-1 text-sm text-primary">{meals.lunch?.name || 'None'}</div>
-                                    </div>
-                                    <div className="flex items-center">
-                                      <div className="w-20 text-xs font-medium text-text-secondary">Dinner:</div>
-                                      <div className="flex-1 text-sm text-primary">{meals.dinner?.name || 'None'}</div>
-                                    </div>
-                                  </div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div>
+                              <p className="text-sm text-text-secondary">
+                                {new Date(selectedPlan.start_date).toLocaleDateString()} - {new Date(selectedPlan.end_date).toLocaleDateString()}
+                                {selectedPlan.no_repeat && ' • No Repeats'}
+                              </p>
+                              <p className="text-sm text-text-secondary">
+                                Created: {new Date(selectedPlan.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => exportMealPlan(selectedPlan)}
+                                className="bg-accent bg-opacity-10 hover:bg-opacity-20 text-accent px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
+                              >
+                                <FaRandom className="mr-1" />
+                                Export CSV
+                              </button>
+                              <button
+                                onClick={() => deleteMealPlan(selectedPlan.id)}
+                                className="bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
+                              >
+                                <FaTrash className="mr-1" />
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-6 mt-6">
+                            {Object.entries(selectedPlan.plan).map(([day, meals]) => (
+                              <div key={day} className="border border-border rounded-lg overflow-hidden">
+                                <div className="bg-gray-50 px-4 py-3 border-b border-border">
+                                  <h3 className="font-medium text-primary">{day}</h3>
                                 </div>
+                                <div className="p-4 space-y-4">
+                                  {(meals.breakfast || selectedPlan.plan[day].breakfast) && (
+                                    <div className="flex items-center">
+                                      <div className="w-24 text-sm font-medium text-text-secondary">Breakfast:</div>
+                                      <div className="flex-1 text-primary">{meals.breakfast?.name || 'None'}</div>
+                                      <button
+                                        onClick={() => handleMealChange(day, 'breakfast', selectedPlan.plan)}
+                                        className="ml-2 text-accent hover:text-accent-dark"
+                                        title="Change breakfast"
+                                      >
+                                        <FaRandom className="text-sm" />
+                                      </button>
+                                    </div>
+                                  )}
+                                  {(meals.lunch || selectedPlan.plan[day].lunch) && (
+                                    <div className="flex items-center">
+                                      <div className="w-24 text-sm font-medium text-text-secondary">Lunch:</div>
+                                      <div className="flex-1 text-primary">{meals.lunch?.name || 'None'}</div>
+                                      <button
+                                        onClick={() => handleMealChange(day, 'lunch', selectedPlan.plan)}
+                                        className="ml-2 text-accent hover:text-accent-dark"
+                                        title="Change lunch"
+                                      >
+                                        <FaRandom className="text-sm" />
+                                      </button>
+                                    </div>
+                                  )}
+                                  {(meals.dinner || selectedPlan.plan[day].dinner) && (
+                                    <div className="flex items-center">
+                                      <div className="w-24 text-sm font-medium text-text-secondary">Dinner:</div>
+                                      <div className="flex-1 text-primary">{meals.dinner?.name || 'None'}</div>
+                                      <button
+                                        onClick={() => handleMealChange(day, 'dinner', selectedPlan.plan)}
+                                        className="ml-2 text-accent hover:text-accent-dark"
+                                        title="Change lunch"
+                                      >
+                                        <FaRandom className="text-sm" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             ))}
                           </div>
-                          
-                          <div className="flex space-x-3">
+                        </div>
+                      ) : isCreatingPlan ? (
+                        /* Create New Plan View */
+                        <div>
+                          <div className="mb-6">
+                            <button
+                              onClick={() => setIsCreatingPlan(false)}
+                              className="text-accent hover:text-highlight flex items-center text-sm"
+                            >
+                              <FaChevronLeft className="mr-1" />
+                              Back to Meal Plans
+                            </button>
+                          </div>
+
+                          <div className="bg-light border border-border rounded-lg p-5 mb-6">
+                            <h3 className="font-medium text-primary mb-4">Create New Meal Plan</h3>
+                            
+                            <div className="mb-4">
+                              <label className="block text-sm font-medium text-text-secondary mb-1" htmlFor="planName">
+                                Plan Name
+                              </label>
+                              <input
+                                id="planName"
+                                type="text"
+                                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                                value={newPlanName}
+                                onChange={(e) => setNewPlanName(e.target.value)}
+                                placeholder="e.g., Weekly Family Meals"
+                                required
+                              />
+                            </div>
+                            
+                            <div className="mb-4">
+                              <label className="block text-sm font-medium text-text-secondary mb-2">
+                                Date Range
+                              </label>
+                              <div className="relative">
+                                <DatePicker
+                                  selectsRange={true}
+                                  startDate={dateRange[0]}
+                                  endDate={dateRange[1]}
+                                  onChange={(update: [Date | null, Date | null]) => {
+                                    setDateRange(update);
+                                  }}
+                                  isClearable={false}
+                                  className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                                  dateFormat="MMM d, yyyy"
+                                  minDate={new Date()}
+                                  placeholderText="Select date range"
+                                />
+                                <FaCalendarAlt className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary pointer-events-none" />
+                              </div>
+                              {dateRange[0] && dateRange[1] && (
+                                <p className="mt-2 text-xs text-text-secondary">
+                                  Duration: {Math.ceil((dateRange[1].getTime() - dateRange[0].getTime()) / (1000 * 60 * 60 * 24)) + 1} days
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="mb-4">
+                              <label className="block text-sm font-medium text-text-secondary mb-2">
+                                Meal Types to Include
+                              </label>
+                              <div className="space-y-2">
+                                <label className="inline-flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    className="form-checkbox text-accent"
+                                    checked={selectedMealTypes.breakfast}
+                                    onChange={(e) => setSelectedMealTypes(prev => ({
+                                      ...prev,
+                                      breakfast: e.target.checked
+                                    }))}
+                                  />
+                                  <span className="ml-2">Breakfast</span>
+                                </label>
+                                <div className="flex items-center space-x-4">
+                                  <label className="inline-flex items-center">
+                                    <input
+                                      type="checkbox"
+                                      className="form-checkbox text-accent"
+                                      checked={selectedMealTypes.lunch}
+                                      onChange={(e) => setSelectedMealTypes(prev => ({
+                                        ...prev,
+                                        lunch: e.target.checked
+                                      }))}
+                                    />
+                                    <span className="ml-2">Lunch</span>
+                                  </label>
+                                  <label className="inline-flex items-center">
+                                    <input
+                                      type="checkbox"
+                                      className="form-checkbox text-accent"
+                                      checked={selectedMealTypes.dinner}
+                                      onChange={(e) => setSelectedMealTypes(prev => ({
+                                        ...prev,
+                                        dinner: e.target.checked
+                                      }))}
+                                    />
+                                    <span className="ml-2">Dinner</span>
+                                  </label>
+                                </div>
+                              </div>
+                              {Object.values(selectedMealTypes).filter(Boolean).length === 0 && (
+                                <div className="mt-2 text-xs text-red-600 flex items-start">
+                                  <FaExclamationTriangle className="mr-1 mt-0.5 flex-shrink-0" />
+                                  <span>Please select at least one meal type</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="mb-4">
+                              <label className="inline-flex items-center">
+                                <input
+                                  type="checkbox"
+                                  className="form-checkbox text-accent"
+                                  checked={noRepeat}
+                                  onChange={() => setNoRepeat(!noRepeat)}
+                                />
+                                <span className="ml-2">No Repeat Meals</span>
+                              </label>
+                              {noRepeat && dateRange[0] && dateRange[1] && (
+                                <div className="mt-2 text-xs text-amber-600 flex items-start">
+                                  <FaExclamationTriangle className="mr-1 mt-0.5 flex-shrink-0" />
+                                  <span>
+                                    This requires {Math.ceil((dateRange[1].getTime() - dateRange[0].getTime()) / (1000 * 60 * 60 * 24) + 1) * 
+                                      Object.values(selectedMealTypes).filter(Boolean).length} different foods 
+                                    (you have {favoriteFoods.length})
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            
                             <button
                               onClick={generateMealPlan}
-                              className="flex-1 border border-accent text-accent hover:bg-accent hover:text-white px-4 py-2 rounded-md flex items-center justify-center transition-colors duration-200"
-                              disabled={isGenerating}
+                              disabled={isGenerating || favoriteFoods.length === 0 || Object.values(selectedMealTypes).filter(Boolean).length === 0}
+                              className="w-full bg-accent hover:bg-accent-dark text-white px-4 py-2 rounded-md flex items-center justify-center mb-4 transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
                               {isGenerating ? (
                                 <>
-                                  <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin mr-2"></div>
-                                  Regenerating...
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                  Generating...
                                 </>
                               ) : (
                                 <>
                                   <FaRandom className="mr-2" />
-                                  Regenerate
+                                  Generate Random Plan
                                 </>
                               )}
                             </button>
-                            <button
-                              onClick={saveMealPlan}
-                              disabled={isSaving || !newPlanName.trim()}
-                              className="flex-1 bg-accent hover:bg-accent-dark text-white px-4 py-2 rounded-md flex items-center justify-center transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
-                            >
-                              {isSaving ? (
-                                <>
-                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                  Saving...
-                                </>
-                              ) : (
-                                <>
-                                  <FaSave className="mr-2" />
-                                  Save Plan
-                                </>
-                              )}
-                            </button>
+                            
+                            {favoriteFoods.length === 0 && (
+                              <div className="text-sm text-red-500 mb-4 flex items-center">
+                                <FaExclamationTriangle className="mr-1" />
+                                You need to add some favorite foods before generating a meal plan.
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    /* Meal Plans List View */
-                    <>
-                      {/* Create Plan Button */}
-                      <button
-                        onClick={() => setIsCreatingPlan(true)}
-                        className="w-full bg-accent hover:bg-accent-dark text-white px-4 py-3 rounded-md flex items-center justify-center mb-6 transition-colors duration-200"
-                      >
-                        <FaPlus className="mr-2" />
-                        Create New Meal Plan
-                      </button>
 
-                      {/* Search Bar */}
-                      <div className="mb-6">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            placeholder="Search meal plans..."
-                            className="w-full px-4 py-3 pl-10 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                          />
-                          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Meal Plans List */}
-                      {loading ? (
-                        <div className="flex justify-center items-center h-64">
-                          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                      ) : filteredMealPlans.length === 0 ? (
-                        <div className="bg-light border border-border rounded-lg p-8 text-center">
-                          <div className="w-16 h-16 bg-accent bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <FaCalendarAlt className="text-accent text-xl" />
-                          </div>
-                          <h3 className="text-xl font-medium text-primary mb-2">No meal plans found</h3>
-                          <p className="text-text-secondary mb-6">
-                            {searchTerm ? "No meal plans match your search criteria." : "You haven't created any meal plans yet."}
-                          </p>
-                          <button
-                            onClick={() => setIsCreatingPlan(true)}
-                            className="bg-accent hover:bg-accent-dark text-white px-6 py-2 rounded-md inline-flex items-center transition-colors duration-200"
-                          >
-                            <FaPlus className="mr-2" />
-                            Create Your First Meal Plan
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {filteredMealPlans.map((plan) => (
-                            <motion.div
-                              key={plan.id}
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="bg-white border border-border rounded-lg overflow-hidden shadow-sm"
-                            >
-                              <div className="p-5">
-                                <h3 className="font-medium text-lg text-primary mb-2">{plan.name}</h3>
-                                <div className="flex items-center text-sm text-text-secondary mb-4">
-                                  <FaCalendarAlt className="mr-2" />
-                                  <span>{plan.duration === 'one_week' ? '1 Week Plan' : '2 Weeks Plan'}</span>
-                                  {plan.no_repeat && (
+                          {currentMealPlan && (
+                            <div>
+                              <h3 className="font-medium text-primary mb-4">Generated Meal Plan</h3>
+                              
+                              <div className="space-y-4 mb-6">
+                                {Object.entries(currentMealPlan)
+                                  .slice(0, Math.ceil((dateRange[1]?.getTime() ?? 0 - (dateRange[0]?.getTime() ?? 0)) / (1000 * 60 * 60 * 24)) + 1)
+                                  .map(([day, meals]) => (
+                                    <div key={day} className="border border-border rounded-lg overflow-hidden">
+                                      <div className="bg-gray-50 px-4 py-2 border-b border-border">
+                                        <h4 className="font-medium text-primary">{day}</h4>
+                                      </div>
+                                      <div className="p-3 space-y-3">
+                                        {selectedMealTypes.breakfast && (
+                                          <div className="flex items-center">
+                                            <div className="w-20 text-xs font-medium text-text-secondary">Breakfast:</div>
+                                            <div className="flex-1 text-sm text-primary">{meals.breakfast?.name || 'None'}</div>
+                                            <button
+                                              onClick={() => handleMealChange(day, 'breakfast', currentMealPlan)}
+                                              className="ml-2 text-accent hover:text-accent-dark"
+                                              title="Change breakfast"
+                                            >
+                                              <FaRandom className="text-sm" />
+                                            </button>
+                                          </div>
+                                        )}
+                                        {selectedMealTypes.lunch && (
+                                          <div className="flex items-center">
+                                            <div className="w-20 text-xs font-medium text-text-secondary">Lunch:</div>
+                                            <div className="flex-1 text-sm text-primary">{meals.lunch?.name || 'None'}</div>
+                                            <button
+                                              onClick={() => handleMealChange(day, 'lunch', currentMealPlan)}
+                                              className="ml-2 text-accent hover:text-accent-dark"
+                                              title="Change lunch"
+                                            >
+                                              <FaRandom className="text-sm" />
+                                            </button>
+                                          </div>
+                                        )}
+                                        {selectedMealTypes.dinner && (
+                                          <div className="flex items-center">
+                                            <div className="w-20 text-xs font-medium text-text-secondary">Dinner:</div>
+                                            <div className="flex-1 text-sm text-primary">{meals.dinner?.name || 'None'}</div>
+                                            <button
+                                              onClick={() => handleMealChange(day, 'dinner', currentMealPlan)}
+                                              className="ml-2 text-accent hover:text-accent-dark"
+                                              title="Change dinner"
+                                            >
+                                              <FaRandom className="text-sm" />
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                ))}
+                              </div>
+                              
+                              <div className="flex space-x-3">
+                                <button
+                                  onClick={generateMealPlan}
+                                  className="flex-1 border border-accent text-accent hover:bg-accent hover:text-white px-4 py-2 rounded-md flex items-center justify-center transition-colors duration-200"
+                                  disabled={isGenerating}
+                                >
+                                  {isGenerating ? (
                                     <>
-                                      <span className="mx-2">•</span>
-                                      <span>No Repeats</span>
+                                      <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin mr-2"></div>
+                                      Regenerating...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaRandom className="mr-2" />
+                                      Regenerate
                                     </>
                                   )}
-                                  <span className="mx-2">•</span>
-                                  <span>Created {new Date(plan.created_at).toLocaleDateString()}</span>
-                                </div>
-                                <div className="flex space-x-2">
-                                  <button
-                                    onClick={() => viewMealPlan(plan)}
-                                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
-                                  >
-                                    <FaEdit className="mr-1" />
-                                    View Details
-                                  </button>
-                                  <button
-                                    onClick={() => deleteMealPlan(plan.id)}
-                                    className="bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
-                                  >
-                                    <FaTrash className="mr-1" />
-                                    Delete
-                                  </button>
-                                </div>
+                                </button>
+                                <button
+                                  onClick={saveMealPlan}
+                                  disabled={isSaving || !newPlanName.trim()}
+                                  className="flex-1 bg-accent hover:bg-accent-dark text-white px-4 py-2 rounded-md flex items-center justify-center transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                  {isSaving ? (
+                                    <>
+                                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                      Saving...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaSave className="mr-2" />
+                                      Save Plan
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (currentMealPlan && user) {
+                                      exportMealPlan({
+                                        id: 'temp',
+                                        user_id: user.id,
+                                        name: newPlanName,
+                                        created_at: new Date().toISOString(),
+                                        start_date: dateRange[0]?.toISOString() || '',
+                                        end_date: dateRange[1]?.toISOString() || '',
+                                        plan: currentMealPlan,
+                                        no_repeat: noRepeat
+                                      });
+                                    }
+                                  }}
+                                  disabled={!currentMealPlan || !user}
+                                  className="flex-1 border border-accent text-accent hover:bg-accent hover:text-white px-4 py-2 rounded-md flex items-center justify-center transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                  <FaRandom className="mr-2" />
+                                  Export CSV
+                                </button>
                               </div>
-                            </motion.div>
-                          ))}
+                            </div>
+                          )}
                         </div>
+                      ) : (
+                        /* Meal Plans List View */
+                        <>
+                          {/* Create Plan Button */}
+                          <button
+                            onClick={() => setIsCreatingPlan(true)}
+                            className="w-full bg-accent hover:bg-accent-dark text-white px-4 py-3 rounded-md flex items-center justify-center mb-6 transition-colors duration-200"
+                          >
+                            <FaPlus className="mr-2" />
+                            Create New Meal Plan
+                          </button>
+
+                          {/* Search Bar */}
+                          <div className="mb-6">
+                            <div className="relative">
+                              <input
+                                type="text"
+                                placeholder="Search meal plans..."
+                                className="w-full px-4 py-3 pl-10 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                              />
+                              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Meal Plans List */}
+                          {loading ? (
+                            <div className="flex justify-center items-center h-64">
+                              <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                          ) : filteredMealPlans.length === 0 ? (
+                            <div className="bg-light border border-border rounded-lg p-8 text-center">
+                              <div className="w-16 h-16 bg-accent bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <FaCalendarAlt className="text-accent text-xl" />
+                              </div>
+                              <h3 className="text-xl font-medium text-primary mb-2">No meal plans found</h3>
+                              <p className="text-text-secondary mb-6">
+                                {searchTerm ? "No meal plans match your search criteria." : "You haven't created any meal plans yet."}
+                              </p>
+                              <button
+                                onClick={() => setIsCreatingPlan(true)}
+                                className="bg-accent hover:bg-accent-dark text-white px-6 py-2 rounded-md inline-flex items-center transition-colors duration-200"
+                              >
+                                <FaPlus className="mr-2" />
+                                Create Your First Meal Plan
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              {filteredMealPlans.map((plan) => (
+                                <motion.div
+                                  key={plan.id}
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="bg-white border border-border rounded-lg overflow-hidden shadow-sm"
+                                >
+                                  <div className="p-5">
+                                    <h3 className="font-medium text-lg text-primary mb-2">{plan.name}</h3>
+                                    <div className="flex items-center text-sm text-text-secondary mb-4">
+                                      <FaCalendarAlt className="mr-2" />
+                                      <span>
+                                        {new Date(plan.start_date).toLocaleDateString()} - {new Date(plan.end_date).toLocaleDateString()}
+                                      </span>
+                                      {plan.no_repeat && (
+                                        <>
+                                          <span className="mx-2">•</span>
+                                          <span>No Repeats</span>
+                                        </>
+                                      )}
+                                      <span className="mx-2">•</span>
+                                      <span>Created {new Date(plan.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                      <button
+                                        onClick={() => viewMealPlan(plan)}
+                                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
+                                      >
+                                        <FaEdit className="mr-1" />
+                                        View Details
+                                      </button>
+                                      <button
+                                        onClick={() => exportMealPlan(plan)}
+                                        className="bg-accent bg-opacity-10 hover:bg-opacity-20 text-accent px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
+                                      >
+                                        <FaRandom className="mr-1" />
+                                        Export CSV
+                                      </button>
+                                      <button
+                                        onClick={() => deleteMealPlan(plan.id)}
+                                        className="bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
+                                      >
+                                        <FaTrash className="mr-1" />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                </div>
-              </div>
+                    </div>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </div>
+        </div>
+      </Dialog>
+    </Transition>
   );
 } 

@@ -17,6 +17,35 @@ export const metadata: Metadata = {
   },
 };
 
+// Client component for dark mode initialization
+function ClientLayout({ children }: { children: React.ReactNode }) {
+  'use client';
+  
+  const initializeDarkMode = () => {
+    try {
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (_) {}
+  };
+
+  // Run on mount
+  if (typeof window !== 'undefined') {
+    initializeDarkMode();
+  }
+
+  return (
+    <AuthProvider>
+      <div>
+        {children}
+      </div>
+    </AuthProvider>
+  );
+}
+
+// Server component (default export)
 export default function RootLayout({
   children,
 }: {
@@ -25,26 +54,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <body className="min-h-screen">
-        <AuthProvider>
-          <div id="smooth-wrapper">
-            <div id="smooth-content">
-              {children}
-            </div>
-          </div>
-          <div className="custom-cursor hidden md:block"></div>
-        </AuthProvider>
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            document.addEventListener('DOMContentLoaded', () => {
-              const cursor = document.querySelector('.custom-cursor');
-              if (cursor) {
-                document.addEventListener('mousemove', (e) => {
-                  cursor.setAttribute('style', 'top: ' + e.pageY + 'px; left: ' + e.pageX + 'px;');
-                });
-              }
-            });
-          `
-        }} />
+        <ClientLayout>
+          {children}
+        </ClientLayout>
       </body>
     </html>
   );

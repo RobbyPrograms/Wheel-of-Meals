@@ -2,18 +2,19 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import DashboardLayout from '@/components/DashboardLayout';
-import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight } from 'react-icons/fa';
+import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight, FaEdit } from 'react-icons/fa';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { autoSetupDatabase } from '@/lib/auto-setup';
 import FoodsPanel from '@/components/FoodsPanel';
 import MealPlansPanel from '@/components/MealPlansPanel';
+import MealPlansDashboard from '@/components/MealPlansDashboard';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [foodCount, setFoodCount] = useState<number | null>(null);
   const [mealPlanCount, setMealPlanCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,15 +24,30 @@ export default function Dashboard() {
   const [isFoodsPanelOpen, setIsFoodsPanelOpen] = useState(false);
   const [isMealPlansPanelOpen, setIsMealPlansPanelOpen] = useState(false);
 
-  // Check for query parameters to open panels
+  // Check for query parameters to open panels and clear them after
   useEffect(() => {
     const panel = searchParams.get('panel');
     if (panel === 'foods') {
       setIsFoodsPanelOpen(true);
+      // Clear the query parameter
+      router.replace('/dashboard');
     } else if (panel === 'meal-plans') {
       setIsMealPlansPanelOpen(true);
+      // Clear the query parameter
+      router.replace('/dashboard');
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
+
+  // Handle panel close
+  const handleFoodsPanelClose = () => {
+    setIsFoodsPanelOpen(false);
+    router.replace('/dashboard');
+  };
+
+  const handleMealPlansPanelClose = () => {
+    setIsMealPlansPanelOpen(false);
+    router.replace('/dashboard');
+  };
 
   const fetchDashboardData = useCallback(async () => {
     if (!user) return;
@@ -105,13 +121,19 @@ export default function Dashboard() {
     }
   };
 
-  const handleDataUpdated = () => {
+  const handleDataUpdated = useCallback(async () => {
     // Refresh dashboard data when data is added, edited, or deleted
-    fetchDashboardData();
-  };
+    await fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Add this function to handle meal plan view
+  const handleMealPlanView = useCallback((planId?: string) => {
+    setIsMealPlansPanelOpen(true);
+    // You can add logic here to show the specific plan if needed
+  }, []);
 
   return (
-    <DashboardLayout>
+    <>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-medium text-primary">
           Welcome to your dashboard
@@ -270,18 +292,32 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Recent Meal Plans */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-medium text-primary">Recent Meal Plans</h2>
+          <button 
+            onClick={() => setIsMealPlansPanelOpen(true)}
+            className="text-accent hover:text-highlight text-sm flex items-center"
+          >
+            View All <FaChevronRight className="ml-1 text-xs" />
+          </button>
+        </div>
+        <MealPlansDashboard onRefresh={handleDataUpdated} />
+      </div>
+
       {/* Panels */}
       <FoodsPanel 
         isOpen={isFoodsPanelOpen} 
-        onClose={() => setIsFoodsPanelOpen(false)} 
+        onClose={handleFoodsPanelClose} 
         onFoodAdded={handleDataUpdated}
       />
       
       <MealPlansPanel 
         isOpen={isMealPlansPanelOpen} 
-        onClose={() => setIsMealPlansPanelOpen(false)} 
+        onClose={handleMealPlansPanelClose} 
         onMealPlanAdded={handleDataUpdated}
       />
-    </DashboardLayout>
+    </>
   );
 } 

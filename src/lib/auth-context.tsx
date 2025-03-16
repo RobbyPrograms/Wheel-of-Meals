@@ -21,12 +21,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   const refreshSession = async () => {
     try {
       const { data, error } = await supabase.auth.getSession();
       if (error) {
         console.error('Error refreshing session:', error);
+        setSession(null);
+        setUser(null);
         return;
       }
       
@@ -35,44 +38,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (data.session?.user) {
         console.log('User authenticated:', data.session.user.id);
-        // Automatically set up database tables when user is authenticated
-        await autoSetupDatabase();
+        try {
+          await autoSetupDatabase();
+        } catch (err) {
+          console.error('Error setting up database:', err);
+        }
       } else {
         console.log('No authenticated user');
       }
     } catch (err) {
       console.error('Unexpected error refreshing session:', err);
+      setSession(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Get initial session
-    refreshSession();
+    let mounted = true;
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session) => {
-        console.log('Auth state changed:', event);
-        setSession(session);
-        setUser(session?.user ?? null);
+    const initialize = async () => {
+      try {
+        // Get initial session
+        await refreshSession();
         
-        // If user just signed in or signed up, set up database
-        if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
-          await autoSetupDatabase();
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event: AuthChangeEvent, session) => {
+            console.log('Auth state changed:', event);
+            if (!mounted) return;
+
+            setSession(session);
+            setUser(session?.user ?? null);
+            
+            if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
+              try {
+                await autoSetupDatabase();
+              } catch (err) {
+                console.error('Error setting up database:', err);
+              }
+            }
+            
+            setLoading(false);
+          }
+        );
+
+        if (mounted) {
+          setInitialized(true);
+          setLoading(false);
         }
-        
-        setLoading(false);
+
+        return () => {
+          mounted = false;
+          subscription.unsubscribe();
+        };
+      } catch (err) {
+        console.error('Error initializing auth:', err);
+        if (mounted) {
+          setLoading(false);
+          setInitialized(true);
+        }
       }
-    );
+    };
+
+    initialize();
 
     return () => {
-      subscription.unsubscribe();
+      mounted = false;
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
@@ -87,10 +125,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       console.error('Unexpected sign in error:', err);
       return { error: err };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string) => {
+    setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({ email, password });
       
@@ -105,22 +146,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       console.error('Unexpected sign up error:', err);
       return { error: err };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
+    setLoading(true);
     try {
       await supabase.auth.signOut();
-      await refreshSession();
+      setSession(null);
+      setUser(null);
     } catch (err) {
       console.error('Error signing out:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const value = {
     session,
     user,
-    loading,
+    loading: loading || !initialized,
     signIn,
     signUp,
     signOut,
