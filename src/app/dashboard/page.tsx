@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight, FaLightbulb } from 'react-icons/fa';
+import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight, FaLightbulb, FaUserFriends } from 'react-icons/fa';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -195,18 +195,30 @@ export default function Dashboard() {
           </div>
         </button>
 
-        <Link href="/dashboard/random" className="border border-border hover:shadow-medium transition-all duration-300">
-          <div className="p-6">
-            <div className="bg-accent text-light w-12 h-12 flex items-center justify-center rounded-full mb-4">
-              <FaRandom className="text-xl" />
-            </div>
-            <h3 className="text-lg font-medium mb-2 text-primary">Random Meal</h3>
-            <p className="text-text-secondary text-sm mb-4">Get a random meal suggestion</p>
-            <div className="flex items-center text-accent text-sm font-medium">
-              <span>View Details</span>
-              <FaChevronRight className="ml-2 text-xs" />
-            </div>
+        <Link
+          href="/dashboard/random"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+        >
+          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+            <FaRandom className="text-accent text-xl" />
           </div>
+          <h3 className="text-lg font-semibold text-primary mb-2">Random Meal</h3>
+          <p className="text-text-secondary">
+            Get a random meal suggestion from your favorites
+          </p>
+        </Link>
+
+        <Link
+          href="/dashboard/friends"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+        >
+          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+            <FaUserFriends className="text-accent text-xl" />
+          </div>
+          <h3 className="text-lg font-semibold text-primary mb-2">Friends</h3>
+          <p className="text-text-secondary">
+            Connect with friends and discover their favorite meals
+          </p>
         </Link>
 
         <button 
