@@ -13,6 +13,16 @@
   body {
     @apply bg-light text-text-primary font-sans;
     overflow-x: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    @apply fixed inset-0 bg-[url('/background.png')] bg-cover bg-center opacity-[0.15] -z-10;
+  }
+
+  .section, section {
+    @apply relative;
   }
 
   h1, h2, h3, h4, h5, h6 {

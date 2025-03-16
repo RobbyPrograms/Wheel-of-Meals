@@ -36,20 +36,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-light">
+    <div className="min-h-screen">
       <Navbar />
       <div className="container mx-auto px-4 pt-24 pb-16">
         {isDashboardHome ? (
-          <div>
-            {children}
+          <div className="bg-light/95 backdrop-blur-md rounded-lg shadow-md">
+            <div className="grid gap-6 p-6">
+              {children}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-3">
-              <DashboardSidebar />
+              <div className="bg-light/95 backdrop-blur-md rounded-lg shadow-md p-6">
+                <DashboardSidebar />
+              </div>
             </div>
             <div className="lg:col-span-9">
-              {children}
+              <div className="bg-light/95 backdrop-blur-md rounded-lg shadow-md p-6">
+                {children}
+              </div>
             </div>
           </div>
         )}

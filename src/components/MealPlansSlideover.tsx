@@ -3,6 +3,7 @@
 import { Fragment, useCallback } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { FaTimes } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
 
 interface MealPlansSlideover {
   isOpen: boolean;
@@ -12,11 +13,28 @@ interface MealPlansSlideover {
 }
 
 export default function MealPlansSlideover({ isOpen, onClose, onMealPlanAdded, children }: MealPlansSlideover) {
-  const handleClose = useCallback(() => {
-    if (onMealPlanAdded) {
-      onMealPlanAdded();
+  const router = useRouter();
+
+  const handleClose = useCallback(async () => {
+    try {
+      // First trigger any data updates and wait for them to complete
+      if (onMealPlanAdded) {
+        await onMealPlanAdded();
+      }
+      
+      // Close the panel
+      onClose();
+
+      // Wait a brief moment for state updates to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Force a browser refresh
+      window.location.reload();
+    } catch (error) {
+      console.error('Error during close:', error);
+      // Still do the refresh even if there's an error
+      window.location.reload();
     }
-    onClose();
   }, [onClose, onMealPlanAdded]);
 
   return (
@@ -31,7 +49,11 @@ export default function MealPlansSlideover({ isOpen, onClose, onMealPlanAdded, c
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+          <div 
+            className="fixed inset-0 bg-black/30" 
+            aria-hidden="true"
+            onClick={handleClose}
+          />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-hidden">

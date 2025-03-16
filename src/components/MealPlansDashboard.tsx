@@ -94,7 +94,8 @@ export default function MealPlansDashboard() {
     // Close the panel
     setIsPanelOpen(false);
 
-    // Fetch fresh data
+    // Refresh the page data and fetch fresh data
+    router.refresh();
     fetchMealPlans();
   }, [fetchMealPlans, router]);
 

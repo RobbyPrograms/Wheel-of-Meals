@@ -14,39 +14,6 @@ export default function HomePage() {
   const heroRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
-  const animationStartTimeRef = useRef<number>(Date.now());
-  const backgroundElementsRef = useRef<Array<{
-    x: number;
-    y: number;
-    size: number;
-    speed: number;
-    opacity: number;
-    direction: number;
-    color: string;
-    xOffset: number;
-    yOffset: number;
-  }>>([]);
-
-  // Initialize background elements
-  useEffect(() => {
-    // Create random floating elements
-    backgroundElementsRef.current = Array.from({ length: 15 }, () => ({
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: 20 + Math.random() * 100,
-      speed: 0.5 + Math.random() * 1.5,
-      opacity: 0.03 + Math.random() * 0.07,
-      direction: Math.random() > 0.5 ? 1 : -1,
-      color: [
-        '#255F38', // primary
-        '#1F7D53', // accent
-        '#18230F', // secondary
-        '#4A7856', // highlight
-      ][Math.floor(Math.random() * 4)],
-      xOffset: Math.random() * 10,
-      yOffset: Math.random() * 10
-    }));
-  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -66,27 +33,6 @@ export default function HomePage() {
       setMousePosition({
         x: e.clientX / window.innerWidth,
         y: e.clientY / window.innerHeight
-      });
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
-
-  // Parallax effect for hero section
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!heroRef.current) return;
-      
-      const elements = heroRef.current.querySelectorAll('.parallax-element');
-      const x = e.clientX / window.innerWidth;
-      const y = e.clientY / window.innerHeight;
-      
-      elements.forEach((el) => {
-        const depth = parseFloat((el as HTMLElement).dataset.depth || '0');
-        const moveX = (x - 0.5) * depth * 50;
-        const moveY = (y - 0.5) * depth * 50;
-        (el as HTMLElement).style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
       });
     };
 
@@ -131,32 +77,7 @@ export default function HomePage() {
             transformStyle: 'preserve-3d'
           }}
         >
-          {/* Floating background elements */}
-          {backgroundElementsRef.current.map((element, index) => {
-            // Calculate position based on time for continuous animation
-            const time = (Date.now() - animationStartTimeRef.current) / 1000;
-            const yMovement = Math.sin(time * element.speed + index) * 5;
-            const xMovement = Math.cos(time * element.speed * 0.5 + index) * 3;
-            
-            return (
-              <div
-                key={`hero-float-${index}`}
-                className="floating-element absolute rounded-full"
-                style={{
-                  left: `calc(${element.x}% + ${xMovement + element.xOffset}px)`,
-                  top: `calc(${element.y}% + ${yMovement + element.yOffset}px)`,
-                  width: `${element.size}px`,
-                  height: `${element.size}px`,
-                  backgroundColor: element.color,
-                  opacity: element.opacity,
-                  transform: `rotate(${time * 10 * element.direction}deg)`,
-                  transition: 'none',
-                }}
-              />
-            );
-          })}
-
-          <div className="container mx-auto px-4 relative z-10">
+          <div className="container relative z-10">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-7xl md:text-9xl font-bold tracking-tight mb-8 transform transition-transform duration-500"
                   style={{ 
@@ -173,47 +94,35 @@ export default function HomePage() {
                 Discover your next favorite meal with our intelligent food selection and meal planning platform. 
                 No more decision fatigue when it comes to what to eat.
               </p>
-              {mounted && (
-                <div className="flex flex-col sm:flex-row justify-center gap-4 transform transition-transform duration-500"
-                     style={{ 
-                       transform: `translateZ(${scrollY * 0.02}px)`,
-                     }}>
-                  {user ? (
+              <div className="flex flex-col sm:flex-row justify-center gap-4 transform transition-transform duration-500"
+                   style={{ 
+                     transform: `translateZ(${scrollY * 0.02}px)`,
+                   }}>
+                {user ? (
+                  <Link
+                    href="/dashboard"
+                    className="btn-primary hover-3d"
+                  >
+                    Go to Dashboard
+                  </Link>
+                ) : (
+                  <>
                     <Link
-                      href="/dashboard"
+                      href="/signup"
                       className="btn-primary hover-3d"
                     >
-                      Go to Dashboard
+                      Get Started
                     </Link>
-                  ) : (
-                    <>
-                      <Link
-                        href="/signup"
-                        className="btn-primary hover-3d"
-                      >
-                        Get Started
-                      </Link>
-                      <Link
-                        href="/login"
-                        className="btn-secondary hover-3d"
-                      >
-                        Log In
-                      </Link>
-                    </>
-                  )}
-                </div>
-              )}
+                    <Link
+                      href="/login"
+                      className="btn-secondary hover-3d"
+                    >
+                      Log In
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-          
-          {/* Parallax elements */}
-          <div className="parallax-element" data-depth="0.2" style={{position: 'absolute', top: '15%', right: '10%', width: '300px', height: '300px', backgroundColor: '#255F38', opacity: 0.1, borderRadius: '50%'}}></div>
-          <div className="parallax-element" data-depth="0.4" style={{position: 'absolute', bottom: '10%', left: '5%', width: '200px', height: '200px', backgroundColor: '#1F7D53', opacity: 0.1, borderRadius: '50%'}}></div>
-          <div className="parallax-element" data-depth="0.3" style={{position: 'absolute', top: '60%', right: '20%', width: '150px', height: '150px', backgroundColor: '#18230F', opacity: 0.1, borderRadius: '50%'}}></div>
-          
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-accent animate-bounce">
-            <FaArrowDown />
-            <span className="sr-only">Scroll down</span>
           </div>
         </section>
 
@@ -221,37 +130,8 @@ export default function HomePage() {
         <section 
           ref={aboutRef}
           className="py-32 bg-primary text-light relative"
-          style={{ 
-            perspective: '1000px',
-            transformStyle: 'preserve-3d'
-          }}
         >
-          {/* Floating background elements for About section */}
-          {backgroundElementsRef.current.slice(0, 8).map((element, index) => {
-            // Calculate position based on time for continuous animation
-            const time = (Date.now() - animationStartTimeRef.current) / 1000;
-            const yMovement = Math.sin(time * element.speed + index + 10) * 5;
-            const xMovement = Math.cos(time * element.speed * 0.5 + index + 10) * 3;
-            
-            return (
-              <div
-                key={`about-float-${index}`}
-                className="floating-element absolute rounded-full"
-                style={{
-                  left: `calc(${element.x}% + ${xMovement + element.xOffset}px)`,
-                  top: `calc(${element.y}% + ${yMovement + element.yOffset}px)`,
-                  width: `${element.size * 0.8}px`,
-                  height: `${element.size * 0.8}px`,
-                  backgroundColor: '#fff',
-                  opacity: element.opacity * 0.5,
-                  transform: `rotate(${time * 10 * element.direction}deg)`,
-                  transition: 'none',
-                }}
-              />
-            );
-          })}
-
-          <div className="container mx-auto px-4 relative z-10">
+          <div className="container relative z-10">
             <div className="max-w-3xl mx-auto text-center transform transition-all duration-700"
                  style={{ 
                    transform: `translateZ(${Math.max(0, (scrollY - 500) * 0.1)}px) rotateX(${Math.max(0, Math.min(10, (scrollY - 500) * 0.01))}deg)`,
@@ -268,49 +148,14 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
-          
-          {/* 3D elements */}
-          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-accent opacity-5 rounded-full transform"
-               style={{ transform: `translateZ(${(scrollY - 500) * 0.2}px) translateX(${(scrollY - 500) * -0.1}px)` }}></div>
-          <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-highlight opacity-5 rounded-full transform"
-               style={{ transform: `translateZ(${(scrollY - 500) * 0.15}px) translateX(${(scrollY - 500) * 0.05}px)` }}></div>
         </section>
 
         {/* Features Section */}
         <section 
           ref={featuresRef}
           className="py-32 bg-light relative"
-          style={{ 
-            perspective: '1000px',
-            transformStyle: 'preserve-3d'
-          }}
         >
-          {/* Floating background elements for Features section */}
-          {backgroundElementsRef.current.slice(5, 12).map((element, index) => {
-            // Calculate position based on time for continuous animation
-            const time = (Date.now() - animationStartTimeRef.current) / 1000;
-            const yMovement = Math.sin(time * element.speed + index + 20) * 5;
-            const xMovement = Math.cos(time * element.speed * 0.5 + index + 20) * 3;
-            
-            return (
-              <div
-                key={`features-float-${index}`}
-                className="floating-element absolute rounded-full"
-                style={{
-                  left: `calc(${element.x}% + ${xMovement + element.xOffset}px)`,
-                  top: `calc(${element.y}% + ${yMovement + element.yOffset}px)`,
-                  width: `${element.size * 0.7}px`,
-                  height: `${element.size * 0.7}px`,
-                  backgroundColor: element.color,
-                  opacity: element.opacity,
-                  transform: `rotate(${time * 10 * element.direction}deg)`,
-                  transition: 'none',
-                }}
-              />
-            );
-          })}
-
-          <div className="container mx-auto px-4 relative z-10">
+          <div className="container relative z-10">
             <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 text-primary transform transition-all duration-700"
                 style={{ 
                   transform: `translateZ(${Math.max(0, (scrollY - 1000) * 0.1)}px)`,
@@ -337,44 +182,13 @@ export default function HomePage() {
               ))}
             </div>
           </div>
-          
-          {/* 3D elements */}
-          <div className="absolute top-1/3 left-10 w-24 h-24 bg-accent opacity-5 rounded-full transform"
-               style={{ transform: `translateZ(${(scrollY - 1000) * 0.2}px) translateY(${(scrollY - 1000) * -0.1}px)` }}></div>
-          <div className="absolute bottom-1/3 right-10 w-36 h-36 bg-highlight opacity-5 rounded-full transform"
-               style={{ transform: `translateZ(${(scrollY - 1000) * 0.15}px) translateY(${(scrollY - 1000) * 0.05}px)` }}></div>
         </section>
 
         {/* CTA Section */}
         <section className="py-20 bg-secondary text-light relative overflow-hidden">
-          {/* Floating background elements for CTA section */}
-          {backgroundElementsRef.current.slice(3, 7).map((element, index) => {
-            // Calculate position based on time for continuous animation
-            const time = (Date.now() - animationStartTimeRef.current) / 1000;
-            const yMovement = Math.sin(time * element.speed + index + 30) * 5;
-            const xMovement = Math.cos(time * element.speed * 0.5 + index + 30) * 3;
-            
-            return (
-              <div
-                key={`cta-float-${index}`}
-                className="floating-element absolute rounded-full"
-                style={{
-                  left: `calc(${element.x}% + ${xMovement + element.xOffset}px)`,
-                  top: `calc(${element.y}% + ${yMovement + element.yOffset}px)`,
-                  width: `${element.size * 0.6}px`,
-                  height: `${element.size * 0.6}px`,
-                  backgroundColor: '#fff',
-                  opacity: element.opacity * 0.3,
-                  transform: `rotate(${time * 10 * element.direction}deg)`,
-                  transition: 'none',
-                }}
-              />
-            );
-          })}
-
-          <div className="container mx-auto px-4 text-center relative z-10">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Transform Your Meal Planning?</h2>
-            <p className="text-lg md:text-xl mb-12 max-w-3xl mx-auto">
+          <div className="container relative z-10">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-center">Ready to Transform Your Meal Planning?</h2>
+            <p className="text-lg md:text-xl mb-12 max-w-3xl mx-auto text-center">
               Join Wheel of Meals today and take the guesswork out of "What's for dinner?"
             </p>
             {mounted && (
