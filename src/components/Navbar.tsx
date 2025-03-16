@@ -36,7 +36,6 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    // Close the account menu when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
       if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
         setIsAccountMenuOpen(false);
@@ -54,77 +53,98 @@ export default function Navbar() {
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 bg-light transition-all duration-300 ${isScrolled ? 'py-3 shadow-subtle border-b border-border' : 'py-5'}`}>
+    <nav 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled 
+          ? 'bg-primary/95 backdrop-blur-md shadow-lg py-3' 
+          : 'bg-primary py-5'
+      }`}
+    >
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center">
-          <Link href="/" className="flex items-center">
-            <span className="font-display font-bold text-xl tracking-tight text-primary">
+          {/* Logo */}
+          <Link href="/" className="flex items-center group">
+            <span className="font-display font-bold text-2xl tracking-tight text-white group-hover:text-highlight transition-colors">
               WHEELOFMEALS
             </span>
           </Link>
 
           {/* Mobile menu button */}
           <button
-            className="md:hidden text-primary focus:outline-none"
+            className="md:hidden text-white/90 hover:text-white focus:outline-none"
             onClick={toggleMenu}
             aria-label="Toggle menu"
           >
-            {isMenuOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+            {isMenuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
           </button>
 
-          {/* Desktop menu */}
-          <div className="hidden md:flex items-center space-x-8">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-1">
             <Link 
               href="/" 
-              className={`nav-link ${isActive('/') ? 'nav-link-active' : ''}`}
+              className={`px-4 py-2 text-white/90 hover:text-white transition-colors relative group ${
+                isActive('/') ? 'text-white' : ''
+              }`}
             >
-              Home
-            </Link>
-            <Link 
-              href="/about" 
-              className={`nav-link ${isActive('/about') ? 'nav-link-active' : ''}`}
-            >
-              About
+              <span>Home</span>
+              <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-highlight transform origin-left transition-transform duration-300 ${
+                isActive('/') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+              }`}></span>
             </Link>
             <Link 
               href="/dashboard" 
-              className={`nav-link ${pathname.startsWith('/dashboard') ? 'nav-link-active' : ''}`}
+              className={`px-4 py-2 text-white/90 hover:text-white transition-colors relative group ${
+                pathname.startsWith('/dashboard') ? 'text-white' : ''
+              }`}
             >
-              Dashboard
+              <span>Dashboard</span>
+              <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-highlight transform origin-left transition-transform duration-300 ${
+                pathname.startsWith('/dashboard') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+              }`}></span>
             </Link>
+            <Link 
+              href="/about" 
+              className={`px-4 py-2 text-white/90 hover:text-white transition-colors relative group ${
+                isActive('/about') ? 'text-white' : ''
+              }`}
+            >
+              <span>About</span>
+              <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-highlight transform origin-left transition-transform duration-300 ${
+                isActive('/about') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+              }`}></span>
+            </Link>
+            
             {user ? (
-              <div className="relative" ref={accountMenuRef}>
+              <div className="relative ml-2" ref={accountMenuRef}>
                 <button 
-                  className="flex items-center nav-link"
                   onClick={toggleAccountMenu}
+                  className="flex items-center px-4 py-2 text-white/90 hover:text-white transition-colors"
                   aria-expanded={isAccountMenuOpen}
                   aria-haspopup="true"
                 >
+                  <FaUserCircle className="text-xl mr-2" />
                   <span>Account</span>
-                  <FaChevronDown className={`ml-1 text-xs opacity-70 transition-transform duration-200 ${isAccountMenuOpen ? 'rotate-180' : ''}`} />
+                  <FaChevronDown className={`ml-2 text-xs transition-transform duration-200 ${
+                    isAccountMenuOpen ? 'rotate-180' : ''
+                  }`} />
                 </button>
+                
                 {isAccountMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 origin-top-right bg-light border border-border rounded-md shadow-medium py-1 z-10">
+                  <div className="absolute right-0 mt-2 w-48 py-2 bg-white rounded-xl shadow-xl border border-gray-100 backdrop-blur-lg">
                     <Link
                       href="/profile"
-                      className="block px-4 py-2 text-sm text-text-primary hover:bg-accent hover:bg-opacity-5 hover:text-accent"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-accent hover:text-white transition-colors"
                     >
-                      <FaUserCircle className="inline mr-2 text-accent" />
+                      <FaUserCircle className="mr-2" />
                       Profile
                     </Link>
-                    <Link
-                      href="/dashboard"
-                      className="block px-4 py-2 text-sm text-text-primary hover:bg-accent hover:bg-opacity-5 hover:text-accent"
-                    >
-                      Dashboard
-                    </Link>
-                    <div className="divider my-1 mx-4"></div>
+                    <div className="h-px bg-gray-200 my-2 mx-4"></div>
                     <button
                       onClick={() => {
                         signOut();
                         setIsAccountMenuOpen(false);
                       }}
-                      className="block w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-accent hover:bg-opacity-5 hover:text-accent"
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                     >
                       Sign Out
                     </button>
@@ -134,7 +154,7 @@ export default function Navbar() {
             ) : (
               <Link
                 href="/login"
-                className="nav-link"
+                className="ml-2 px-4 py-2 bg-accent hover:bg-highlight text-white rounded-lg transition-colors"
               >
                 Login
               </Link>
@@ -144,46 +164,59 @@ export default function Navbar() {
 
         {/* Mobile menu */}
         {isMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t border-border pt-4">
-            <div className="flex flex-col space-y-4">
+          <div className="md:hidden mt-4 pb-4 border-t border-white/10 pt-4">
+            <div className="flex flex-col space-y-3">
               <Link
                 href="/"
-                className={`px-2 py-1 ${isActive('/') ? 'text-accent' : 'text-text-primary hover:text-accent'}`}
+                className={`px-2 py-2 rounded-lg transition-colors ${
+                  isActive('/') 
+                    ? 'bg-white/10 text-white' 
+                    : 'text-white/80 hover:bg-white/5 hover:text-white'
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Home
               </Link>
               <Link
-                href="/about"
-                className={`px-2 py-1 ${isActive('/about') ? 'text-accent' : 'text-text-primary hover:text-accent'}`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                About
-              </Link>
-              <Link
                 href="/dashboard"
-                className={`px-2 py-1 ${pathname.startsWith('/dashboard') ? 'text-accent' : 'text-text-primary hover:text-accent'}`}
+                className={`px-2 py-2 rounded-lg transition-colors ${
+                  pathname.startsWith('/dashboard')
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/80 hover:bg-white/5 hover:text-white'
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Dashboard
               </Link>
+              <Link
+                href="/about"
+                className={`px-2 py-2 rounded-lg transition-colors ${
+                  isActive('/about')
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/80 hover:bg-white/5 hover:text-white'
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                About
+              </Link>
+              
               {user ? (
                 <>
+                  <div className="h-px bg-white/10 my-2"></div>
                   <Link
                     href="/profile"
-                    className="px-2 py-1 text-text-primary hover:text-accent"
+                    className="px-2 py-2 rounded-lg text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <FaUserCircle className="inline mr-2 text-accent" />
+                    <FaUserCircle className="inline mr-2" />
                     Profile
                   </Link>
-                  <div className="divider my-2"></div>
                   <button
                     onClick={() => {
                       signOut();
                       setIsMenuOpen(false);
                     }}
-                    className="text-left px-2 py-1 text-text-primary hover:text-accent"
+                    className="px-2 py-2 rounded-lg text-left text-red-300 hover:bg-white/5 hover:text-red-200 transition-colors"
                   >
                     Sign Out
                   </button>
@@ -191,7 +224,7 @@ export default function Navbar() {
               ) : (
                 <Link
                   href="/login"
-                  className="px-2 py-1 text-text-primary hover:text-accent"
+                  className="px-2 py-2 bg-accent hover:bg-highlight text-white rounded-lg transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Login

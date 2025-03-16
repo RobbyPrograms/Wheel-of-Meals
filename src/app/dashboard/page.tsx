@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight, FaEdit } from 'react-icons/fa';
+import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight, FaLightbulb } from 'react-icons/fa';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +10,7 @@ import { autoSetupDatabase } from '@/lib/auto-setup';
 import FoodsPanel from '@/components/FoodsPanel';
 import MealPlansPanel from '@/components/MealPlansPanel';
 import MealPlansDashboard from '@/components/MealPlansDashboard';
+import AISuggestions from '@/components/AISuggestions';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -23,17 +24,16 @@ export default function Dashboard() {
   const [isSettingUpDatabase, setIsSettingUpDatabase] = useState(false);
   const [isFoodsPanelOpen, setIsFoodsPanelOpen] = useState(false);
   const [isMealPlansPanelOpen, setIsMealPlansPanelOpen] = useState(false);
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
 
   // Check for query parameters to open panels and clear them after
   useEffect(() => {
     const panel = searchParams.get('panel');
     if (panel === 'foods') {
       setIsFoodsPanelOpen(true);
-      // Clear the query parameter
       router.replace('/dashboard');
     } else if (panel === 'meal-plans') {
       setIsMealPlansPanelOpen(true);
-      // Clear the query parameter
       router.replace('/dashboard');
     }
   }, [searchParams, router]);
@@ -62,7 +62,6 @@ export default function Dashboard() {
         .eq('user_id', user.id);
       
       if (foodError) {
-        // Check if this is a table doesn't exist error
         if (foodError.code === '42P01') {
           throw new Error('Database tables not set up properly. Please try refreshing the page.');
         }
@@ -105,11 +104,9 @@ export default function Dashboard() {
     setError(null);
     
     try {
-      // Attempt to automatically set up the database
       const setupSuccess = await autoSetupDatabase();
       
       if (setupSuccess) {
-        // If setup was successful, reload dashboard data
         await fetchDashboardData();
       } else {
         setError('Unable to set up database. Please try again later.');
@@ -122,15 +119,36 @@ export default function Dashboard() {
   };
 
   const handleDataUpdated = useCallback(async () => {
-    // Refresh dashboard data when data is added, edited, or deleted
     await fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Add this function to handle meal plan view
   const handleMealPlanView = useCallback((planId?: string) => {
     setIsMealPlansPanelOpen(true);
-    // You can add logic here to show the specific plan if needed
   }, []);
+
+  const handleAddToFavorites = async (meal: { name: string; description: string; recipe: string }) => {
+    try {
+      const { error } = await supabase
+        .from('favorite_foods')
+        .insert([
+          {
+            name: meal.name,
+            ingredients: meal.description,
+            recipe: meal.recipe,
+            user_id: user?.id
+          }
+        ]);
+
+      if (error) throw error;
+      await fetchDashboardData();
+    } catch (error) {
+      console.error('Error adding meal:', error);
+    }
+  };
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <>
@@ -142,7 +160,7 @@ export default function Dashboard() {
       </div>
 
       {/* Feature Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
         <button 
           onClick={() => setIsFoodsPanelOpen(true)}
           className="border border-border hover:shadow-medium transition-all duration-300 text-left"
@@ -190,6 +208,23 @@ export default function Dashboard() {
             </div>
           </div>
         </Link>
+
+        <button 
+          onClick={() => setIsAIPanelOpen(true)}
+          className="border border-border hover:shadow-medium transition-all duration-300 text-left"
+        >
+          <div className="p-6">
+            <div className="bg-primary text-light w-12 h-12 flex items-center justify-center rounded-full mb-4">
+              <FaLightbulb className="text-xl" />
+            </div>
+            <h3 className="text-lg font-medium mb-2 text-primary">AI Suggestions</h3>
+            <p className="text-text-secondary text-sm mb-4">Get personalized meal ideas</p>
+            <div className="flex items-center text-accent text-sm font-medium">
+              <span>View Details</span>
+              <FaChevronRight className="ml-2 text-xs" />
+            </div>
+          </div>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -293,7 +328,7 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Meal Plans */}
-      <div className="mb-8">
+      <div className="mt-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-medium text-primary">Recent Meal Plans</h2>
           <button 
@@ -318,6 +353,26 @@ export default function Dashboard() {
         onClose={handleMealPlansPanelClose} 
         onMealPlanAdded={handleDataUpdated}
       />
+
+      {/* AI Suggestions Panel */}
+      {isAIPanelOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-primary">AI Meal Suggestions</h2>
+              <button
+                onClick={() => setIsAIPanelOpen(false)}
+                className="text-text-secondary hover:text-primary transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6">
+              <AISuggestions onAddToFavorites={handleAddToFavorites} />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 } 

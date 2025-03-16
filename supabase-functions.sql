@@ -17,6 +17,9 @@ BEGIN
       user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       ingredients TEXT,
+      recipe TEXT,
+      rating INTEGER DEFAULT 0 CHECK (rating >= 0 AND rating <= 5),
+      meal_types TEXT[] DEFAULT '{}',
       created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
     );
 

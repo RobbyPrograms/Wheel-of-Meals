@@ -3,13 +3,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { FaPlus, FaTrash, FaUtensils, FaTimes, FaEdit, FaSave, FaChevronLeft } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaUtensils, FaTimes, FaEdit, FaSave, FaChevronLeft, FaBook, FaStar as FaStarSolid } from 'react-icons/fa';
+import { FaRegStar as FaStarOutline } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+
+type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert';
 
 type Food = {
   id: string;
   name: string;
   ingredients: string;
+  recipe: string;
+  rating: number;
+  meal_types: MealType[];
 };
 
 interface FoodsPanelProps {
@@ -21,13 +27,20 @@ interface FoodsPanelProps {
 export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelProps) {
   const { user, refreshSession } = useAuth();
   const [foods, setFoods] = useState<Food[]>([]);
-  const [newFood, setNewFood] = useState({ name: '', ingredients: '' });
+  const [newFood, setNewFood] = useState({ 
+    name: '', 
+    ingredients: '', 
+    recipe: '',
+    rating: 0,
+    meal_types: [] as MealType[]
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isAddingFood, setIsAddingFood] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingFood, setEditingFood] = useState<Food | null>(null);
+  const [selectedFood, setSelectedFood] = useState<Food | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,31 +50,24 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
   }, [isOpen, user]);
 
   const fetchFoods = async () => {
+    if (!user) return;
+
     try {
       setLoading(true);
       setError(null);
-      
-      if (!user) {
-        setError('You must be logged in to view your favorite foods');
-        setLoading(false);
-        return;
-      }
-      
+
       const { data, error } = await supabase
         .from('favorite_foods')
-        .select('*')
-        .eq('user_id', user.id);
+        .select('id, name, ingredients, recipe, rating, meal_types')
+        .eq('user_id', user.id)
+        .order('name');
 
-      if (error) {
-        console.error('Error fetching foods:', error);
-        setError(`Failed to load foods: ${error.message}`);
-        return;
-      }
+      if (error) throw error;
 
       setFoods(data || []);
-    } catch (err: any) {
-      console.error('Unexpected error fetching foods:', err);
-      setError(`An unexpected error occurred: ${err.message}`);
+    } catch (err) {
+      console.error('Error fetching foods:', err);
+      setError('Failed to fetch foods. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -69,60 +75,38 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
 
   const handleAddFood = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    
     if (!user) {
-      setError('You must be logged in to add favorite foods');
-      await refreshSession();
-      return;
-    }
-    
-    if (!newFood.name.trim()) {
-      setError('Food name is required');
+      setError('You must be logged in to add foods');
       return;
     }
 
     try {
       setLoading(true);
-      
+      setError(null);
+
       const foodData = {
         user_id: user.id,
         name: newFood.name.trim(),
         ingredients: newFood.ingredients.trim(),
+        recipe: newFood.recipe.trim(),
+        rating: newFood.rating,
+        meal_types: newFood.meal_types,
       };
       
-      const { data, error } = await supabase
+      const { error: insertError } = await supabase
         .from('favorite_foods')
-        .insert(foodData)
-        .select();
+        .insert([foodData]);
 
-      if (error) {
-        console.error('Error adding food:', error);
-        
-        if (error.code === '42501' || error.message.includes('permission')) {
-          setError('Permission denied. Make sure RLS policies are set up correctly.');
-        } 
-        else if (error.code === '23503') {
-          setError('User ID not found. Please log out and log back in.');
-        }
-        else if (error.code === '42P01') {
-          setError('Table "favorite_foods" does not exist. Please set up your database correctly.');
-        }
-        else {
-          setError(`Failed to add food: ${error.message}`);
-        }
-        return;
-      }
+      if (insertError) throw insertError;
 
       setSuccess('Food added successfully!');
-      setNewFood({ name: '', ingredients: '' });
+      setNewFood({ name: '', ingredients: '', recipe: '', rating: 0, meal_types: [] });
       setIsAddingFood(false);
       await fetchFoods();
       if (onFoodAdded) onFoodAdded();
-    } catch (err: any) {
-      console.error('Unexpected error adding food:', err);
-      setError(`An unexpected error occurred: ${err.message}`);
+    } catch (err) {
+      console.error('Error adding food:', err);
+      setError('Failed to add food. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -140,7 +124,8 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
         .from('favorite_foods')
         .update({
           name: editingFood.name,
-          ingredients: editingFood.ingredients
+          ingredients: editingFood.ingredients,
+          recipe: editingFood.recipe
         })
         .eq('id', editingFood.id)
         .eq('user_id', user?.id);
@@ -203,6 +188,42 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
 
   const cancelEditing = () => {
     setEditingFood(null);
+  };
+
+  const mealTypeOptions: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert'];
+
+  const handleMealTypeToggle = (type: MealType) => {
+    setNewFood(prev => {
+      const types = prev.meal_types.includes(type)
+        ? prev.meal_types.filter(t => t !== type)
+        : [...prev.meal_types, type];
+      return { ...prev, meal_types: types };
+    });
+  };
+
+  const handleRatingChange = (rating: number) => {
+    setNewFood(prev => ({ ...prev, rating }));
+  };
+
+  const StarRating = ({ rating, onRatingChange }: { rating: number; onRatingChange: (rating: number) => void }) => {
+    return (
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => onRatingChange(star)}
+            className="text-xl focus:outline-none"
+          >
+            {star <= rating ? (
+              <FaStarSolid className="text-yellow-400" />
+            ) : (
+              <FaStarOutline className="text-gray-300 hover:text-yellow-400" />
+            )}
+          </button>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -316,9 +337,39 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                                 required
                               />
                             </div>
+
+                            <div className="mb-4">
+                              <label className="block text-sm font-medium text-text-secondary mb-1">
+                                Meal Type
+                              </label>
+                              <div className="flex flex-wrap gap-2">
+                                {mealTypeOptions.map((type) => (
+                                  <button
+                                    key={type}
+                                    type="button"
+                                    onClick={() => handleMealTypeToggle(type)}
+                                    className={`px-3 py-1 rounded-full text-sm ${
+                                      newFood.meal_types.includes(type)
+                                        ? 'bg-accent text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                  >
+                                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="mb-4">
+                              <label className="block text-sm font-medium text-text-secondary mb-1">
+                                Rating
+                              </label>
+                              <StarRating rating={newFood.rating} onRatingChange={handleRatingChange} />
+                            </div>
+
                             <div className="mb-4">
                               <label className="block text-sm font-medium text-text-secondary mb-1" htmlFor="ingredients">
-                                Main Ingredients (optional)
+                                Main Ingredients
                               </label>
                               <textarea
                                 id="ingredients"
@@ -327,6 +378,20 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                                 onChange={(e) => setNewFood({ ...newFood, ingredients: e.target.value })}
                                 placeholder="e.g., Dough, tomato sauce, cheese"
                                 rows={3}
+                              />
+                            </div>
+
+                            <div className="mb-4">
+                              <label className="block text-sm font-medium text-text-secondary mb-1" htmlFor="recipe">
+                                Recipe Instructions
+                              </label>
+                              <textarea
+                                id="recipe"
+                                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                                value={newFood.recipe}
+                                onChange={(e) => setNewFood({ ...newFood, recipe: e.target.value })}
+                                placeholder="e.g., 1. Preheat oven to 450°F&#10;2. Roll out the dough&#10;3. Add toppings&#10;4. Bake for 15-20 minutes"
+                                rows={5}
                               />
                             </div>
                             <div className="flex justify-end space-x-3">
@@ -379,7 +444,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                     </div>
                   </div>
 
-                  {/* Foods List */}
+                  {/* Food List */}
                   {loading ? (
                     <div className="flex justify-center items-center h-64">
                       <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
@@ -404,83 +469,42 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                   ) : (
                     <div className="space-y-4">
                       {filteredFoods.map((food) => (
-                        <motion.div
+                        <div
                           key={food.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="bg-white border border-border rounded-lg overflow-hidden shadow-sm"
+                          className="bg-white border border-border rounded-lg p-4 hover:border-accent transition-colors duration-200"
                         >
-                          {editingFood && editingFood.id === food.id ? (
-                            <div className="p-5">
-                              <form onSubmit={handleUpdateFood}>
-                                <div className="mb-3">
-                                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                                    Food Name
-                                  </label>
-                                  <input
-                                    type="text"
-                                    className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                                    value={editingFood.name}
-                                    onChange={(e) => setEditingFood({...editingFood, name: e.target.value})}
-                                    required
-                                  />
-                                </div>
-                                <div className="mb-4">
-                                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                                    Ingredients
-                                  </label>
-                                  <textarea
-                                    className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                                    value={editingFood.ingredients}
-                                    onChange={(e) => setEditingFood({...editingFood, ingredients: e.target.value})}
-                                    rows={2}
-                                  />
-                                </div>
-                                <div className="flex space-x-2">
-                                  <button
-                                    type="submit"
-                                    className="bg-accent hover:bg-accent-dark text-white px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
-                                  >
-                                    <FaSave className="mr-1" />
-                                    Save
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={cancelEditing}
-                                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
-                                  >
-                                    <FaTimes className="mr-1" />
-                                    Cancel
-                                  </button>
-                                </div>
-                              </form>
-                            </div>
-                          ) : (
-                            <div className="p-5">
-                              <h3 className="font-medium text-lg text-primary mb-2">{food.name}</h3>
-                              <p className="text-text-secondary text-sm mb-4">
-                                {food.ingredients || "No ingredients listed"}
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <h3 className="font-medium text-primary">{food.name}</h3>
+                              <p className="text-sm text-text-secondary line-clamp-1">
+                                {food.ingredients || 'No ingredients listed'}
                               </p>
-                              <div className="flex space-x-2">
-                                <button
-                                  onClick={() => startEditing(food)}
-                                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
-                                >
-                                  <FaEdit className="mr-1" />
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteFood(food.id)}
-                                  className="bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
-                                >
-                                  <FaTrash className="mr-1" />
-                                  Delete
-                                </button>
-                              </div>
                             </div>
-                          )}
-                        </motion.div>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => setSelectedFood(food)}
+                                className="p-2 text-accent hover:bg-accent/10 rounded-full transition-colors"
+                                title="View Details"
+                              >
+                                <FaBook />
+                              </button>
+                              <button
+                                onClick={() => startEditing(food)}
+                                className="p-2 text-accent hover:bg-accent/10 rounded-full transition-colors"
+                                title="Edit"
+                              >
+                                <FaEdit />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteFood(food.id)}
+                                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                title="Delete"
+                              >
+                                <FaTrash />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -488,6 +512,101 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
               </div>
             </div>
           </motion.div>
+
+          {/* Food Detail Modal */}
+          <AnimatePresence>
+            {selectedFood && (
+              <motion.div
+                className="fixed inset-0 z-50 overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setSelectedFood(null)}></div>
+                <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <motion.div
+                    className="bg-white rounded-xl shadow-xl w-full max-w-lg"
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h2 className="text-2xl font-bold text-primary">{selectedFood.name}</h2>
+                          <div className="flex items-center gap-4 mt-2">
+                            <div className="flex items-center">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <FaStarSolid
+                                  key={star}
+                                  className={star <= selectedFood.rating ? 'text-yellow-400' : 'text-gray-200'}
+                                />
+                              ))}
+                            </div>
+                            <div className="flex gap-2">
+                              {selectedFood.meal_types.map((type) => (
+                                <span
+                                  key={type}
+                                  className="px-2 py-1 bg-accent/10 text-accent rounded-full text-xs"
+                                >
+                                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSelectedFood(null)}
+                          className="text-text-secondary hover:text-primary transition-colors"
+                        >
+                          <FaTimes />
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-6">
+                        <div>
+                          <h3 className="text-lg font-semibold text-primary mb-2">Ingredients</h3>
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            {selectedFood.ingredients ? (
+                              <div className="space-y-2">
+                                {selectedFood.ingredients.split(',').map((ingredient, index) => (
+                                  <div key={index} className="flex items-center">
+                                    <span className="w-2 h-2 bg-accent rounded-full mr-2"></span>
+                                    <span className="text-text-secondary">{ingredient.trim()}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-text-secondary italic">No ingredients listed</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-lg font-semibold text-primary mb-2">Recipe Instructions</h3>
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            {selectedFood.recipe ? (
+                              <div className="space-y-2">
+                                {selectedFood.recipe.split('\n').map((step, index) => (
+                                  <div key={index} className="flex items-start">
+                                    <span className="text-accent font-medium mr-2">{index + 1}.</span>
+                                    <span className="text-text-secondary">{step.trim()}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-text-secondary italic">No recipe instructions available</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       )}
     </AnimatePresence>
