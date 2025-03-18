@@ -133,58 +133,98 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, username: string) => {
     setLoading(true);
     try {
-      // First check if username is available
-      const { data: existingUser, error: checkError } = await supabase
+      console.log('Starting signup process...', { email, username });
+      
+      // Basic validation
+      if (!email || !password || !username) {
+        console.error('Missing required fields');
+        return { error: new Error('Email, password, and username are required') };
+      }
+
+      if (username.length < 3 || username.length > 24) {
+        console.error('Invalid username length');
+        return { error: new Error('Username must be between 3 and 24 characters') };
+      }
+
+      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        console.error('Invalid username format');
+        return { error: new Error('Username can only contain letters, numbers, and underscores') };
+      }
+
+      // First, check if the username is available
+      const { data: existingUsers, error: searchError } = await supabase
         .from('user_profiles')
         .select('username')
         .eq('username', username)
-        .single();
+        .limit(1);
 
-      if (existingUser) {
+      if (searchError) {
+        console.error('Error checking username availability:', searchError);
+        return { error: new Error('Error checking username availability') };
+      }
+
+      if (existingUsers && existingUsers.length > 0) {
+        console.error('Username already taken');
         return { error: new Error('Username already taken') };
       }
 
-      // Sign up the user with metadata
-      const { data, error } = await supabase.auth.signUp({
+      console.log('Username is available, proceeding with signup...');
+
+      // Sign up the user
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            username: username // Include username in metadata
-          }
+            username: username,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       });
-      
-      if (error) {
-        console.error('Sign up error:', error);
-        return { error };
+
+      if (signUpError) {
+        console.error('Signup error:', signUpError);
+        return { error: signUpError };
       }
 
-      if (!data.user) {
+      if (!signUpData?.user) {
+        console.error('No user data returned');
         return { error: new Error('No user data returned from signup') };
       }
 
-      // Wait a moment for the trigger to create the profile
+      console.log('Signup successful, user created:', signUpData.user.id);
+
+      // Wait briefly for the trigger to execute
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Verify the profile was created
+      // Verify profile creation
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('id', data.user.id)
+        .eq('id', signUpData.user.id)
         .single();
 
       if (profileError || !profile) {
-        console.error('Profile verification error:', profileError);
-        return { error: new Error('Failed to verify user profile creation') };
+        console.error('Error verifying profile creation:', profileError);
+        // Profile creation might have failed, but user is created
+        // You might want to handle this case differently
+      } else {
+        console.log('Profile created successfully:', profile);
       }
 
-      console.log('Sign up successful:', data.user.id);
-      await refreshSession();
+      // Set session if available
+      if (signUpData.session) {
+        console.log('Setting session...');
+        setSession(signUpData.session);
+        setUser(signUpData.user);
+      } else {
+        console.log('No session available, email confirmation may be required');
+      }
+
       return { error: null };
-    } catch (err: any) {
-      console.error('Unexpected sign up error:', err);
-      return { error: err };
+    } catch (err) {
+      console.error('Unexpected error in signUp:', err);
+      return { error: err instanceof Error ? err : new Error('An unexpected error occurred') };
     } finally {
       setLoading(false);
     }
