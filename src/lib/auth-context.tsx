@@ -10,7 +10,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
 };
@@ -130,17 +130,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, username: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      // First check if username is available
+      const { data: existingUser, error: checkError } = await supabase
+        .from('user_profiles')
+        .select('username')
+        .eq('username', username)
+        .single();
+
+      if (existingUser) {
+        return { error: new Error('Username already taken') };
+      }
+
+      // Sign up the user with metadata
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username: username // Include username in metadata
+          }
+        }
+      });
       
       if (error) {
         console.error('Sign up error:', error);
         return { error };
       }
-      
-      console.log('Sign up successful:', data.user?.id);
+
+      if (!data.user) {
+        return { error: new Error('No user data returned from signup') };
+      }
+
+      // Wait a moment for the trigger to create the profile
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Verify the profile was created
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('Profile verification error:', profileError);
+        return { error: new Error('Failed to verify user profile creation') };
+      }
+
+      console.log('Sign up successful:', data.user.id);
       await refreshSession();
       return { error: null };
     } catch (err: any) {
