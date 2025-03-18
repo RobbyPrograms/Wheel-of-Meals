@@ -19,13 +19,21 @@ export type User = {
 
 export type FavoriteFood = {
   id: string;
-  user_id: string;
   name: string;
-  ingredients: string;
-  recipe: string;
-  rating: number;
-  meal_types: string[];
+  ingredients: string[];
+  recipe: string | null;
+  description: string | null;
   created_at: string;
+  user_id: string;
+};
+
+export type UserProfile = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type MealPlan = {

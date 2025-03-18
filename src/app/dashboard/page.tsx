@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight, FaLightbulb, FaUserFriends } from 'react-icons/fa';
+import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight, FaLightbulb, FaUserFriends, FaCompass } from 'react-icons/fa';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -219,6 +219,21 @@ export default function Dashboard() {
           <p className="text-text-secondary">
             Connect with friends and discover their favorite meals
           </p>
+        </Link>
+
+        <Link
+          href="/dashboard/explore"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
+              <FaCompass className="text-2xl text-accent" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-primary">Explore</h3>
+              <p className="text-text-secondary">Discover meals from your friends</p>
+            </div>
+          </div>
         </Link>
 
         <button 

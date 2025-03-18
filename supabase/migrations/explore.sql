@@ -1,40 +1,4 @@
--- First, drop existing policies if they exist
-DROP POLICY IF EXISTS "Users can view all profiles" ON user_profiles;
-DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
-DROP POLICY IF EXISTS "Users can insert own profile" ON user_profiles;
-DROP POLICY IF EXISTS "Users can view their friends" ON friends;
-DROP POLICY IF EXISTS "Users can add friends" ON friends;
-DROP POLICY IF EXISTS "Users can update their friend status" ON friends;
-DROP POLICY IF EXISTS "Users can view posts from friends" ON posts;
-DROP POLICY IF EXISTS "Users can create posts" ON posts;
-DROP POLICY IF EXISTS "Users can view likes" ON post_likes;
-DROP POLICY IF EXISTS "Users can like posts" ON post_likes;
-DROP POLICY IF EXISTS "Users can unlike posts" ON post_likes;
-
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Create user_profiles table
-CREATE TABLE IF NOT EXISTS user_profiles (
-    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL CHECK (length(username) >= 3),
-    display_name TEXT,
-    avatar_url TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create friends table
-CREATE TABLE IF NOT EXISTS friends (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    friend_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(user_id, friend_id)
-);
-
--- Create posts table if it doesn't exist
+-- Create posts table
 CREATE TABLE IF NOT EXISTS posts (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -43,7 +7,7 @@ CREATE TABLE IF NOT EXISTS posts (
     UNIQUE(user_id, food_id)
 );
 
--- Create likes table if it doesn't exist
+-- Create likes table
 CREATE TABLE IF NOT EXISTS post_likes (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
@@ -53,42 +17,10 @@ CREATE TABLE IF NOT EXISTS post_likes (
 );
 
 -- Enable RLS
-ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE friends ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
 
--- Create new policies
-CREATE POLICY "Users can view all profiles"
-    ON user_profiles FOR SELECT
-    TO authenticated
-    USING (true);
-
-CREATE POLICY "Users can update own profile"
-    ON user_profiles FOR UPDATE
-    TO authenticated
-    USING (auth.uid() = id);
-
-CREATE POLICY "Users can insert own profile"
-    ON user_profiles FOR INSERT
-    TO authenticated
-    WITH CHECK (auth.uid() = id);
-
-CREATE POLICY "Users can view their friends"
-    ON friends FOR SELECT
-    TO authenticated
-    USING (auth.uid() = user_id OR auth.uid() = friend_id);
-
-CREATE POLICY "Users can add friends"
-    ON friends FOR INSERT
-    TO authenticated
-    WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update their friend status"
-    ON friends FOR UPDATE
-    TO authenticated
-    USING (auth.uid() = user_id OR auth.uid() = friend_id);
-
+-- Policies for posts
 CREATE POLICY "Users can view posts from friends"
     ON posts FOR SELECT
     TO authenticated
@@ -106,6 +38,7 @@ CREATE POLICY "Users can create posts"
     TO authenticated
     WITH CHECK (auth.uid() = user_id);
 
+-- Policies for likes
 CREATE POLICY "Users can view likes"
     ON post_likes FOR SELECT
     TO authenticated
@@ -120,23 +53,6 @@ CREATE POLICY "Users can unlike posts"
     ON post_likes FOR DELETE
     TO authenticated
     USING (auth.uid() = user_id);
-
--- Function to search users
-CREATE OR REPLACE FUNCTION search_users(search_query TEXT)
-RETURNS SETOF user_profiles
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT *
-    FROM user_profiles
-    WHERE 
-        username ILIKE '%' || search_query || '%'
-        OR display_name ILIKE '%' || search_query || '%'
-    LIMIT 10;
-END;
-$$;
 
 -- Function to get explore posts
 CREATE OR REPLACE FUNCTION get_explore_posts(p_user_id UUID)
@@ -174,7 +90,7 @@ BEGIN
             'recipe', ff.recipe
         ) as food,
         (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) as likes_count,
-        0::BIGINT as comments_count,
+        0 as comments_count,
         EXISTS (
             SELECT 1 FROM post_likes 
             WHERE post_id = p.id AND user_id = p_user_id
@@ -211,24 +127,4 @@ BEGIN
         VALUES (p_post_id, p_user_id);
     END IF;
 END;
-$$;
-
--- Trigger to create user profile on signup
-CREATE OR REPLACE FUNCTION create_profile_for_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-    INSERT INTO user_profiles (id)
-    VALUES (NEW.id);
-    RETURN NEW;
-END;
-$$;
-
--- Create the trigger
-DROP TRIGGER IF EXISTS create_profile_after_signup ON auth.users;
-CREATE TRIGGER create_profile_after_signup
-    AFTER INSERT ON auth.users
-    FOR EACH ROW
-    EXECUTE FUNCTION create_profile_for_user(); 
+$$; 
