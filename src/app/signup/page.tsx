@@ -22,15 +22,17 @@ export default function Signup() {
     e.preventDefault();
     setError(null);
     
-    // Validate username
-    if (username.length < 3) {
-      setError('Username must be at least 3 characters long');
-      return;
-    }
+    // Validate username if provided
+    if (username) {
+      if (username.length < 3) {
+        setError('Username must be at least 3 characters long');
+        return;
+      }
 
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      setError('Username can only contain letters, numbers, and underscores');
-      return;
+      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        setError('Username can only contain letters, numbers, and underscores');
+        return;
+      }
     }
     
     // Validate passwords match
@@ -48,7 +50,7 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      const { error } = await signUp(email, password, username);
+      const { error } = await signUp(email, password, username || undefined);
       
       if (error) {
         setError(error.message);
@@ -105,20 +107,19 @@ export default function Signup() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="username" className="flex items-center text-sm font-medium text-text-secondary mb-2">
-                  <FaUser className="mr-2 text-accent" /> Choose Your Wizard Name
+                  <FaUser className="mr-2 text-accent" /> Choose Your Wizard Name (Optional)
                 </label>
                 <input
                   id="username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  required
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-200"
-                  placeholder="wizardname"
+                  placeholder="wizardname (optional)"
                   pattern="^[a-zA-Z0-9_]+$"
                   minLength={3}
                 />
-                <p className="mt-1 text-sm text-text-secondary">Letters, numbers, and underscores only</p>
+                <p className="mt-1 text-sm text-text-secondary">Letters, numbers, and underscores only (optional)</p>
               </div>
 
               <div>

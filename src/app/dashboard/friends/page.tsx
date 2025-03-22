@@ -14,6 +14,7 @@ type Friend = {
   display_name: string | null;
   avatar_url: string | null;
   status: 'pending' | 'accepted' | 'rejected';
+  is_sender: boolean;
 };
 
 type UserProfile = {
@@ -39,6 +40,7 @@ export default function FriendsPage() {
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [searchResult, setSearchResult] = useState<UserProfile | null>(null);
   const [addingFriend, setAddingFriend] = useState(false);
+  const [updatingFriend, setUpdatingFriend] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -160,6 +162,29 @@ export default function FriendsPage() {
     }
   };
 
+  const handleFriendRequest = async (friendId: string, status: 'accepted' | 'rejected') => {
+    if (!user) return;
+
+    try {
+      setUpdatingFriend(friendId);
+      setError(null);
+
+      const { error: updateError } = await supabase
+        .from('friends')
+        .update({ status })
+        .match({ friend_id: user.id, user_id: friendId });
+
+      if (updateError) throw updateError;
+
+      await fetchFriends();
+    } catch (err) {
+      console.error('Error updating friend request:', err);
+      setError('Failed to update friend request. Please try again.');
+    } finally {
+      setUpdatingFriend(null);
+    }
+  };
+
   if (!user) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -277,62 +302,148 @@ export default function FriendsPage() {
           <FaSpinner className="animate-spin text-3xl text-accent mx-auto mb-4" />
           <p className="text-text-secondary">Loading friends...</p>
         </div>
-      ) : friends.length === 0 ? (
-        <div className="text-center py-8 bg-white rounded-xl shadow-md">
-          <p className="text-text-secondary mb-4">You haven't added any friends yet.</p>
-          <p className="text-sm text-text-secondary">
-            Search for friends by their username to see their favorite meals!
-          </p>
-        </div>
       ) : (
-        <div className="space-y-8">
-          {friends.map((friend) => (
-            <div key={friend.friend_id} className="bg-white rounded-xl shadow-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-primary">
-                    {friend.display_name || friend.username}
-                  </h3>
-                  <p className="text-sm text-text-secondary">@{friend.username}</p>
-                </div>
-              </div>
-              
-              {friendMeals[friend.friend_id]?.length === 0 ? (
-                <p className="text-text-secondary">No meals added yet.</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {friendMeals[friend.friend_id]?.map((meal) => (
-                    <div key={meal.id} className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium text-primary">{meal.name}</h4>
-                        <button
-                          onClick={() => addToMyFoods(meal)}
-                          className="text-accent hover:text-accent/80 transition-colors"
-                          title="Add to my foods"
-                        >
-                          <FaPlus />
-                        </button>
-                      </div>
-                      <p className="text-sm text-text-secondary">{meal.ingredients}</p>
-                      {meal.meal_types && meal.meal_types.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {meal.meal_types.map((type) => (
-                            <span
-                              key={type}
-                              className="px-2 py-1 bg-accent/10 text-accent rounded-full text-xs"
-                            >
-                              {type.charAt(0).toUpperCase() + type.slice(1)}
-                            </span>
-                          ))}
+        <>
+          {/* Pending Friend Requests */}
+          {friends.filter(f => f.status === 'pending' && !f.is_sender).length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-primary mb-4">Friend Requests</h2>
+              <div className="space-y-4">
+                {friends
+                  .filter(f => f.status === 'pending' && !f.is_sender)
+                  .map((friend) => (
+                    <div key={friend.friend_id} className="bg-white rounded-xl shadow-md p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold text-primary">
+                            {friend.display_name || friend.username}
+                          </h3>
+                          <p className="text-sm text-text-secondary">@{friend.username}</p>
                         </div>
-                      )}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleFriendRequest(friend.friend_id, 'accepted')}
+                            disabled={updatingFriend === friend.friend_id}
+                            className="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {updatingFriend === friend.friend_id ? (
+                              <FaSpinner className="animate-spin" />
+                            ) : (
+                              <>
+                                <FaCheck />
+                                Accept
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleFriendRequest(friend.friend_id, 'rejected')}
+                            disabled={updatingFriend === friend.friend_id}
+                            className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {updatingFriend === friend.friend_id ? (
+                              <FaSpinner className="animate-spin" />
+                            ) : (
+                              <>
+                                <FaTimes />
+                                Reject
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ))}
-                </div>
-              )}
+              </div>
             </div>
-          ))}
-        </div>
+          )}
+
+          {/* Sent Friend Requests */}
+          {friends.filter(f => f.status === 'pending' && f.is_sender).length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-primary mb-4">Sent Requests</h2>
+              <div className="space-y-4">
+                {friends
+                  .filter(f => f.status === 'pending' && f.is_sender)
+                  .map((friend) => (
+                    <div key={friend.friend_id} className="bg-white rounded-xl shadow-md p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold text-primary">
+                            {friend.display_name || friend.username}
+                          </h3>
+                          <p className="text-sm text-text-secondary">@{friend.username}</p>
+                        </div>
+                        <span className="text-text-secondary">Pending response</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Accepted Friends */}
+          <div className="space-y-8">
+            <h2 className="text-xl font-semibold text-primary mb-4">Friends</h2>
+            {friends
+              .filter(f => f.status === 'accepted')
+              .map((friend) => (
+                <div key={friend.friend_id} className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-primary">
+                        {friend.display_name || friend.username}
+                      </h3>
+                      <p className="text-sm text-text-secondary">@{friend.username}</p>
+                    </div>
+                  </div>
+
+                  {/* Friend's Meals */}
+                  <div>
+                    <h4 className="font-medium text-primary mb-2">Favorite Meals</h4>
+                    {friendMeals[friend.friend_id]?.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {friendMeals[friend.friend_id].map((meal) => (
+                          <div
+                            key={meal.id}
+                            className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h5 className="font-medium text-primary">{meal.name}</h5>
+                                <p className="text-sm text-text-secondary">
+                                  {Array.isArray(meal.ingredients) 
+                                    ? meal.ingredients.join(', ')
+                                    : 'No ingredients listed'}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => addToMyFoods(meal)}
+                                className="text-accent hover:text-accent/80 transition-colors"
+                                title="Add to My Foods"
+                              >
+                                <FaPlus />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-text-secondary">No favorite meals yet.</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+            {friends.filter(f => f.status === 'accepted').length === 0 && (
+              <div className="text-center py-8 bg-white rounded-xl shadow-md">
+                <p className="text-text-secondary mb-4">No accepted friends yet.</p>
+                <p className="text-sm text-text-secondary">
+                  Search for friends by their username to connect!
+                </p>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

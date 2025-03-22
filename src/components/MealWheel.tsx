@@ -7,9 +7,10 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface MealWheelProps {
   foods: FavoriteFood[];
+  onFoodsUpdate?: (foods: FavoriteFood[]) => void;
 }
 
-export default function MealWheel({ foods }: MealWheelProps) {
+export default function MealWheel({ foods, onFoodsUpdate }: MealWheelProps) {
   const { user } = useAuth();
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FavoriteFood | null>(null);
@@ -48,13 +49,13 @@ export default function MealWheel({ foods }: MealWheelProps) {
   const handleAddToMealPlan = () => {
     if (!selectedFood) return;
     setCurrentPlan(prev => [...prev, selectedFood]);
-    if (!keepInWheel) {
+    if (!keepInWheel && onFoodsUpdate) {
       const newFoods = foods.filter(f => f.id !== selectedFood.id);
-      // You'll need to implement this prop if you want to update the parent's food list
-      // onFoodsUpdate?.(newFoods);
+      onFoodsUpdate(newFoods);
     }
     setSuccess('Added to current plan!');
     setTimeout(() => setSuccess(null), 3000);
+    setSelectedFood(null);
   };
 
   const handleSavePlan = async () => {
@@ -64,12 +65,43 @@ export default function MealWheel({ foods }: MealWheelProps) {
       setSavingPlan(true);
       setError(null);
 
+      // Create a plan object with meals organized by day
+      const today = new Date();
+      const endDate = new Date(today);
+      endDate.setDate(today.getDate() + 6); // One week from today
+
+      // Create a plan object with meals organized by day
+      const plan: Record<string, { breakfast?: FavoriteFood; lunch?: FavoriteFood; dinner?: FavoriteFood }> = {};
+      
+      // Distribute meals across the week
+      currentPlan.forEach((meal, index) => {
+        const date = new Date(today);
+        date.setDate(today.getDate() + Math.floor(index / 3)); // Move to next day every 3 meals
+        
+        const dayKey = date.toLocaleDateString('en-US', { 
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric'
+        });
+
+        if (!plan[dayKey]) {
+          plan[dayKey] = {};
+        }
+
+        // Assign meal to breakfast, lunch, or dinner based on index
+        const mealType = index % 3 === 0 ? 'breakfast' : index % 3 === 1 ? 'lunch' : 'dinner';
+        plan[dayKey][mealType] = meal;
+      });
+
       const { error: insertError } = await supabase
         .from('meal_plans')
         .insert([{
           user_id: user.id,
-          meals: currentPlan,
-          duration: 'one_week'
+          name: `Wheel Generated Plan - ${today.toLocaleDateString()}`,
+          start_date: today.toISOString(),
+          end_date: endDate.toISOString(),
+          plan: plan,
+          no_repeat: false
         }]);
 
       if (insertError) throw insertError;
@@ -93,12 +125,14 @@ export default function MealWheel({ foods }: MealWheelProps) {
             {/* Wheel Container */}
             <div className="relative w-64 h-64 md:w-72 md:h-72">
               {/* Spinner Arrow */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 w-4 h-8 bg-accent z-10 clip-arrow" />
+              <div 
+                className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 w-4 h-8 bg-accent z-10 clip-arrow shadow-md" 
+              />
               
               {/* Wheel */}
               <motion.div
                 ref={wheelRef}
-                className="w-full h-full rounded-full border-4 border-accent overflow-hidden shadow-lg"
+                className="w-full h-full rounded-full border-4 border-accent overflow-hidden shadow-lg bg-white"
                 style={{
                   transform: `rotate(${rotationAngle}deg)`,
                   transition: 'transform 3s cubic-bezier(0.17, 0.67, 0.83, 0.67)'
@@ -108,6 +142,7 @@ export default function MealWheel({ foods }: MealWheelProps) {
                 {foods.map((food, index) => {
                   const segmentAngle = 360 / foods.length;
                   const rotation = index * segmentAngle;
+                  const isEven = index % 2 === 0;
                   return (
                     <div
                       key={food.id}
@@ -117,14 +152,15 @@ export default function MealWheel({ foods }: MealWheelProps) {
                       }}
                     >
                       <div
-                        className="absolute top-0 left-0 w-1/2 h-full origin-right flex items-center justify-start pl-4"
+                        className="absolute top-0 left-0 w-1/2 h-full origin-right flex items-center justify-start pl-4 transition-colors"
                         style={{
                           transform: `rotate(${segmentAngle / 2}deg)`,
-                          backgroundColor: index % 2 === 0 ? '#34D399' : '#6EE7B7',
+                          backgroundColor: isEven ? 'rgb(52, 211, 153)' : 'rgb(110, 231, 183)',
+                          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
                         }}
                       >
                         <span
-                          className="text-sm font-medium text-white truncate max-w-[80px]"
+                          className="text-sm font-medium text-white truncate max-w-[80px] drop-shadow-md"
                           style={{
                             transform: `rotate(${-rotation - segmentAngle / 2}deg)`,
                           }}
@@ -144,7 +180,7 @@ export default function MealWheel({ foods }: MealWheelProps) {
               disabled={isSpinning || foods.length === 0}
               className="mt-8 px-8 py-3 bg-accent text-white rounded-full font-medium hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
             >
-              {isSpinning ? 'Spinning...' : 'Spin the Wheel'}
+              {isSpinning ? 'Spinning...' : foods.length === 0 ? 'No meals available' : 'Spin the Wheel'}
             </button>
           </div>
         </div>

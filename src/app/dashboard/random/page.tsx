@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import type { FavoriteFood } from '@/lib/supabase';
@@ -18,6 +18,10 @@ export default function RandomMeal() {
       fetchFoods();
     }
   }, [user]);
+
+  const handleFoodsUpdate = useCallback((updatedFoods: FavoriteFood[]) => {
+    setFoods(updatedFoods);
+  }, []);
 
   const fetchFoods = async () => {
     try {
@@ -134,7 +138,7 @@ export default function RandomMeal() {
         </p>
       </div>
 
-      <MealWheel foods={foods} />
+      <MealWheel foods={foods} onFoodsUpdate={handleFoodsUpdate} />
     </div>
   );
 } 

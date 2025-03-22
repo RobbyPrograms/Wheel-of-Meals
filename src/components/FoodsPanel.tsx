@@ -12,7 +12,7 @@ type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert';
 type Food = {
   id: string;
   name: string;
-  ingredients: string;
+  ingredients: string[];
   recipe: string;
   rating: number;
   meal_types: MealType[];
@@ -75,40 +75,47 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
 
   const handleAddFood = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      setError('You must be logged in to add foods');
-      return;
-    }
+    setError('');
+
+    // Convert comma-separated ingredients to array
+    const ingredientsArray = newFood.ingredients
+      .split(',')
+      .map(item => item.trim())
+      .filter(item => item.length > 0);
+
+    // Convert meal types to array
+    const mealTypesArray = newFood.meal_types.length > 0 ? newFood.meal_types : [];
 
     try {
-      setLoading(true);
-      setError(null);
-
-      const foodData = {
-        user_id: user.id,
-        name: newFood.name.trim(),
-        ingredients: newFood.ingredients.trim(),
-        recipe: newFood.recipe.trim(),
-        rating: newFood.rating,
-        meal_types: newFood.meal_types,
-      };
-      
-      const { error: insertError } = await supabase
+      const { error } = await supabase
         .from('favorite_foods')
-        .insert([foodData]);
+        .insert([
+          {
+            user_id: user?.id,
+            name: newFood.name,
+            ingredients: ingredientsArray,
+            recipe: newFood.recipe,
+            rating: newFood.rating,
+            meal_types: mealTypesArray
+          }
+        ]);
 
-      if (insertError) throw insertError;
+      if (error) {
+        console.error('Error adding food:', error);
+        setError('Failed to add food. Please try again.');
+        return;
+      }
 
-      setSuccess('Food added successfully!');
+      // Clear form
       setNewFood({ name: '', ingredients: '', recipe: '', rating: 0, meal_types: [] });
       setIsAddingFood(false);
-      await fetchFoods();
+      
+      // Refresh foods list
+      fetchFoods();
       if (onFoodAdded) onFoodAdded();
-    } catch (err) {
-      console.error('Error adding food:', err);
+    } catch (error) {
+      console.error('Error adding food:', error);
       setError('Failed to add food. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -179,7 +186,9 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
 
   const filteredFoods = foods.filter(food => 
     food.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    food.ingredients.toLowerCase().includes(searchTerm.toLowerCase())
+    (Array.isArray(food.ingredients) && food.ingredients.some(ingredient => 
+      ingredient.toLowerCase().includes(searchTerm.toLowerCase())
+    ))
   );
 
   const startEditing = (food: Food) => {
@@ -237,9 +246,9 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
       const { error: updateError } = await supabase
         .from('favorite_foods')
         .update({
-          name: editingFood.name.trim(),
-          ingredients: editingFood.ingredients.trim(),
-          recipe: editingFood.recipe.trim(),
+          name: editingFood.name,
+          ingredients: editingFood.ingredients,
+          recipe: editingFood.recipe,
           rating: editingFood.rating,
           meal_types: editingFood.meal_types,
         })
@@ -550,8 +559,8 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                                   ))}
                                 </div>
                               </div>
-                              <p className="text-sm text-text-secondary line-clamp-2">
-                                {food.ingredients}
+                              <p className="text-sm text-text-secondary mb-2">
+                                {Array.isArray(food.ingredients) ? food.ingredients.join(', ') : 'No ingredients listed'}
                               </p>
                             </div>
                           </div>
@@ -641,17 +650,19 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                         </button>
                       </div>
                       
-                      <div className="space-y-6">
+                      <div className="space-y-4 p-6">
                         <div>
                           <h3 className="text-lg font-semibold text-primary mb-2">Ingredients</h3>
                           <div className="bg-gray-50 rounded-lg p-4">
-                            {selectedFood.ingredients ? (
-                              <div className="space-y-2">
-                                {selectedFood.ingredients.split(',').map((ingredient, index) => (
-                                  <div key={index} className="flex items-center">
-                                    <span className="w-2 h-2 bg-accent rounded-full mr-2"></span>
-                                    <span className="text-text-secondary">{ingredient.trim()}</span>
-                                  </div>
+                            {Array.isArray(selectedFood.ingredients) && selectedFood.ingredients.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {selectedFood.ingredients.map((ingredient, index) => (
+                                  <span
+                                    key={index}
+                                    className="px-2 py-1 bg-accent/10 text-accent rounded-full text-sm"
+                                  >
+                                    {ingredient}
+                                  </span>
                                 ))}
                               </div>
                             ) : (
@@ -660,10 +671,10 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                           </div>
                         </div>
 
-                        <div>
-                          <h3 className="text-lg font-semibold text-primary mb-2">Recipe Instructions</h3>
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            {selectedFood.recipe ? (
+                        {selectedFood.recipe && (
+                          <div>
+                            <h3 className="text-lg font-semibold text-primary mb-2">Recipe Instructions</h3>
+                            <div className="bg-gray-50 rounded-lg p-4">
                               <div className="space-y-2">
                                 {selectedFood.recipe.split('\n').map((step, index) => (
                                   <div key={index} className="flex items-start">
@@ -672,11 +683,9 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                                   </div>
                                 ))}
                               </div>
-                            ) : (
-                              <p className="text-text-secondary italic">No recipe instructions available</p>
-                            )}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -765,8 +774,14 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                           <textarea
                             id="edit-ingredients"
                             className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                            value={editingFood.ingredients}
-                            onChange={(e) => setEditingFood({ ...editingFood, ingredients: e.target.value })}
+                            value={Array.isArray(editingFood.ingredients) ? editingFood.ingredients.join(', ') : ''}
+                            onChange={(e) => {
+                              const ingredientsArray = e.target.value
+                                .split(',')
+                                .map(item => item.trim())
+                                .filter(item => item.length > 0);
+                              setEditingFood({ ...editingFood, ingredients: ingredientsArray });
+                            }}
                             rows={3}
                           />
                         </div>

@@ -128,14 +128,21 @@ export default function Dashboard() {
 
   const handleAddToFavorites = async (meal: { name: string; description: string; recipe: string }) => {
     try {
+      // Convert comma-separated ingredients to array
+      const ingredientsArray = meal.description
+        .split(',')
+        .map(item => item.trim())
+        .filter(item => item.length > 0);
+
       const { error } = await supabase
         .from('favorite_foods')
         .insert([
           {
             name: meal.name,
-            ingredients: meal.description,
+            ingredients: ingredientsArray,
             recipe: meal.recipe,
-            user_id: user?.id
+            user_id: user?.id,
+            meal_types: ['dinner'] // Default meal type
           }
         ]);
 
