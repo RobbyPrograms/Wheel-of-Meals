@@ -92,7 +92,10 @@ export default function FriendsPage() {
       setError(null);
 
       const { data, error: searchError } = await supabase
-        .rpc('search_users', { search_query: query });
+        .rpc('search_users', { 
+          search_query: query,
+          current_user_id: user?.id
+        });
 
       if (searchError) throw searchError;
 

@@ -5,14 +5,22 @@ import { useAuth } from '@/lib/auth-context';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import { FaUser, FaEnvelope, FaCalendarAlt, FaEdit, FaKey, FaSave, FaTimes } from 'react-icons/fa';
+import { supabase } from '@/lib/supabase';
+
+type ProfileData = {
+  name: string;
+  email: string;
+  username: string;
+};
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState({
+  const [profileData, setProfileData] = useState<ProfileData>({
     name: '',
     email: '',
+    username: ''
   });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -34,9 +42,34 @@ export default function ProfilePage() {
       setProfileData({
         name: user.user_metadata?.name || '',
         email: user.email || '',
+        username: ''
       });
+      fetchUserProfile();
     }
   }, [user]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setProfileData(prev => ({
+          ...prev,
+          username: data.username
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+    }
+  };
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
@@ -65,11 +98,17 @@ export default function ProfilePage() {
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // This is a placeholder - in a real app, you would update the user profile
-    // through Supabase or your backend
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update user profile in Supabase
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({
+          username: profileData.username,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user?.id);
+
+      if (profileError) throw profileError;
       
       setNotification({
         type: 'success',
@@ -83,6 +122,7 @@ export default function ProfilePage() {
         setNotification(null);
       }, 3000);
     } catch (error) {
+      console.error('Error updating profile:', error);
       setNotification({
         type: 'error',
         message: 'Failed to update profile. Please try again.'
@@ -189,7 +229,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto px-4 -mt-8 relative z-10 mb-24">
+      <main className="flex-1 container mx-auto px-4 py-12 -mt-12 relative z-10">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Notification */}
           {notification && (
@@ -237,6 +277,26 @@ export default function ProfilePage() {
               {isEditing ? (
                 <form onSubmit={handleProfileSubmit} className="space-y-6">
                   <div>
+                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                      Username
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <FaUser className="text-accent" />
+                      </div>
+                      <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        value={profileData.username || ''}
+                        onChange={handleProfileChange}
+                        className="pl-11 w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
+                        placeholder="Your username"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                       Name
                     </label>
@@ -272,6 +332,7 @@ export default function ProfilePage() {
                         onChange={handleProfileChange}
                         className="pl-11 w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
                         placeholder="Your email"
+                        disabled
                       />
                     </div>
                   </div>
@@ -288,6 +349,15 @@ export default function ProfilePage() {
                 </form>
               ) : (
                 <div className="space-y-8">
+                  <div className="flex items-center p-4 bg-gray-50 rounded-xl">
+                    <FaUser className="text-accent text-xl mr-4" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-500 mb-1">Username</div>
+                      <div className="text-lg font-medium text-gray-900">
+                        {profileData.username || 'Not set'}
+                      </div>
+                    </div>
+                  </div>
                   <div className="flex items-center p-4 bg-gray-50 rounded-xl">
                     <FaUser className="text-accent text-xl mr-4" />
                     <div>
