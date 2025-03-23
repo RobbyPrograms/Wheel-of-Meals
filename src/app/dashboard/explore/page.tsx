@@ -244,12 +244,6 @@ export default function ExplorePage() {
   const [viewMode, setViewMode] = useState<'explore' | 'friends' | 'my-posts'>('explore');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      fetchPosts();
-    }
-  }, [user, viewMode]);
-
   const fetchPosts = async () => {
     try {
       setLoading(true);
@@ -262,10 +256,23 @@ export default function ExplorePage() {
         functionName = 'get_friends_posts';
       }
 
+      console.log('Fetching posts with function:', functionName);
       const { data, error } = await supabase.rpc(functionName);
+      console.log('Response:', { data, error });
 
-      if (error) throw error;
-      setPosts(data || []);
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.log('No data returned');
+        setPosts([]);
+        return;
+      }
+
+      console.log('Setting posts:', data);
+      setPosts(data);
     } catch (err) {
       console.error('Error fetching posts:', err);
       setError('Failed to load posts. Please try again.');
@@ -273,6 +280,15 @@ export default function ExplorePage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      console.log('User authenticated, fetching posts...');
+      fetchPosts();
+    } else {
+      console.log('No user, skipping post fetch');
+    }
+  }, [user, viewMode]);
 
   const handlePostCreated = (newPost: Post) => {
     setPosts(prev => [newPost, ...prev]);
