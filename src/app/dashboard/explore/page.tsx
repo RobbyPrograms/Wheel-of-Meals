@@ -5,15 +5,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { FavoriteFood } from '@/lib/supabase';
 import { 
-  FaSpinner, FaUtensils, FaTimes, FaPlus, FaUser, FaClock
+  FaSpinner, FaUtensils, FaTimes, FaPlus, FaUser, FaClock,
+  FaGlobe, FaUserCircle, FaTrash, FaEllipsisV,
+  FaHeart, FaRegHeart, FaRetweet, FaUserFriends
 } from 'react-icons/fa';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 
 type Post = {
-  id: string;
-  user_id: string;
-  food_id: string;
+  id: string; // UUID
+  user_id: string; // UUID
+  food_id: string; // UUID
   caption: string | null;
   created_at: string;
   is_explore: boolean;
@@ -25,15 +27,23 @@ type Post = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  likes_count: number;
+  reposts_count: number;
+  is_liked: boolean;
+  is_reposted: boolean;
+  reposted_by_username: string | null;
+  reposted_by_display_name: string | null;
+  repost_created_at: string | null;
 };
 
 interface CreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPostCreated: (post: Post) => void;
+  onRefresh: () => Promise<void>;
 }
 
-const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPostCreated }) => {
+const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPostCreated, onRefresh }) => {
   const [userFoods, setUserFoods] = useState<FavoriteFood[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFoodId, setSelectedFoodId] = useState<string | null>(null);
@@ -73,22 +83,49 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
     }
     setError(null);
     try {
-      const { data, error } = await supabase
+      // Create the post (selectedFoodId is already a UUID string)
+      const { data: postData, error: postError } = await supabase
         .rpc('create_post', {
           p_food_id: selectedFoodId,
           p_caption: caption || null,
           p_is_explore: true
         });
 
-      if (error) throw error;
-
-      if (data) {
-        onPostCreated(data);
-        onClose();
+      if (postError) {
+        console.error('Post creation error:', postError);
+        throw new Error(postError.message || 'Failed to create post');
       }
-    } catch (err) {
+
+      if (!postData || postData.length === 0) {
+        throw new Error('No post data returned');
+      }
+
+      // Transform the data to match our frontend Post type
+      const transformedPost: Post = {
+        ...postData[0],
+        id: postData[0].id,
+        food_id: postData[0].food_id,
+        likes_count: postData[0].likes_count || 0,
+        reposts_count: postData[0].reposts_count || 0,
+        is_liked: postData[0].is_liked || false,
+        is_reposted: postData[0].is_reposted || false,
+        reposted_by_username: null,
+        reposted_by_display_name: null,
+        repost_created_at: null,
+        food_ingredients: Array.isArray(postData[0].food_ingredients) 
+          ? postData[0].food_ingredients 
+          : [],
+        food_meal_types: Array.isArray(postData[0].food_meal_types)
+          ? postData[0].food_meal_types
+          : []
+      };
+
+      onPostCreated(transformedPost);
+      onClose();
+      await onRefresh();
+    } catch (err: any) {
       console.error('Error creating post:', err);
-      setError('Failed to create post. Please try again.');
+      setError(err?.message || 'Failed to create post. Please try again.');
     }
   };
 
@@ -204,19 +241,28 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'explore' | 'friends' | 'my-posts'>('explore');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchPosts();
     }
-  }, [user]);
+  }, [user, viewMode]);
 
   const fetchPosts = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const { data, error } = await supabase.rpc('get_explore_posts');
+      let functionName = 'get_explore_posts';
+      if (viewMode === 'my-posts') {
+        functionName = 'get_user_posts';
+      } else if (viewMode === 'friends') {
+        functionName = 'get_friends_posts';
+      }
+
+      const { data, error } = await supabase.rpc(functionName);
 
       if (error) throw error;
       setPosts(data || []);
@@ -232,16 +278,119 @@ export default function ExplorePage() {
     setPosts(prev => [newPost, ...prev]);
   };
 
+  const handleDeletePost = async (postId: string) => {
+    try {
+      const { error } = await supabase.rpc('delete_post', {
+        p_post_id: postId
+      });
+
+      if (error) throw error;
+
+      // Remove the post from the state
+      setPosts(prev => prev.filter(post => post.id !== postId));
+      setDeleteConfirm(null);
+    } catch (err) {
+      console.error('Error deleting post:', err);
+      setError('Failed to delete post. Please try again.');
+    }
+  };
+
+  const handleLikePost = async (postId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('toggle_post_like', {
+        p_post_id: postId
+      });
+
+      if (error) throw error;
+
+      setPosts(prev => prev.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            is_liked: data[0].is_liked,
+            likes_count: data[0].likes_count
+          };
+        }
+        return post;
+      }));
+    } catch (err) {
+      console.error('Error toggling like:', err);
+      setError('Failed to update like. Please try again.');
+    }
+  };
+
+  const handleRepostPost = async (postId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('toggle_post_repost', {
+        p_post_id: postId
+      });
+
+      if (error) throw error;
+
+      setPosts(prev => prev.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            is_reposted: data[0].is_reposted,
+            reposts_count: data[0].reposts_count
+          };
+        }
+        return post;
+      }));
+    } catch (err) {
+      console.error('Error toggling repost:', err);
+      setError('Failed to update repost. Please try again.');
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-primary">Explore</h1>
-        <button
-          onClick={() => setIsCreatePostModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
-        >
-          <FaPlus /> Create Post
-        </button>
+      <div className="flex flex-col gap-8 mb-8">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-primary">Explore</h1>
+          <button
+            onClick={() => setIsCreatePostModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+          >
+            <FaPlus /> Create Post
+          </button>
+        </div>
+
+        <div className="flex gap-2 bg-white rounded-lg shadow-sm p-1">
+          <button
+            onClick={() => setViewMode('explore')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+              viewMode === 'explore'
+                ? 'bg-accent text-white'
+                : 'text-text-secondary hover:text-primary'
+            }`}
+          >
+            <FaGlobe />
+            Explore
+          </button>
+          <button
+            onClick={() => setViewMode('friends')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+              viewMode === 'friends'
+                ? 'bg-accent text-white'
+                : 'text-text-secondary hover:text-primary'
+            }`}
+          >
+            <FaUserFriends />
+            Friends
+          </button>
+          <button
+            onClick={() => setViewMode('my-posts')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+              viewMode === 'my-posts'
+                ? 'bg-accent text-white'
+                : 'text-text-secondary hover:text-primary'
+            }`}
+          >
+            <FaUserCircle />
+            My Posts
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -256,18 +405,49 @@ export default function ExplorePage() {
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-text-secondary mb-4">No posts yet. Be the first to share!</p>
-          <button
-            onClick={() => setIsCreatePostModalOpen(true)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
-          >
-            <FaPlus /> Create Post
-          </button>
+          <p className="text-text-secondary mb-4">
+            {viewMode === 'explore' 
+              ? 'No posts yet. Be the first to share!'
+              : viewMode === 'friends'
+              ? 'No posts from friends yet. Add some friends to see their posts!'
+              : 'You haven\'t created any posts yet.'}
+          </p>
+          {viewMode === 'friends' ? (
+            <Link
+              href="/dashboard/friends"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+            >
+              <FaUserFriends /> Find Friends
+            </Link>
+          ) : (
+            <button
+              onClick={() => setIsCreatePostModalOpen(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+            >
+              <FaPlus /> Create Post
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid gap-8">
           {posts.map((post) => (
-            <div key={post.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div 
+              key={post.reposted_by_username 
+                ? `repost-${post.id}-${post.reposted_by_username}-${post.repost_created_at}` 
+                : post.id
+              } 
+              className="bg-white rounded-xl shadow-sm overflow-hidden"
+            >
+              {/* Repost Info */}
+              {post.reposted_by_username && (
+                <div className="px-6 pt-4 flex items-center gap-2 text-sm text-text-secondary">
+                  <FaRetweet className="text-green-500" />
+                  <span>
+                    {post.reposted_by_display_name || post.reposted_by_username} reposted
+                  </span>
+                </div>
+              )}
+
               {/* Post Header */}
               <div className="p-4 border-b border-gray-100">
                 <div className="flex items-center justify-between">
@@ -290,9 +470,31 @@ export default function ExplorePage() {
                       <p className="text-sm text-text-secondary">@{post.username}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-text-secondary">
-                    <FaClock className="text-accent" />
-                    {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                  <div className="flex items-center gap-4">
+                    <div className="text-sm text-text-secondary">
+                      <FaClock className="inline mr-1 text-accent" />
+                      {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                    </div>
+                    {post.user_id === user?.id && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setDeleteConfirm(deleteConfirm === post.id ? null : post.id)}
+                          className="p-2 text-text-secondary hover:text-primary transition-colors rounded-full hover:bg-gray-100"
+                        >
+                          <FaEllipsisV />
+                        </button>
+                        {deleteConfirm === post.id && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
+                            <button
+                              onClick={() => handleDeletePost(post.id)}
+                              className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              Delete Post
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -304,7 +506,9 @@ export default function ExplorePage() {
                   <div className="flex items-center gap-2">
                     <span className="flex items-center gap-1 text-sm text-text-secondary">
                       <FaUtensils className="text-accent" />
-                      {post.food_meal_types?.[0] || 'Any meal'}
+                      {Array.isArray(post.food_meal_types) && post.food_meal_types.length > 0
+                        ? post.food_meal_types[0]
+                        : 'Any meal'}
                     </span>
                     {post.food_visibility === 'private' && (
                       <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
@@ -322,14 +526,18 @@ export default function ExplorePage() {
                 <div className="mb-4">
                   <h3 className="font-medium text-primary mb-2">Ingredients</h3>
                   <div className="flex flex-wrap gap-2">
-                    {post.food_ingredients.map((ingredient, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-1 bg-accent/5 text-accent rounded-md text-sm"
-                      >
-                        {ingredient}
-                      </span>
-                    ))}
+                    {Array.isArray(post.food_ingredients) ? (
+                      post.food_ingredients.map((ingredient, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 bg-accent/5 text-accent rounded-md text-sm"
+                        >
+                          {ingredient}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-text-secondary text-sm">No ingredients listed</span>
+                    )}
                   </div>
                 </div>
 
@@ -343,6 +551,33 @@ export default function ExplorePage() {
                   </div>
                 )}
               </div>
+
+              {/* Post Actions */}
+              <div className="px-6 py-4 border-t border-gray-100 flex items-center gap-6">
+                <button
+                  onClick={() => handleLikePost(post.id)}
+                  className={`flex items-center gap-2 text-sm transition-colors ${
+                    post.is_liked
+                      ? 'text-red-500 hover:text-red-600'
+                      : 'text-text-secondary hover:text-red-500'
+                  }`}
+                >
+                  {post.is_liked ? <FaHeart /> : <FaRegHeart />}
+                  <span>{post.likes_count || ''}</span>
+                </button>
+
+                <button
+                  onClick={() => handleRepostPost(post.id)}
+                  className={`flex items-center gap-2 text-sm transition-colors ${
+                    post.is_reposted
+                      ? 'text-green-500 hover:text-green-600'
+                      : 'text-text-secondary hover:text-green-500'
+                  }`}
+                >
+                  <FaRetweet />
+                  <span>{post.reposts_count || ''}</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -352,6 +587,7 @@ export default function ExplorePage() {
         isOpen={isCreatePostModalOpen}
         onClose={() => setIsCreatePostModalOpen(false)}
         onPostCreated={handlePostCreated}
+        onRefresh={fetchPosts}
       />
     </div>
   );
