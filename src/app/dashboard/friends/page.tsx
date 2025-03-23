@@ -123,6 +123,19 @@ export default function FriendsPage() {
       setAddingFriend(true);
       setError(null);
 
+      // Check if friend request already exists
+      const { data: existingRequest, error: checkError } = await supabase
+        .from('friends')
+        .select('*')
+        .or(`and(user_id.eq.${user.id},friend_id.eq.${searchResult.id}),and(user_id.eq.${searchResult.id},friend_id.eq.${user.id})`);
+
+      if (checkError) throw checkError;
+
+      if (existingRequest && existingRequest.length > 0) {
+        setError('Friend request already exists.');
+        return;
+      }
+
       const { error: addError } = await supabase
         .from('friends')
         .insert([{
@@ -370,12 +383,15 @@ export default function FriendsPage() {
                   .map((friend) => (
                     <div key={friend.friend_id} className="bg-white rounded-xl shadow-md p-6">
                       <div className="flex items-center justify-between">
-                        <div>
+                        <Link
+                          href={`/profile/${friend.username}`}
+                          className="hover:text-accent transition-colors"
+                        >
                           <h3 className="text-lg font-semibold text-primary">
                             {friend.display_name || friend.username}
                           </h3>
                           <p className="text-sm text-text-secondary">@{friend.username}</p>
-                        </div>
+                        </Link>
                         <span className="text-text-secondary">Pending response</span>
                       </div>
                     </div>
@@ -392,12 +408,15 @@ export default function FriendsPage() {
               .map((friend) => (
                 <div key={friend.friend_id} className="bg-white rounded-xl shadow-md p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <div>
+                    <Link
+                      href={`/profile/${friend.username}`}
+                      className="hover:text-accent transition-colors"
+                    >
                       <h3 className="text-lg font-semibold text-primary">
                         {friend.display_name || friend.username}
                       </h3>
                       <p className="text-sm text-text-secondary">@{friend.username}</p>
-                    </div>
+                    </Link>
                   </div>
 
                   {/* Friend's Meals */}
