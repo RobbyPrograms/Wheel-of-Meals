@@ -126,30 +126,32 @@ export default function Dashboard() {
     setIsMealPlansPanelOpen(true);
   }, []);
 
-  const handleAddToFavorites = async (meal: { name: string; description: string; recipe: string }) => {
-    try {
-      // Convert comma-separated ingredients to array
-      const ingredientsArray = meal.description
-        .split(',')
-        .map(item => item.trim())
-        .filter(item => item.length > 0);
+  const handleAddToFavorites = async (meal: { 
+    name: string; 
+    description: string; 
+    recipe: string;
+    visibility: 'public' | 'private';
+  }) => {
+    if (!user) return;
 
+    try {
       const { error } = await supabase
         .from('favorite_foods')
-        .insert([
-          {
-            name: meal.name,
-            ingredients: ingredientsArray,
-            recipe: meal.recipe,
-            user_id: user?.id,
-            meal_types: ['dinner'] // Default meal type
-          }
-        ]);
+        .insert({
+          user_id: user.id,
+          name: meal.name,
+          ingredients: meal.description.split(',').map(i => i.trim()),
+          recipe: meal.recipe,
+          visibility: meal.visibility
+        });
 
       if (error) throw error;
-      await fetchDashboardData();
-    } catch (error) {
-      console.error('Error adding meal:', error);
+
+      // Refresh data after adding
+      handleDataUpdated();
+    } catch (err) {
+      console.error('Error adding meal to favorites:', err);
+      setError('Failed to add meal to favorites');
     }
   };
 

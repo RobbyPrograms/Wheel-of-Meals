@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { FaPlus, FaTrash, FaUtensils, FaTimes, FaEdit, FaSave, FaChevronLeft, FaBook, FaStar as FaStarSolid } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaUtensils, FaTimes, FaEdit, FaSave, FaChevronLeft, FaBook, FaStar as FaStarSolid, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { FaRegStar as FaStarOutline } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -32,7 +32,8 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
     ingredients: '', 
     recipe: '',
     rating: 0,
-    meal_types: [] as MealType[]
+    meal_types: [] as MealType[],
+    visibility: 'public' as 'public' | 'private'
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +97,8 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
             ingredients: ingredientsArray,
             recipe: newFood.recipe,
             rating: newFood.rating,
-            meal_types: mealTypesArray
+            meal_types: mealTypesArray,
+            visibility: newFood.visibility
           }
         ]);
 
@@ -107,7 +109,14 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
       }
 
       // Clear form
-      setNewFood({ name: '', ingredients: '', recipe: '', rating: 0, meal_types: [] });
+      setNewFood({ 
+        name: '', 
+        ingredients: '', 
+        recipe: '', 
+        rating: 0, 
+        meal_types: [],
+        visibility: 'public'
+      });
       setIsAddingFood(false);
       
       // Refresh foods list
@@ -452,30 +461,55 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                                 rows={5}
                               />
                             </div>
-                            <div className="flex justify-end space-x-3">
+
+                            <div className="mb-4">
+                              <label className="block text-sm font-medium text-text-secondary mb-1">
+                                Visibility
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setNewFood({ ...newFood, visibility: 'public' })}
+                                  className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${
+                                    newFood.visibility === 'public'
+                                      ? 'bg-accent text-white'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  <FaEye /> Public
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setNewFood({ ...newFood, visibility: 'private' })}
+                                  className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${
+                                    newFood.visibility === 'private'
+                                      ? 'bg-accent text-white'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  <FaEyeSlash /> Private
+                                </button>
+                              </div>
+                              <p className="text-xs text-text-secondary mt-1">
+                                {newFood.visibility === 'public' 
+                                  ? 'Friends can see this meal'
+                                  : 'Only you can see this meal'}
+                              </p>
+                            </div>
+
+                            <div className="flex justify-end gap-2">
                               <button
                                 type="button"
                                 onClick={() => setIsAddingFood(false)}
-                                className="px-4 py-2 border border-border rounded-md text-text-primary hover:bg-gray-50 transition-colors"
+                                className="px-4 py-2 text-text-secondary hover:text-primary"
                               >
                                 Cancel
                               </button>
                               <button
                                 type="submit"
-                                className="bg-accent hover:bg-accent-dark text-white px-4 py-2 rounded-md flex items-center transition-colors duration-200"
-                                disabled={loading}
+                                className="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent/90"
                               >
-                                {loading ? (
-                                  <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                    Adding...
-                                  </>
-                                ) : (
-                                  <>
-                                    <FaPlus className="mr-2" />
-                                    Add Food
-                                  </>
-                                )}
+                                Add Food
                               </button>
                             </div>
                           </form>

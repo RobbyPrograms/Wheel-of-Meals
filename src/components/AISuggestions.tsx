@@ -1,8 +1,13 @@
 import { useState } from 'react';
-import { FaLightbulb, FaPlus, FaSpinner, FaCheck } from 'react-icons/fa';
+import { FaLightbulb, FaPlus, FaSpinner, FaCheck, FaEye, FaEyeSlash } from 'react-icons/fa';
 
 interface AISuggestionsProps {
-  onAddToFavorites: (meal: { name: string; description: string; recipe: string }) => void;
+  onAddToFavorites: (meal: { 
+    name: string; 
+    description: string; 
+    recipe: string;
+    visibility: 'public' | 'private';
+  }) => void;
 }
 
 export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) {
@@ -16,6 +21,7 @@ export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) 
   }>>([]);
   const [error, setError] = useState<string | null>(null);
   const [addedMeals, setAddedMeals] = useState<Set<string>>(new Set());
+  const [mealVisibility, setMealVisibility] = useState<{ [key: string]: 'public' | 'private' }>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,12 +123,21 @@ export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) 
     ingredients: string[]; 
     recipe: string[] 
   }) => {
+    const visibility = mealVisibility[suggestion.name] || 'private';
     onAddToFavorites({
       name: suggestion.name,
       description: suggestion.ingredients.join(', '),
-      recipe: suggestion.recipe.join('\n')
+      recipe: suggestion.recipe.join('\n'),
+      visibility
     });
     setAddedMeals(prev => new Set([...Array.from(prev), suggestion.name]));
+  };
+
+  const toggleVisibility = (mealName: string) => {
+    setMealVisibility(prev => ({
+      ...prev,
+      [mealName]: prev[mealName] === 'public' ? 'private' : 'public'
+    }));
   };
 
   return (
@@ -202,27 +217,47 @@ export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) 
                       </div>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleAddToFavorites(suggestion)}
-                    disabled={addedMeals.has(suggestion.name)}
-                    className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors duration-200 ml-4 ${
-                      addedMeals.has(suggestion.name)
-                        ? 'bg-green-100 text-green-600'
-                        : 'bg-accent/10 hover:bg-accent/20 text-accent'
-                    }`}
-                  >
-                    {addedMeals.has(suggestion.name) ? (
-                      <>
-                        <FaCheck className="text-sm" />
-                        <span className="text-sm">Added</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaPlus className="text-sm" />
-                        <span className="text-sm">Add</span>
-                      </>
+                  <div className="flex flex-col items-end gap-2">
+                    {!addedMeals.has(suggestion.name) && (
+                      <button
+                        onClick={() => toggleVisibility(suggestion.name)}
+                        className="flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                      >
+                        {mealVisibility[suggestion.name] === 'public' ? (
+                          <>
+                            <FaEye className="text-sm" />
+                            <span className="text-sm">Public</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaEyeSlash className="text-sm" />
+                            <span className="text-sm">Private</span>
+                          </>
+                        )}
+                      </button>
                     )}
-                  </button>
+                    <button
+                      onClick={() => handleAddToFavorites(suggestion)}
+                      disabled={addedMeals.has(suggestion.name)}
+                      className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-colors duration-200 ${
+                        addedMeals.has(suggestion.name)
+                          ? 'bg-green-100 text-green-600'
+                          : 'bg-accent/10 hover:bg-accent/20 text-accent'
+                      }`}
+                    >
+                      {addedMeals.has(suggestion.name) ? (
+                        <>
+                          <FaCheck className="text-sm" />
+                          <span className="text-sm">Added</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaPlus className="text-sm" />
+                          <span className="text-sm">Add</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

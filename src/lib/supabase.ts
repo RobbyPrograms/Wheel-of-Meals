@@ -21,12 +21,13 @@ export type FavoriteFood = {
   id: string;
   user_id: string;
   name: string;
+  description?: string;
   ingredients: string[];
-  recipe: string;
-  rating: number;
-  meal_types: ('breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert')[];
+  recipe?: string;
+  meal_types: string[];
+  rating?: number;
   created_at: string;
-  updated_at: string;
+  visibility: 'public' | 'private';
 };
 
 export type UserProfile = {

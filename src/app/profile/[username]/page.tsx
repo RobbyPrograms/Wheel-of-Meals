@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { FaSpinner, FaPlus, FaCheck } from 'react-icons/fa';
+import { FaSpinner, FaPlus, FaCheck, FaFilter } from 'react-icons/fa';
 import Link from 'next/link';
+import DashboardLayout from '@/components/DashboardLayout';
 
 interface UserProfile {
   id: string;
@@ -21,6 +22,8 @@ interface FavoriteFood {
   ingredients: string[];
   recipe: string;
   user_id: string;
+  meal_types: string[];
+  visibility: 'public' | 'private';
 }
 
 export default function UserProfilePage() {
@@ -32,6 +35,8 @@ export default function UserProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [addedFoods, setAddedFoods] = useState<Set<string>>(new Set());
   const [addingFood, setAddingFood] = useState<string | null>(null);
+  const [selectedMealTypes, setSelectedMealTypes] = useState<string[]>([]);
+  const mealTypeOptions = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert'];
 
   useEffect(() => {
     if (username) {
@@ -111,127 +116,214 @@ export default function UserProfilePage() {
     }
   };
 
+  const filteredFoods = favoriteFoods.filter(food => 
+    selectedMealTypes.length === 0 || 
+    food.meal_types.some(type => selectedMealTypes.includes(type))
+  );
+
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <FaSpinner className="animate-spin text-3xl text-accent mx-auto mb-4" />
-          <p className="text-text-secondary">Loading profile...</p>
+      <DashboardLayout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <FaSpinner className="animate-spin text-3xl text-accent mx-auto mb-4" />
+            <p className="text-text-secondary">Loading profile...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   if (error || !profile) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <p className="text-red-500 mb-4">{error || 'Profile not found'}</p>
-          <Link href="/dashboard" className="text-accent hover:underline">
-            Back to Dashboard
-          </Link>
+      <DashboardLayout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <p className="text-red-500 mb-4">{error || 'Profile not found'}</p>
+            <Link href="/dashboard" className="text-accent hover:underline">
+              Back to Dashboard
+            </Link>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
-          <Link
-            href="/dashboard"
-            className="text-text-secondary hover:text-primary transition-colors inline-flex items-center gap-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+    <DashboardLayout>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <Link
+              href="/dashboard"
+              className="text-text-secondary hover:text-primary transition-colors inline-flex items-center gap-2"
             >
-              <path
-                fillRule="evenodd"
-                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Back to Dashboard
-          </Link>
-        </div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Back to Dashboard
+            </Link>
+          </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            {profile.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt={profile.username}
-                className="w-20 h-20 rounded-full"
-              />
-            ) : (
-              <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center">
-                <span className="text-2xl text-accent">
-                  {profile.display_name?.[0] || profile.username[0].toUpperCase()}
-                </span>
+          <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+            <div className="flex items-center gap-4 mb-6">
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.username}
+                  className="w-20 h-20 rounded-full"
+                />
+              ) : (
+                <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center">
+                  <span className="text-2xl text-accent">
+                    {profile.display_name?.[0] || profile.username[0].toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div>
+                <h1 className="text-2xl font-bold text-primary">
+                  {profile.display_name || profile.username}
+                </h1>
+                <p className="text-text-secondary">@{profile.username}</p>
               </div>
-            )}
-            <div>
-              <h1 className="text-2xl font-bold text-primary">
-                {profile.display_name || profile.username}
-              </h1>
-              <p className="text-text-secondary">@{profile.username}</p>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-primary mb-4">Favorite Meals</h2>
-          {favoriteFoods.length === 0 ? (
-            <p className="text-text-secondary">No favorite meals yet.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {favoriteFoods.map((food) => (
-                <div key={food.id} className="border border-gray-100 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="font-medium text-primary">{food.name}</h3>
-                    {user && user.id !== profile.id && (
-                      <button
-                        onClick={() => addToMyFoods(food)}
-                        disabled={addingFood === food.id || addedFoods.has(food.name)}
-                        className={`p-2 rounded-full transition-colors ${
-                          addedFoods.has(food.name)
-                            ? 'text-green-500 bg-green-50'
-                            : 'text-accent hover:bg-accent/10'
-                        }`}
-                        title={addedFoods.has(food.name) ? "Added to your meals" : "Add to your meals"}
-                      >
-                        {addingFood === food.id ? (
-                          <FaSpinner className="animate-spin" />
-                        ) : addedFoods.has(food.name) ? (
-                          <FaCheck />
-                        ) : (
-                          <FaPlus />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                  <div className="mb-3">
-                    <h4 className="text-sm font-medium text-text-secondary mb-1">Ingredients:</h4>
-                    <ul className="list-disc list-inside text-sm text-text-secondary">
-                      {food.ingredients.map((ingredient, index) => (
-                        <li key={index}>{ingredient}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-text-secondary mb-1">Recipe:</h4>
-                    <p className="text-sm text-text-secondary whitespace-pre-wrap">{food.recipe}</p>
-                  </div>
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-primary">Favorite Meals</h2>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent rounded-lg hover:bg-accent/20 transition-colors"
+                  >
+                    <FaFilter className="text-sm" />
+                    <span>Filter</span>
+                  </button>
                 </div>
-              ))}
+              </div>
             </div>
-          )}
+
+            {/* Meal Type Filters */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              {mealTypeOptions.map(type => (
+                <button
+                  key={type}
+                  onClick={() => {
+                    if (selectedMealTypes.includes(type)) {
+                      setSelectedMealTypes(prev => prev.filter(t => t !== type));
+                    } else {
+                      setSelectedMealTypes(prev => [...prev, type]);
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    selectedMealTypes.includes(type)
+                      ? 'bg-accent text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
+              {selectedMealTypes.length > 0 && (
+                <button
+                  onClick={() => setSelectedMealTypes([])}
+                  className="px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:text-accent transition-colors"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+
+            {filteredFoods.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-text-secondary">
+                  {favoriteFoods.length === 0
+                    ? "No favorite meals yet."
+                    : "No meals match the selected filters."}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredFoods.map((food) => (
+                  <div 
+                    key={food.id} 
+                    className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                  >
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-primary mb-2">{food.name}</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {food.meal_types.map(type => (
+                              <span
+                                key={type}
+                                className="px-2 py-1 bg-accent/10 text-accent rounded-md text-xs font-medium"
+                              >
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        {user && user.id !== profile.id && (
+                          <button
+                            onClick={() => addToMyFoods(food)}
+                            disabled={addingFood === food.id || addedFoods.has(food.name)}
+                            className={`p-2 rounded-full transition-colors ${
+                              addedFoods.has(food.name)
+                                ? 'text-green-500 bg-green-50'
+                                : 'text-accent hover:bg-accent/10'
+                            }`}
+                            title={addedFoods.has(food.name) ? "Added to your meals" : "Add to your meals"}
+                          >
+                            {addingFood === food.id ? (
+                              <FaSpinner className="animate-spin" />
+                            ) : addedFoods.has(food.name) ? (
+                              <FaCheck />
+                            ) : (
+                              <FaPlus />
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium text-gray-700 mb-2">Ingredients</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {food.ingredients.map((ingredient, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-sm"
+                              >
+                                {ingredient}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h4 className="font-medium text-gray-700 mb-2">Recipe</h4>
+                          <p className="text-gray-600 text-sm whitespace-pre-wrap">{food.recipe}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 } 

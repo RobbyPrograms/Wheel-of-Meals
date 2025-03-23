@@ -3,20 +3,199 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
-import { FavoriteFood, UserProfile } from '@/lib/supabase';
-import { FaSpinner, FaHeart, FaComment, FaShare, FaUserPlus } from 'react-icons/fa';
+import { FavoriteFood } from '@/lib/supabase';
+import { 
+  FaSpinner, FaUtensils, FaTimes, FaPlus, FaUser, FaClock
+} from 'react-icons/fa';
 import Link from 'next/link';
+import { formatDistanceToNow } from 'date-fns';
 
 type Post = {
   id: string;
   user_id: string;
   food_id: string;
+  caption: string | null;
   created_at: string;
-  user_info: UserProfile;
-  food: FavoriteFood;
-  likes_count: number;
-  comments_count: number;
-  is_liked: boolean;
+  is_explore: boolean;
+  food_name: string;
+  food_ingredients: string[];
+  food_recipe: string;
+  food_meal_types: string[];
+  food_visibility: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+interface CreatePostModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onPostCreated: (post: Post) => void;
+}
+
+const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPostCreated }) => {
+  const [userFoods, setUserFoods] = useState<FavoriteFood[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedFoodId, setSelectedFoodId] = useState<string | null>(null);
+  const [caption, setCaption] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchUserFoods();
+    }
+  }, [isOpen]);
+
+  const fetchUserFoods = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('favorite_foods')
+        .select('*')
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+      setUserFoods(data || []);
+    } catch (err) {
+      console.error('Error fetching user foods:', err);
+      setError('Failed to load your meals. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFoodId) {
+      setError('Please select a meal to share');
+      return;
+    }
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .rpc('create_post', {
+          p_food_id: selectedFoodId,
+          p_caption: caption || null,
+          p_is_explore: true
+        });
+
+      if (error) throw error;
+
+      if (data) {
+        onPostCreated(data);
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error creating post:', err);
+      setError('Failed to create post. Please try again.');
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl my-8">
+        <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+          <h2 className="text-lg font-semibold text-primary">Create Post</h2>
+          <button
+            onClick={onClose}
+            className="text-text-secondary hover:text-primary transition-colors"
+          >
+            <FaTimes />
+          </button>
+        </div>
+
+        <div className="p-6">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-500 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-primary mb-2">
+              Select a Meal to Share
+            </label>
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <FaSpinner className="animate-spin text-accent" />
+              </div>
+            ) : userFoods.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-text-secondary mb-4">
+                  You haven't added any meals yet.
+                </p>
+                <Link
+                  href="/dashboard/foods"
+                  className="inline-block bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors"
+                >
+                  Add Your First Meal
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {userFoods.map((food) => (
+                  <button
+                    key={food.id}
+                    onClick={() => setSelectedFoodId(food.id)}
+                    className={`p-4 rounded-lg border text-left transition-colors ${
+                      selectedFoodId === food.id
+                        ? 'border-accent bg-accent/5'
+                        : 'border-gray-200 hover:border-accent/50'
+                    }`}
+                  >
+                    <h3 className="font-medium text-primary mb-1">{food.name}</h3>
+                    <div className="flex items-center gap-2 text-sm text-text-secondary">
+                      <span className="flex items-center gap-1">
+                        <FaUtensils />
+                        {food.meal_types?.[0] || 'Any meal'}
+                      </span>
+                      {food.visibility === 'private' && (
+                        <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+                          Private
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-primary mb-2">
+              Add a Caption (Optional)
+            </label>
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Share your thoughts about this meal..."
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-gray-100 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-text-secondary hover:text-primary transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!selectedFoodId || loading}
+            className="px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50"
+          >
+            Post
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default function ExplorePage() {
@@ -24,10 +203,7 @@ export default function ExplorePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [addingFriend, setAddingFriend] = useState<string | null>(null);
+  const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -38,8 +214,9 @@ export default function ExplorePage() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .rpc('get_explore_posts', { p_user_id: user?.id });
+      setError(null);
+      
+      const { data, error } = await supabase.rpc('get_explore_posts');
 
       if (error) throw error;
       setPosts(data || []);
@@ -51,217 +228,131 @@ export default function ExplorePage() {
     }
   };
 
-  const searchUsers = async (query: string) => {
-    if (query.length < 3) {
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      setSearching(true);
-      const { data, error } = await supabase
-        .rpc('search_users', { search_query: query });
-
-      if (error) throw error;
-      setSearchResults(data || []);
-    } catch (err) {
-      console.error('Error searching users:', err);
-      setError('Failed to search users. Please try again.');
-    } finally {
-      setSearching(false);
-    }
+  const handlePostCreated = (newPost: Post) => {
+    setPosts(prev => [newPost, ...prev]);
   };
-
-  const handleLike = async (postId: string) => {
-    try {
-      const { error } = await supabase
-        .rpc('toggle_post_like', { p_post_id: postId, p_user_id: user?.id });
-
-      if (error) throw error;
-      fetchPosts(); // Refresh posts to update likes
-    } catch (err) {
-      console.error('Error toggling like:', err);
-      setError('Failed to like post. Please try again.');
-    }
-  };
-
-  const addFriend = async (friendId: string) => {
-    try {
-      setAddingFriend(friendId);
-      const { error } = await supabase
-        .from('friends')
-        .insert([{ user_id: user?.id, friend_id: friendId }]);
-
-      if (error) throw error;
-      setSearchResults(searchResults.filter(result => result.id !== friendId));
-    } catch (err) {
-      console.error('Error adding friend:', err);
-      setError('Failed to add friend. Please try again.');
-    } finally {
-      setAddingFriend(null);
-    }
-  };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery) {
-        searchUsers(searchQuery);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-text-secondary">Please sign in to view this page.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Search Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-primary mb-4">Find Friends</h2>
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by username or display name"
-              className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-            />
-            {searching && (
-              <FaSpinner className="animate-spin absolute right-3 top-3 text-gray-400" />
-            )}
-          </div>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold text-primary">Explore</h1>
+        <button
+          onClick={() => setIsCreatePostModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+        >
+          <FaPlus /> Create Post
+        </button>
+      </div>
 
-          {searchResults.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {searchResults.map((result) => (
-                <div
-                  key={result.id}
-                  className="p-4 bg-white rounded-lg shadow-sm flex justify-between items-center"
-                >
-                  <div>
-                    <span className="font-medium">@{result.username}</span>
-                    {result.display_name && (
-                      <span className="text-text-secondary ml-2">({result.display_name})</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => addFriend(result.id)}
-                    disabled={addingFriend === result.id}
-                    className="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {addingFriend === result.id ? (
-                      <FaSpinner className="animate-spin" />
-                    ) : (
-                      <>
-                        <FaUserPlus />
-                        Add Friend
-                      </>
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {searchQuery.length > 0 && searchResults.length === 0 && !searching && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg text-text-secondary">
-              No users found. Try a different search term.
-            </div>
-          )}
+      {error && (
+        <div className="mb-8 p-4 bg-red-50 text-red-500 rounded-lg">
+          {error}
         </div>
+      )}
 
-        {/* Posts Feed */}
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold text-primary mb-4">Explore Meals</h2>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <FaSpinner className="animate-spin text-2xl text-accent" />
-            </div>
-          ) : error ? (
-            <div className="text-center py-8 text-red-500">{error}</div>
-          ) : posts.length === 0 ? (
-            <div className="text-center py-8 text-text-secondary">
-              No meals to explore yet. Add some friends to see their meals!
-            </div>
-          ) : (
-            posts.map((post) => (
-              <div key={post.id} className="bg-white rounded-xl shadow-md overflow-hidden">
-                <div className="p-4">
-                  <Link href={`/dashboard/profile/${post.user_info.username}`} className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                      {post.user_info.avatar_url ? (
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <FaSpinner className="animate-spin text-accent text-2xl" />
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-text-secondary mb-4">No posts yet. Be the first to share!</p>
+          <button
+            onClick={() => setIsCreatePostModalOpen(true)}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+          >
+            <FaPlus /> Create Post
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-8">
+          {posts.map((post) => (
+            <div key={post.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+              {/* Post Header */}
+              <div className="p-4 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                      {post.avatar_url ? (
                         <img
-                          src={post.user_info.avatar_url}
-                          alt={post.user_info.username}
+                          src={post.avatar_url}
+                          alt={post.username}
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
-                        <span className="text-sm font-medium text-gray-600">
-                          {post.user_info.username[0].toUpperCase()}
-                        </span>
+                        <FaUser className="text-accent" />
                       )}
                     </div>
                     <div>
-                      <span className="font-medium">@{post.user_info.username}</span>
-                      {post.user_info.display_name && (
-                        <span className="text-text-secondary ml-2">({post.user_info.display_name})</span>
-                      )}
+                      <p className="font-medium text-primary">
+                        {post.display_name || post.username}
+                      </p>
+                      <p className="text-sm text-text-secondary">@{post.username}</p>
                     </div>
-                  </Link>
-
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-primary mb-2">{post.food.name}</h3>
-                    {post.food.description && (
-                      <p className="text-text-secondary mb-2">{post.food.description}</p>
-                    )}
-                    <div className="mt-2">
-                      <h4 className="font-medium text-primary mb-1">Ingredients:</h4>
-                      <ul className="list-disc list-inside text-text-secondary">
-                        {post.food.ingredients.map((ingredient, index) => (
-                          <li key={index}>{ingredient}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    {post.food.recipe && (
-                      <div className="mt-2">
-                        <h4 className="font-medium text-primary mb-1">Recipe:</h4>
-                        <p className="text-text-secondary whitespace-pre-wrap">{post.food.recipe}</p>
-                      </div>
-                    )}
                   </div>
-
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => handleLike(post.id)}
-                      className={`flex items-center gap-1 ${
-                        post.is_liked ? 'text-red-500' : 'text-text-secondary'
-                      }`}
-                    >
-                      <FaHeart />
-                      <span>{post.likes_count}</span>
-                    </button>
-                    <button className="flex items-center gap-1 text-text-secondary">
-                      <FaComment />
-                      <span>{post.comments_count}</span>
-                    </button>
-                    <button className="flex items-center gap-1 text-text-secondary">
-                      <FaShare />
-                    </button>
+                  <div className="flex items-center gap-2 text-sm text-text-secondary">
+                    <FaClock className="text-accent" />
+                    {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                   </div>
                 </div>
               </div>
-            ))
-          )}
+
+              {/* Meal Content */}
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-primary">{post.food_name}</h2>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1 text-sm text-text-secondary">
+                      <FaUtensils className="text-accent" />
+                      {post.food_meal_types?.[0] || 'Any meal'}
+                    </span>
+                    {post.food_visibility === 'private' && (
+                      <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+                        Private
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {post.caption && (
+                  <p className="text-text-secondary mb-4 italic">"{post.caption}"</p>
+                )}
+
+                {/* Ingredients */}
+                <div className="mb-4">
+                  <h3 className="font-medium text-primary mb-2">Ingredients</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {post.food_ingredients.map((ingredient, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-1 bg-accent/5 text-accent rounded-md text-sm"
+                      >
+                        {ingredient}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recipe */}
+                {post.food_recipe && (
+                  <div>
+                    <h3 className="font-medium text-primary mb-2">Recipe</h3>
+                    <p className="text-text-secondary text-sm whitespace-pre-wrap">
+                      {post.food_recipe}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      )}
+
+      <CreatePostModal
+        isOpen={isCreatePostModalOpen}
+        onClose={() => setIsCreatePostModalOpen(false)}
+        onPostCreated={handlePostCreated}
+      />
     </div>
   );
 } 

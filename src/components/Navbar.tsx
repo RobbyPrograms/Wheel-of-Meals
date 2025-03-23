@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { FaUser, FaBars, FaTimes, FaCog, FaChevronDown, FaUserCircle } from 'react-icons/fa';
+import { supabase } from '@/lib/supabase';
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
   const pathname = usePathname();
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +49,27 @@ export default function Navbar() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    const fetchUsername = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+        if (data) setUsername(data.username);
+      } catch (err) {
+        console.error('Error fetching username:', err);
+      }
+    };
+
+    fetchUsername();
+  }, [user]);
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -123,7 +146,7 @@ export default function Navbar() {
                   aria-haspopup="true"
                 >
                   <FaUserCircle className="text-xl mr-2" />
-                  <span>Account</span>
+                  <span>{username || 'Account'}</span>
                   <FaChevronDown className={`ml-2 text-xs transition-transform duration-200 ${
                     isAccountMenuOpen ? 'rotate-180' : ''
                   }`} />
@@ -209,7 +232,7 @@ export default function Navbar() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <FaUserCircle className="inline mr-2" />
-                    Profile
+                    {username || 'Profile'}
                   </Link>
                   <button
                     onClick={() => {
