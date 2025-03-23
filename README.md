@@ -135,26 +135,26 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 
 ## Name Suggestions
-FeastFlow - Emphasizes the continuous stream of food content and social sharing
-RecipeRally - Suggests community and gathering around recipes
-KitchenConnect - Focuses on connecting people through cooking
-CulinaryCloud - Modern and social media-like
-Playful/Creative Names:
-Nibblenet - Fun, social network for food
-Plateshare - Direct and descriptive
-TasteTable - Alliteration and community feeling
-Foodfolio - Like a portfolio for food creations
-Community-Focused Names:
-MealMates - Emphasizes the social aspect
-CookCrew - Community of cooks sharing and connecting
-ChefShare - Simple and direct
-FoodFriends - Friendly and social
-Modern/Tech-Inspired Names:
-Dishly - Modern, app-like name (similar to popular apps)
-Cooklabs - Suggests innovation in cooking
-RecipeHub - Like GitHub but for recipes
-FeastFlow.io - Modern tech startup style
-My top recommendations would be:
-FeastFlow - Modern, memorable, and captures both the social feed aspect and food focus
-Dishly - Short, modern, and versatile
-KitchenConnect - Clear purpose and good alliteration
+- FeastFlow - Emphasizes the continuous stream of food content and social sharing
+- RecipeRally - Suggests community and gathering around recipes
+- KitchenConnect - Focuses on connecting people through cooking
+- CulinaryCloud - Modern and social media-like
+- Playful/Creative Names:
+- Nibblenet - Fun, social network for food
+- Plateshare - Direct and descriptive
+- TasteTable - Alliteration and community feeling
+- Foodfolio - Like a portfolio for food creations
+- Community-Focused Names:
+- MealMates - Emphasizes the social aspect
+- CookCrew - Community of cooks sharing and connecting
+- ChefShare - Simple and direct
+- FoodFriends - Friendly and social
+- Modern/Tech-Inspired Names:
+- Dishly - Modern, app-like name (similar to popular apps)
+- Cooklabs - Suggests innovation in cooking
+- RecipeHub - Like GitHub but for recipes
+- FeastFlow.io - Modern tech startup style
+- My top recommendations would be:
+- FeastFlow - Modern, memorable, and captures both the social feed aspect and food focus
+- Dishly - Short, modern, and versatile
+- KitchenConnect - Clear purpose and good alliteration
