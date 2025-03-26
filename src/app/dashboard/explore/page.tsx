@@ -7,15 +7,16 @@ import { FavoriteFood } from '@/lib/supabase';
 import { 
   FaSpinner, FaUtensils, FaTimes, FaPlus, FaUser, FaClock,
   FaGlobe, FaUserCircle, FaTrash, FaEllipsisV,
-  FaHeart, FaRegHeart, FaRetweet, FaUserFriends
+  FaHeart, FaRegHeart, FaRetweet, FaChartLine
 } from 'react-icons/fa';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import { usePathname } from 'next/navigation';
 
 type Post = {
-  id: string; // UUID
-  user_id: string; // UUID
-  food_id: string; // UUID
+  id: string;
+  user_id: string;
+  food_id: string;
   caption: string | null;
   created_at: string;
   is_explore: boolean;
@@ -241,38 +242,122 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'explore' | 'friends' | 'my-posts'>('explore');
+  const [viewMode, setViewMode] = useState<'explore' | 'trending' | 'my-posts'>('explore');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const pathname = usePathname();
 
   const fetchPosts = async () => {
     try {
+      if (!user) {
+        console.log('No authenticated user found');
+        setError('Please sign in to view posts');
+        return;
+      }
+
       setLoading(true);
       setError(null);
       
       let functionName = 'get_explore_posts';
       if (viewMode === 'my-posts') {
         functionName = 'get_user_posts';
-      } else if (viewMode === 'friends') {
-        functionName = 'get_friends_posts';
+      } else if (viewMode === 'trending') {
+        functionName = 'get_trending_posts';
       }
 
       console.log('Fetching posts with function:', functionName);
-      const { data, error } = await supabase.rpc(functionName);
-      console.log('Response:', { data, error });
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+      console.log('Current user:', user.id);
+      
+      // Now try the RPC call with explicit typing and parameters
+      const { data, error: rpcError } = await supabase.rpc(functionName, 
+        viewMode === 'explore' ? {} : { p_user_id: user.id }
+      );
+      
+      if (rpcError) {
+        console.error('Supabase RPC error details:', {
+          message: rpcError.message,
+          details: rpcError.details,
+          hint: rpcError.hint,
+          code: rpcError.code
+        });
+        // Check if it's a permissions error
+        if (rpcError.message.includes('permission denied')) {
+          setError('Permission denied. Please check your access rights.');
+        } else if (rpcError.message.includes('Not authenticated')) {
+          setError('Please sign in again to view posts');
+        } else {
+          setError(`Error loading posts: ${rpcError.message}`);
+        }
+        return;
       }
 
-      if (!data) {
-        console.log('No data returned');
+      if (!data || !Array.isArray(data)) {
+        console.log('No data returned from posts query or data is not an array');
         setPosts([]);
         return;
       }
 
-      console.log('Setting posts:', data);
-      setPosts(data);
+      // Log raw data for debugging
+      console.log('Raw data from database:', data);
+
+      // Transform the data to ensure proper types
+      const transformedPosts = data.map((post: any) => {
+        // Helper function to safely convert to number
+        const safeNumber = (value: any) => {
+          if (typeof value === 'bigint') return Number(value);
+          if (typeof value === 'string') return parseInt(value, 10) || 0;
+          if (typeof value === 'number') return value;
+          return 0;
+        };
+
+        // Helper function to safely parse JSON string or return default
+        const safeJsonParse = (value: any, defaultValue: any[] = []) => {
+          if (Array.isArray(value)) return value;
+          if (typeof value === 'string') {
+            try {
+              const parsed = JSON.parse(value);
+              return Array.isArray(parsed) ? parsed : defaultValue;
+            } catch {
+              return defaultValue;
+            }
+          }
+          return defaultValue;
+        };
+
+        // Log individual post data for debugging
+        console.log('Processing post:', post);
+        
+        return {
+          id: String(post.id || ''),
+          user_id: String(post.user_id || ''),
+          food_id: String(post.food_id || ''),
+          caption: post.caption || null,
+          created_at: post.created_at ? new Date(post.created_at).toISOString() : new Date().toISOString(),
+          is_explore: Boolean(post.is_explore),
+          food_name: String(post.food_name || ''),
+          food_ingredients: safeJsonParse(post.food_ingredients),
+          food_recipe: String(post.food_recipe || ''),
+          food_meal_types: safeJsonParse(post.food_meal_types),
+          food_visibility: String(post.food_visibility || 'public'),
+          username: String(post.username || ''),
+          display_name: post.display_name || null,
+          avatar_url: post.avatar_url || null,
+          likes_count: safeNumber(post.likes_count),
+          reposts_count: safeNumber(post.reposts_count),
+          is_liked: Boolean(post.is_liked),
+          is_reposted: Boolean(post.is_reposted),
+          reposted_by_username: post.reposted_by_username || null,
+          reposted_by_display_name: post.reposted_by_display_name || null,
+          repost_created_at: post.repost_created_at 
+            ? new Date(post.repost_created_at).toISOString() 
+            : null
+        };
+      });
+
+      console.log('Transformed posts:', transformedPosts.length, 'posts');
+      if (transformedPosts.length > 0) {
+        console.log('Sample transformed post:', transformedPosts[0]);
+      }
+      setPosts(transformedPosts);
     } catch (err) {
       console.error('Error fetching posts:', err);
       setError('Failed to load posts. Please try again.');
@@ -364,12 +449,12 @@ export default function ExplorePage() {
       <div className="flex flex-col gap-8 mb-8">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-primary">Explore</h1>
-          <button
-            onClick={() => setIsCreatePostModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+          <Link
+            href="/dashboard/create"
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
           >
-            <FaPlus /> Create Post
-          </button>
+            <FaPlus className="w-5 h-5" /> Create Post
+          </Link>
         </div>
 
         <div className="flex gap-2 bg-white rounded-lg shadow-sm p-1">
@@ -381,19 +466,19 @@ export default function ExplorePage() {
                 : 'text-text-secondary hover:text-primary'
             }`}
           >
-            <FaGlobe />
+            <Globe className="w-5 h-5 inline-block mr-2" />
             Explore
           </button>
           <button
-            onClick={() => setViewMode('friends')}
+            onClick={() => setViewMode('trending')}
             className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-              viewMode === 'friends'
+              viewMode === 'trending'
                 ? 'bg-accent text-white'
                 : 'text-text-secondary hover:text-primary'
             }`}
           >
-            <FaUserFriends />
-            Friends
+            <FaChartLine className="w-5 h-5 inline-block mr-2" />
+            Trending
           </button>
           <button
             onClick={() => setViewMode('my-posts')}
@@ -403,7 +488,7 @@ export default function ExplorePage() {
                 : 'text-text-secondary hover:text-primary'
             }`}
           >
-            <FaUserCircle />
+            <FaUser className="w-5 h-5 inline-block mr-2" />
             My Posts
           </button>
         </div>
@@ -424,25 +509,16 @@ export default function ExplorePage() {
           <p className="text-text-secondary mb-4">
             {viewMode === 'explore' 
               ? 'No posts yet. Be the first to share!'
-              : viewMode === 'friends'
-              ? 'No posts from friends yet. Add some friends to see their posts!'
+              : viewMode === 'trending'
+              ? 'No trending posts yet. Check back later for new posts!'
               : 'You haven\'t created any posts yet.'}
           </p>
-          {viewMode === 'friends' ? (
-            <Link
-              href="/dashboard/friends"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
-            >
-              <FaUserFriends /> Find Friends
-            </Link>
-          ) : (
-            <button
-              onClick={() => setIsCreatePostModalOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
-            >
-              <FaPlus /> Create Post
-            </button>
-          )}
+          <Link
+            href="/dashboard/create"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+          >
+            <FaPlus /> Create Post
+          </Link>
         </div>
       ) : (
         <div className="grid gap-8">
