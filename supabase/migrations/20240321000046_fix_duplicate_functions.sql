@@ -523,4 +523,148 @@ BEGIN
     ORDER BY 
         COALESCE(pd.repost_created_at, pd.created_at) DESC;
 END;
+$$;
+
+CREATE OR REPLACE FUNCTION get_trending_posts()
+RETURNS TABLE (
+    id UUID,
+    user_id UUID,
+    food_id UUID,
+    caption TEXT,
+    created_at TIMESTAMPTZ,
+    is_explore BOOLEAN,
+    food_name TEXT,
+    food_ingredients TEXT[],
+    food_recipe TEXT,
+    food_meal_types TEXT[],
+    food_visibility TEXT,
+    username TEXT,
+    display_name TEXT,
+    avatar_url TEXT,
+    likes_count BIGINT,
+    reposts_count BIGINT,
+    is_liked BOOLEAN,
+    is_reposted BOOLEAN,
+    reposted_by_username TEXT,
+    reposted_by_display_name TEXT,
+    repost_created_at TIMESTAMPTZ,
+    trending_score FLOAT
+) LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+    v_user_id UUID;
+BEGIN
+    v_user_id := auth.uid();
+    IF v_user_id IS NULL THEN
+        RAISE EXCEPTION 'Not authenticated';
+    END IF;
+
+    RETURN QUERY
+    WITH post_data AS (
+        -- Original posts
+        SELECT 
+            p.id,
+            p.user_id,
+            p.food_id,
+            p.caption,
+            p.created_at,
+            p.is_explore,
+            ff.name AS food_name,
+            ff.ingredients AS food_ingredients,
+            ff.recipe AS food_recipe,
+            ff.meal_types AS food_meal_types,
+            ff.visibility AS food_visibility,
+            up.username,
+            up.display_name,
+            up.avatar_url,
+            NULL::TEXT AS reposted_by_username,
+            NULL::TEXT AS reposted_by_display_name,
+            NULL::TIMESTAMPTZ AS repost_created_at,
+            COUNT(pl.*)::BIGINT AS likes_count,
+            COUNT(pr.*)::BIGINT AS reposts_count,
+            bool_or(pl.user_id = v_user_id) AS is_liked,
+            bool_or(pr.user_id = v_user_id) AS is_reposted,
+            -- Trending score: (likes * 1.0 + reposts * 1.5) / hours_since_post^1.8
+            (COUNT(pl.*)::FLOAT * 1.0 + COUNT(pr.*)::FLOAT * 1.5) / 
+            POWER(EXTRACT(EPOCH FROM (NOW() - p.created_at))/3600 + 1, 1.8) AS trending_score
+        FROM posts p
+        JOIN favorite_foods ff ON p.food_id = ff.id
+        JOIN user_profiles up ON p.user_id = up.id
+        LEFT JOIN post_likes pl ON pl.post_id = p.id
+        LEFT JOIN post_reposts pr ON pr.post_id = p.id
+        WHERE p.created_at >= NOW() - INTERVAL '24 hours'
+        AND ff.visibility = 'public'
+        GROUP BY p.id, p.user_id, p.food_id, p.caption, p.created_at, p.is_explore,
+                 ff.name, ff.ingredients, ff.recipe, ff.meal_types, ff.visibility,
+                 up.username, up.display_name, up.avatar_url
+
+        UNION ALL
+
+        -- Reposts
+        SELECT 
+            p.id,
+            p.user_id,
+            p.food_id,
+            p.caption,
+            p.created_at,
+            p.is_explore,
+            ff.name AS food_name,
+            ff.ingredients AS food_ingredients,
+            ff.recipe AS food_recipe,
+            ff.meal_types AS food_meal_types,
+            ff.visibility AS food_visibility,
+            up.username,
+            up.display_name,
+            up.avatar_url,
+            reposter.username AS reposted_by_username,
+            reposter.display_name AS reposted_by_display_name,
+            pr.created_at AS repost_created_at,
+            COUNT(pl.*)::BIGINT AS likes_count,
+            COUNT(pr2.*)::BIGINT AS reposts_count,
+            bool_or(pl.user_id = v_user_id) AS is_liked,
+            bool_or(pr2.user_id = v_user_id) AS is_reposted,
+            -- Use repost time for trending score calculation
+            (COUNT(pl.*)::FLOAT * 1.0 + COUNT(pr2.*)::FLOAT * 1.5) / 
+            POWER(EXTRACT(EPOCH FROM (NOW() - pr.created_at))/3600 + 1, 1.8) AS trending_score
+        FROM posts p
+        JOIN favorite_foods ff ON p.food_id = ff.id
+        JOIN user_profiles up ON p.user_id = up.id
+        JOIN post_reposts pr ON pr.post_id = p.id
+        JOIN user_profiles reposter ON pr.user_id = reposter.id
+        LEFT JOIN post_likes pl ON pl.post_id = p.id
+        LEFT JOIN post_reposts pr2 ON pr2.post_id = p.id
+        WHERE pr.created_at >= NOW() - INTERVAL '24 hours'
+        AND ff.visibility = 'public'
+        GROUP BY p.id, p.user_id, p.food_id, p.caption, p.created_at, p.is_explore,
+                 ff.name, ff.ingredients, ff.recipe, ff.meal_types, ff.visibility,
+                 up.username, up.display_name, up.avatar_url,
+                 reposter.username, reposter.display_name, pr.created_at
+    )
+    SELECT 
+        pd.id,
+        pd.user_id,
+        pd.food_id,
+        pd.caption,
+        pd.created_at,
+        pd.is_explore,
+        pd.food_name,
+        pd.food_ingredients,
+        pd.food_recipe,
+        pd.food_meal_types,
+        pd.food_visibility,
+        pd.username,
+        pd.display_name,
+        pd.avatar_url,
+        pd.likes_count,
+        pd.reposts_count,
+        pd.is_liked,
+        pd.is_reposted,
+        pd.reposted_by_username,
+        pd.reposted_by_display_name,
+        pd.repost_created_at,
+        pd.trending_score
+    FROM post_data pd
+    WHERE pd.trending_score > 0
+    ORDER BY pd.trending_score DESC
+    LIMIT 50;
+END;
 $$; 

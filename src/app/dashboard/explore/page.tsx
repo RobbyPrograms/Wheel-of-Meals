@@ -267,9 +267,10 @@ export default function ExplorePage() {
       console.log('Fetching posts with function:', functionName);
       console.log('Current user:', user.id);
       
-      // Now try the RPC call with explicit typing and parameters
-      const { data, error: rpcError } = await supabase.rpc(functionName, 
-        viewMode === 'explore' ? {} : { p_user_id: user.id }
+      // Only pass parameters for get_user_posts
+      const { data, error: rpcError } = await supabase.rpc(
+        functionName, 
+        functionName === 'get_user_posts' ? { p_user_id: user.id } : {}
       );
       
       if (rpcError) {
@@ -452,21 +453,25 @@ export default function ExplorePage() {
           <Link
             href="/dashboard/create"
             className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
+            onClick={(e) => {
+              e.preventDefault();
+              setIsCreatePostModalOpen(true);
+            }}
           >
             <FaPlus className="w-5 h-5" /> Create Post
           </Link>
         </div>
 
-        <div className="flex gap-2 bg-white rounded-lg shadow-sm p-1">
+        <div className="flex gap-2 bg-white rounded-lg shadow-sm p-2">
           <button
             onClick={() => setViewMode('explore')}
             className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
               viewMode === 'explore'
                 ? 'bg-accent text-white'
-                : 'text-text-secondary hover:text-primary'
+                : 'text-text-secondary hover:text-primary hover:bg-gray-50'
             }`}
           >
-            <Globe className="w-5 h-5 inline-block mr-2" />
+            <FaGlobe className="w-4 h-4" />
             Explore
           </button>
           <button
@@ -474,10 +479,10 @@ export default function ExplorePage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
               viewMode === 'trending'
                 ? 'bg-accent text-white'
-                : 'text-text-secondary hover:text-primary'
+                : 'text-text-secondary hover:text-primary hover:bg-gray-50'
             }`}
           >
-            <FaChartLine className="w-5 h-5 inline-block mr-2" />
+            <FaChartLine className="w-4 h-4" />
             Trending
           </button>
           <button
@@ -485,10 +490,10 @@ export default function ExplorePage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
               viewMode === 'my-posts'
                 ? 'bg-accent text-white'
-                : 'text-text-secondary hover:text-primary'
+                : 'text-text-secondary hover:text-primary hover:bg-gray-50'
             }`}
           >
-            <FaUser className="w-5 h-5 inline-block mr-2" />
+            <FaUser className="w-4 h-4" />
             My Posts
           </button>
         </div>
