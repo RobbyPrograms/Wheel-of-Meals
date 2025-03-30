@@ -245,35 +245,17 @@ export default function Dashboard() {
           </div>
         </Link>
 
-        {/* My Progress Card */}
+        {/* Explore Card */}
         <Link 
-          href="/dashboard/progress"
+          href="/dashboard/explore"
           className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
         >
           <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-            <FaTrophy className="text-accent text-xl" />
+            <FaCompass className="text-accent text-xl" />
           </div>
-          <h3 className="text-lg font-semibold text-primary mb-2">My Progress</h3>
+          <h3 className="text-lg font-semibold text-primary mb-2">Explore</h3>
           <p className="text-text-secondary text-sm mb-4">
-            Track your cooking journey and achievements
-          </p>
-          <div className="flex items-center text-accent text-sm font-medium">
-            <span>View Details</span>
-            <FaChevronRight className="ml-2 text-xs" />
-          </div>
-        </Link>
-
-        {/* Random Meal Card */}
-        <Link 
-          href="/dashboard/random"
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
-        >
-          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-            <FaRandom className="text-accent text-xl" />
-          </div>
-          <h3 className="text-lg font-semibold text-primary mb-2">Random Meal</h3>
-          <p className="text-text-secondary text-sm mb-4">
-            Get a random meal suggestion from your favorites
+            Discover new recipes and meal ideas
           </p>
           <div className="flex items-center text-accent text-sm font-medium">
             <span>View Details</span>
@@ -292,6 +274,24 @@ export default function Dashboard() {
           <h3 className="text-lg font-semibold text-primary mb-2">Friends</h3>
           <p className="text-text-secondary text-sm mb-4">
             Connect with friends and discover their favorite meals
+          </p>
+          <div className="flex items-center text-accent text-sm font-medium">
+            <span>View Details</span>
+            <FaChevronRight className="ml-2 text-xs" />
+          </div>
+        </Link>
+
+        {/* Random Meal Card */}
+        <Link 
+          href="/dashboard/random"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
+        >
+          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+            <FaRandom className="text-accent text-xl" />
+          </div>
+          <h3 className="text-lg font-semibold text-primary mb-2">Random Meal</h3>
+          <p className="text-text-secondary text-sm mb-4">
+            Get a random meal suggestion from your favorites
           </p>
           <div className="flex items-center text-accent text-sm font-medium">
             <span>View Details</span>

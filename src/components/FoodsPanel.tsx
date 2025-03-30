@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { FaPlus, FaTrash, FaUtensils, FaTimes, FaEdit, FaSave, FaChevronLeft, FaBook, FaStar as FaStarSolid, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaUtensils, FaTimes, FaEdit, FaSave, FaChevronLeft, FaBook, FaStar as FaStarSolid, FaEye, FaEyeSlash, FaChevronRight, FaCompass, FaUserFriends, FaLightbulb } from 'react-icons/fa';
 import { FaRegStar as FaStarOutline } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert';
 
@@ -42,6 +43,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
   const [searchTerm, setSearchTerm] = useState('');
   const [editingFood, setEditingFood] = useState<Food | null>(null);
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -467,6 +469,81 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                   )}
                 </div>
               )}
+
+              {/* Feature Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                {/* My Foods Card */}
+                <Link 
+                  href="/dashboard/foods"
+                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
+                >
+                  <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+                    <FaUtensils className="text-accent text-xl" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-primary mb-2">My Foods</h3>
+                  <p className="text-text-secondary text-sm mb-4">
+                    Manage your favorite meals and ingredients
+                  </p>
+                  <div className="flex items-center text-accent text-sm font-medium">
+                    <span>View Details</span>
+                    <FaChevronRight className="ml-2 text-xs" />
+                  </div>
+                </Link>
+
+                {/* Explore Card */}
+                <Link 
+                  href="/dashboard/explore"
+                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
+                >
+                  <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+                    <FaCompass className="text-accent text-xl" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-primary mb-2">Explore</h3>
+                  <p className="text-text-secondary text-sm mb-4">
+                    Discover new recipes and meal ideas
+                  </p>
+                  <div className="flex items-center text-accent text-sm font-medium">
+                    <span>View Details</span>
+                    <FaChevronRight className="ml-2 text-xs" />
+                  </div>
+                </Link>
+
+                {/* Friends Card */}
+                <Link 
+                  href="/dashboard/friends"
+                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
+                >
+                  <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+                    <FaUserFriends className="text-accent text-xl" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-primary mb-2">Friends</h3>
+                  <p className="text-text-secondary text-sm mb-4">
+                    Connect with friends and discover their favorite meals
+                  </p>
+                  <div className="flex items-center text-accent text-sm font-medium">
+                    <span>View Details</span>
+                    <FaChevronRight className="ml-2 text-xs" />
+                  </div>
+                </Link>
+
+                {/* AI Suggestions Card */}
+                <div 
+                  onClick={() => setIsAIPanelOpen(true)}
+                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                >
+                  <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+                    <FaLightbulb className="text-accent text-xl" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-primary mb-2">AI Suggestions</h3>
+                  <p className="text-text-secondary text-sm mb-4">
+                    Chat with AI to get personalized recipe ideas
+                  </p>
+                  <div className="flex items-center text-accent text-sm font-medium">
+                    <span>Open Chat</span>
+                    <FaChevronRight className="ml-2 text-xs" />
+                  </div>
+                </div>
+              </div>
             </div>
           </motion.div>
         </motion.div>
