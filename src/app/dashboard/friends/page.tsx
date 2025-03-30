@@ -160,20 +160,37 @@ export default function FriendsPage() {
     if (!user) return;
 
     try {
+      // Log the incoming food object
+      console.log('Original food object:', food);
+
+      // Create the insert data
+      const insertData = {
+        user_id: user.id,
+        name: food.name,
+        ingredients: food.ingredients,  // Keep as is since it's already a string in the DB
+        recipe: food.recipe || '',
+        rating: 0,
+        meal_types: '{}',  // Empty PostgreSQL array
+        visibility: 'private'
+      };
+
+      console.log('Final insert data:', insertData);
+
+      // First try to insert without select
       const { error: addError } = await supabase
         .from('favorite_foods')
-        .insert([{
-          ...food,
-          id: undefined, // Let Supabase generate a new ID
-          user_id: user.id,
-          created_at: new Date().toISOString(),
-        }]);
+        .insert(insertData);
 
-      if (addError) throw addError;
+      if (addError) {
+        console.error('Supabase error details:', addError);
+        throw addError;
+      }
 
       setError(null);
-    } catch (err) {
-      console.error('Error adding food:', err);
+      // Optionally refresh the friends list to show the updated data
+      await fetchFriends();
+    } catch (err: any) {
+      console.error('Full error object:', err);
       setError('Failed to add food to your favorites. Please try again.');
     }
   };
