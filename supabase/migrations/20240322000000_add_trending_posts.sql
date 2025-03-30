@@ -25,8 +25,7 @@ RETURNS TABLE (
   is_reposted boolean,
   reposted_by_username text,
   reposted_by_display_name text,
-  repost_created_at timestamptz,
-  trending_score float
+  repost_created_at timestamptz
 ) 
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -40,21 +39,7 @@ BEGIN
   END IF;
 
   RETURN QUERY
-  WITH post_metrics AS (
-    -- Calculate metrics for all posts
-    SELECT 
-      p.id AS post_id,
-      p.created_at,
-      COUNT(pl.*) AS likes_count,
-      COUNT(pr.*) AS reposts_count,
-      EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600 AS hours_old
-    FROM posts p
-    LEFT JOIN post_likes pl ON p.id = pl.post_id
-    LEFT JOIN post_reposts pr ON p.id = pr.post_id
-    WHERE p.is_explore = true
-    GROUP BY p.id, p.created_at
-  ),
-  post_data AS (
+  WITH post_data AS (
     -- Get original posts with their metrics
     SELECT 
       p.id,
@@ -71,21 +56,17 @@ BEGIN
       up.username,
       up.display_name,
       up.avatar_url,
-      pm.likes_count,
-      pm.reposts_count,
-      EXISTS (SELECT 1 FROM post_likes pl2 WHERE pl2.post_id = p.id AND pl2.user_id = v_user_id) AS is_liked,
-      EXISTS (SELECT 1 FROM post_reposts pr2 WHERE pr2.post_id = p.id AND pr2.user_id = v_user_id) AS is_reposted,
+      (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count,
+      (SELECT COUNT(*) FROM post_reposts pr WHERE pr.post_id = p.id) AS reposts_count,
+      EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = v_user_id) AS is_liked,
+      EXISTS (SELECT 1 FROM post_reposts pr WHERE pr.post_id = p.id AND pr.user_id = v_user_id) AS is_reposted,
       NULL::text AS reposted_by_username,
       NULL::text AS reposted_by_display_name,
-      NULL::timestamptz AS repost_created_at,
-      -- Calculate trending score with higher weight for recent activity
-      (pm.likes_count + pm.reposts_count * 1.5) / (1 + pm.hours_old / 24)::float AS trending_score
+      NULL::timestamptz AS repost_created_at
     FROM posts p
     JOIN favorite_foods f ON p.food_id = f.id
     JOIN user_profiles up ON p.user_id = up.id
-    JOIN post_metrics pm ON p.id = pm.post_id
     WHERE p.is_explore = true
-      AND f.visibility = 'public'
 
     UNION ALL
 
@@ -105,23 +86,19 @@ BEGIN
       up.username,
       up.display_name,
       up.avatar_url,
-      pm.likes_count,
-      pm.reposts_count,
-      EXISTS (SELECT 1 FROM post_likes pl2 WHERE pl2.post_id = p.id AND pl2.user_id = v_user_id) AS is_liked,
-      EXISTS (SELECT 1 FROM post_reposts pr2 WHERE pr2.post_id = p.id AND pr2.user_id = v_user_id) AS is_reposted,
+      (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count,
+      (SELECT COUNT(*) FROM post_reposts pr WHERE pr.post_id = p.id) AS reposts_count,
+      EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = v_user_id) AS is_liked,
+      EXISTS (SELECT 1 FROM post_reposts pr WHERE pr.post_id = p.id AND pr.user_id = v_user_id) AS is_reposted,
       rup.username AS reposted_by_username,
       rup.display_name AS reposted_by_display_name,
-      rp.created_at AS repost_created_at,
-      -- Calculate trending score based on most recent activity (repost time)
-      (pm.likes_count + pm.reposts_count * 1.5) / (1 + EXTRACT(EPOCH FROM (NOW() - rp.created_at)) / 86400)::float AS trending_score
+      rp.created_at AS repost_created_at
     FROM posts p
     JOIN post_reposts rp ON p.id = rp.post_id
     JOIN favorite_foods f ON p.food_id = f.id
     JOIN user_profiles up ON p.user_id = up.id
     JOIN user_profiles rup ON rp.user_id = rup.id
-    JOIN post_metrics pm ON p.id = pm.post_id
     WHERE p.is_explore = true
-      AND f.visibility = 'public'
   )
   SELECT 
     pd.id,
@@ -144,10 +121,11 @@ BEGIN
     pd.is_reposted,
     pd.reposted_by_username,
     pd.reposted_by_display_name,
-    pd.repost_created_at,
-    pd.trending_score
+    pd.repost_created_at
   FROM post_data pd
-  ORDER BY pd.trending_score DESC
+  ORDER BY 
+    pd.likes_count + pd.reposts_count DESC,  -- Order by total engagement
+    GREATEST(pd.created_at, pd.repost_created_at) DESC  -- Then by most recent activity
   LIMIT 50;
 END;
 $$; 

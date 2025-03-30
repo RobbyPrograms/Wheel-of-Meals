@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight, FaLightbulb, FaUserFriends, FaCompass } from 'react-icons/fa';
+import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight, FaLightbulb, FaUserFriends, FaCompass, FaTrophy, FaStar } from 'react-icons/fa';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -12,12 +12,24 @@ import MealPlansPanel from '@/components/MealPlansPanel';
 import MealPlansDashboard from '@/components/MealPlansDashboard';
 import AISuggestions from '@/components/AISuggestions';
 
+interface LevelInfo {
+  current_level: number;
+  current_title: string;
+  current_icon: string;
+  current_division: number;
+  current_xp: number;
+  xp_for_next_level: number;
+  progress_percentage: number;
+  rewards: string[];
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [foodCount, setFoodCount] = useState<number | null>(null);
   const [mealPlanCount, setMealPlanCount] = useState<number | null>(null);
+  const [levelInfo, setLevelInfo] = useState<LevelInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [recentFoods, setRecentFoods] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +100,13 @@ export default function Dashboard() {
       
       if (recentFoodsError) throw recentFoodsError;
       setRecentFoods(recentFoodsData || []);
+
+      // Fetch level info
+      const { data: levelInfoData, error: levelInfoError } = await supabase
+        .rpc('get_level_progress', { user_id: user.id });
+      if (!levelInfoError && levelInfoData) {
+        setLevelInfo(levelInfoData[0]);
+      }
     } catch (error: any) {
       setError(error.message || 'Failed to load dashboard data. Please try again later.');
     } finally {
@@ -165,7 +184,15 @@ export default function Dashboard() {
         <h1 className="text-xl font-medium text-primary">
           Welcome to your dashboard
         </h1>
-        <div className="bg-accent bg-opacity-10 text-accent text-xs px-3 py-1">Level 1 Chef</div>
+        {levelInfo && (
+          <div className="flex items-center gap-2 bg-accent bg-opacity-10 text-accent px-4 py-2 rounded-lg">
+            <span className="text-2xl">{levelInfo.current_icon}</span>
+            <div>
+              <div className="font-medium">{levelInfo.current_title}</div>
+              <div className="text-xs">Division {levelInfo.current_division}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Feature Cards */}
@@ -193,11 +220,11 @@ export default function Dashboard() {
         >
           <div className="p-6">
             <div className="bg-highlight text-light w-12 h-12 flex items-center justify-center rounded-full mb-4">
-              <FaCalendarAlt className="text-xl" />
+              <FaTrophy className="text-xl" />
             </div>
-            <h3 className="text-lg font-medium mb-2 text-primary">Meal Plans</h3>
-            <p className="text-text-secondary text-sm mb-4">Create and view your meal schedules</p>
-            <div className="flex items-center text-accent text-sm font-medium">
+            <h3 className="text-lg font-medium mb-2 text-primary">My Progress</h3>
+            <p className="text-text-secondary text-sm mb-4">Track your cooking journey and achievements</p>
+            <div className="flex items-center text-highlight text-sm font-medium">
               <span>View Details</span>
               <FaChevronRight className="ml-2 text-xs" />
             </div>
@@ -263,59 +290,80 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Activity Overview */}
-      <div className="mb-10">
-        <h2 className="text-lg font-medium text-primary mb-6">Activity Overview</h2>
-        {error ? (
-          <div className="text-center py-8 border border-border">
-            <p className="text-red-500 mb-4">{error}</p>
-            <button
-              onClick={handleRetryWithSetup}
-              className="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent-dark transition-colors"
-              disabled={isSettingUpDatabase}
-            >
-              {isSettingUpDatabase ? 'Setting up...' : 'Retry with Setup'}
-            </button>
-          </div>
-        ) : isLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="border border-border p-4">
-                <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-2">TOTAL FOODS</h3>
-                <div className="text-4xl font-medium text-accent">{foodCount || 0}</div>
-                <p className="text-text-secondary text-sm mt-2">Saved favorite meals</p>
-              </div>
-              
-              <div 
-                className="border border-border p-4 cursor-pointer hover:border-highlight transition-colors"
-                onClick={() => setIsMealPlansPanelOpen(true)}
-              >
-                <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-2">MEAL PLANS</h3>
-                <div className="text-4xl font-medium text-highlight">{mealPlanCount || 0}</div>
-                <p className="text-text-secondary text-sm mt-2">Created meal schedules</p>
-              </div>
+      {/* Stats and Progress Section */}
+      {user && (
+        <div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="border border-border p-6 rounded-lg">
+              <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-2">TOTAL FOODS</h3>
+              <div className="text-4xl font-medium text-accent">{foodCount || 0}</div>
+              <p className="text-text-secondary text-sm mt-2">Saved favorite meals</p>
             </div>
             
-            <div className="border border-border p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xs uppercase tracking-wider text-text-secondary">PROGRESS</h3>
-                <div className="bg-accent bg-opacity-10 text-accent text-xs px-2 py-0.5">Level 1</div>
-              </div>
-              <div className="w-full bg-border h-2 mb-2">
-                <div 
-                  className="bg-accent h-2"
-                  style={{ width: '25%' }}
-                ></div>
-              </div>
-              <p className="text-text-secondary text-sm">25% to Level 2 - Add more meals to level up!</p>
+            <div 
+              className="border border-border p-6 rounded-lg cursor-pointer hover:border-highlight transition-colors"
+              onClick={() => setIsMealPlansPanelOpen(true)}
+            >
+              <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-2">MEAL PLANS</h3>
+              <div className="text-4xl font-medium text-highlight">{mealPlanCount || 0}</div>
+              <p className="text-text-secondary text-sm mt-2">Created meal schedules</p>
             </div>
           </div>
-        )}
-      </div>
+          
+          {levelInfo && (
+            <div className="border border-border p-6 rounded-lg">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-1">PROGRESS</h3>
+                  <div className="text-lg font-medium text-primary flex items-center gap-2">
+                    {levelInfo.current_title}
+                    <span className="text-2xl">{levelInfo.current_icon}</span>
+                    <span className="text-sm text-text-secondary">Division {levelInfo.current_division}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FaStar className="text-yellow-400" />
+                  <span className="text-lg font-medium">{levelInfo.current_xp} XP</span>
+                </div>
+              </div>
+              
+              <div className="relative w-full h-4 bg-border rounded-full mb-3 overflow-hidden">
+                <div 
+                  className="absolute top-0 left-0 h-full bg-accent rounded-full transition-all duration-500"
+                  style={{ width: `${levelInfo.progress_percentage}%` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+                </div>
+              </div>
+              
+              <div className="flex justify-between text-sm">
+                <p className="text-text-secondary">
+                  {levelInfo.current_xp} / {levelInfo.xp_for_next_level} XP
+                </p>
+                <p className="text-accent font-medium">
+                  {levelInfo.progress_percentage}% to next level
+                </p>
+              </div>
+
+              {/* Rewards Section */}
+              <div className="mt-6">
+                <h4 className="text-sm font-medium text-primary mb-3">Current Level Rewards</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {levelInfo.rewards.map((reward, index) => (
+                    <div 
+                      key={index}
+                      className="bg-accent bg-opacity-5 text-accent text-sm p-3 rounded-lg flex items-center gap-2"
+                    >
+                      <FaStar className="text-yellow-400" />
+                      {reward}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Recent Foods Section */}
       <div className="mb-10">
