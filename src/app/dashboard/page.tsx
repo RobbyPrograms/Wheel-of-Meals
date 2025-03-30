@@ -396,12 +396,15 @@ export default function Dashboard() {
 
       {/* Recent Foods Section */}
       <div className="mb-10">
-        <div className="border border-border p-6 h-full">
+        <div className="bg-white rounded-xl shadow-md p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-medium text-primary">Recent Foods</h2>
+            <div>
+              <h2 className="text-lg font-semibold text-[#0F1E0F]">Recent Foods</h2>
+              <p className="text-sm text-gray-600">Your latest added meals</p>
+            </div>
             <button 
               onClick={() => setIsFoodsPanelOpen(true)}
-              className="text-accent hover:text-highlight text-sm flex items-center"
+              className="text-[#319141] hover:text-[#0F1E0F] text-sm flex items-center transition-colors"
             >
               View All <FaChevronRight className="ml-1 text-xs" />
             </button>
@@ -409,27 +412,38 @@ export default function Dashboard() {
           
           {isLoading ? (
             <div className="flex justify-center items-center h-40">
-              <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-[#319141] border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : recentFoods.length > 0 ? (
             <div className="space-y-4">
               {recentFoods.map((food) => (
-                <div key={food.id} className="border-b border-border pb-4">
-                  <h3 className="font-medium text-primary">{food.name}</h3>
-                  <p className="text-sm text-text-secondary truncate">
-                    {food.ingredients || 'No ingredients listed'}
+                <div 
+                  key={food.id} 
+                  className="p-4 rounded-lg bg-[#319141]/5 hover:bg-[#319141]/10 transition-colors cursor-pointer"
+                  onClick={() => setIsFoodsPanelOpen(true)}
+                >
+                  <h3 className="font-medium text-[#0F1E0F] mb-1">{food.name}</h3>
+                  <p className="text-sm text-gray-600">
+                    {Array.isArray(food.ingredients) 
+                      ? food.ingredients.join(', ') 
+                      : food.ingredients || 'No ingredients listed'
+                    }
                   </p>
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-text-secondary mb-4">No foods added yet</p>
+              <div className="w-16 h-16 bg-[#319141]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FaUtensils className="text-[#319141] text-2xl" />
+              </div>
+              <p className="text-gray-600 mb-4">No foods added yet</p>
               <button 
                 onClick={() => setIsFoodsPanelOpen(true)}
-                className="bg-accent text-light px-4 py-2 inline-block hover:bg-highlight transition-colors"
+                className="bg-[#319141] text-white px-6 py-2 rounded-lg hover:bg-[#0F1E0F] transition-colors inline-flex items-center gap-2"
               >
                 Add Your First Food
+                <FaChevronRight className="text-xs" />
               </button>
             </div>
           )}
