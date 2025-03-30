@@ -1,41 +1,61 @@
--- Create the chef_levels table to define level thresholds and rewards
+-- First clean up existing data and tables
+DROP TRIGGER IF EXISTS posts_xp_trigger ON posts;
+DROP TRIGGER IF EXISTS post_likes_xp_trigger ON post_likes;
+DROP FUNCTION IF EXISTS handle_post_interaction();
+DROP FUNCTION IF EXISTS award_experience_points();
+DROP FUNCTION IF EXISTS get_level_progress(UUID);
+
+-- Remove XP columns from user_profiles if they exist
+ALTER TABLE public.user_profiles 
+DROP COLUMN IF EXISTS experience_points,
+DROP COLUMN IF EXISTS current_level;
+
+-- Drop and recreate chef_levels table
+DROP TABLE IF EXISTS public.chef_levels CASCADE;
+
+-- Create the chef_levels table to define level thresholds
 CREATE TABLE IF NOT EXISTS public.chef_levels (
     level_number INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
     icon TEXT NOT NULL,
     min_xp INTEGER NOT NULL,
     division INTEGER DEFAULT 1,
-    description TEXT,
-    rewards TEXT[]
+    description TEXT
 );
 
--- Add XP tracking to user_profiles
+-- Insert predefined levels FIRST
+INSERT INTO public.chef_levels (level_number, title, icon, min_xp, division, description) VALUES
+(1, 'Kitchen Novice', '👨‍🍳', 0, 1, 'New to the kitchen but eager to learn!'),
+(2, 'Apprentice Chef', '🍳', 100, 1, 'Learning the basics of cooking'),
+(3, 'Apprentice Chef', '🍳', 250, 2, 'Getting comfortable in the kitchen'),
+(4, 'Apprentice Chef', '🍳', 500, 3, 'Mastering fundamental techniques'),
+(5, 'Apprentice Chef', '🍳', 1000, 4, 'Ready to take on new challenges'),
+(6, 'Home Cook', '🏠', 2000, 1, 'Confident in creating delicious meals'),
+(7, 'Home Cook', '🏠', 3500, 2, 'Experimenting with new flavors'),
+(8, 'Home Cook', '🏠', 5000, 3, 'Creating unique recipe variations'),
+(9, 'Home Cook', '🏠', 7000, 4, 'Mastering home cooking'),
+(10, 'Culinary Enthusiast', '🌟', 10000, 1, 'Passionate about cooking'),
+(11, 'Culinary Enthusiast', '🌟', 15000, 2, 'Inspiring others to cook'),
+(12, 'Culinary Enthusiast', '🌟', 20000, 3, 'Creating trending recipes'),
+(13, 'Culinary Enthusiast', '🌟', 30000, 4, 'A true food innovator'),
+(14, 'Master Chef', '👑', 50000, 1, 'Expert in culinary arts'),
+(15, 'Master Chef', '👑', 75000, 2, 'Creating culinary masterpieces'),
+(16, 'Master Chef', '👑', 100000, 3, 'Leading the cooking community'),
+(17, 'Master Chef', '👑', 150000, 4, 'Setting culinary trends'),
+(18, 'Gourmet Guru', '🎖️', 200000, 1, 'Elite culinary influencer'),
+(19, 'Gourmet Guru', '🎖️', 300000, 2, 'Renowned recipe creator'),
+(20, 'Michelin Star', '⭐', 500000, 1, 'Legendary culinary master');
+
+-- THEN add XP tracking to user_profiles after levels exist
 ALTER TABLE public.user_profiles 
 ADD COLUMN IF NOT EXISTS experience_points INTEGER DEFAULT 0,
-ADD COLUMN IF NOT EXISTS current_level INTEGER DEFAULT 1 REFERENCES public.chef_levels(level_number);
+ADD COLUMN IF NOT EXISTS current_level INTEGER DEFAULT 1;
 
--- Insert predefined levels
-INSERT INTO public.chef_levels (level_number, title, icon, min_xp, division, description, rewards) VALUES
-(1, 'Kitchen Novice', '👨‍🍳', 0, 1, 'New to the kitchen but eager to learn!', ARRAY['Basic recipe access']),
-(2, 'Apprentice Chef', '🍳', 100, 1, 'Learning the basics of cooking', ARRAY['Custom recipe collections']),
-(3, 'Apprentice Chef', '🍳', 250, 2, 'Getting comfortable in the kitchen', ARRAY['Share recipes with friends']),
-(4, 'Apprentice Chef', '🍳', 500, 3, 'Mastering fundamental techniques', ARRAY['Create meal plans']),
-(5, 'Apprentice Chef', '🍳', 1000, 4, 'Ready to take on new challenges', ARRAY['Weekly recipe highlights']),
-(6, 'Home Cook', '🏠', 2000, 1, 'Confident in creating delicious meals', ARRAY['Recipe modification tools']),
-(7, 'Home Cook', '🏠', 3500, 2, 'Experimenting with new flavors', ARRAY['Custom ingredient substitutions']),
-(8, 'Home Cook', '🏠', 5000, 3, 'Creating unique recipe variations', ARRAY['Advanced search filters']),
-(9, 'Home Cook', '🏠', 7000, 4, 'Mastering home cooking', ARRAY['Recipe scaling tools']),
-(10, 'Culinary Enthusiast', '🌟', 10000, 1, 'Passionate about cooking', ARRAY['Featured recipe placement']),
-(11, 'Culinary Enthusiast', '🌟', 15000, 2, 'Inspiring others to cook', ARRAY['Custom recipe collections']),
-(12, 'Culinary Enthusiast', '🌟', 20000, 3, 'Creating trending recipes', ARRAY['Recipe video uploads']),
-(13, 'Culinary Enthusiast', '🌟', 30000, 4, 'A true food innovator', ARRAY['Premium recipe templates']),
-(14, 'Master Chef', '👑', 50000, 1, 'Expert in culinary arts', ARRAY['Recipe monetization']),
-(15, 'Master Chef', '👑', 75000, 2, 'Creating culinary masterpieces', ARRAY['Custom badge creation']),
-(16, 'Master Chef', '👑', 100000, 3, 'Leading the cooking community', ARRAY['Live cooking sessions']),
-(17, 'Master Chef', '👑', 150000, 4, 'Setting culinary trends', ARRAY['Exclusive events access']),
-(18, 'Gourmet Guru', '🎖️', 200000, 1, 'Elite culinary influencer', ARRAY['Premium analytics']),
-(19, 'Gourmet Guru', '🎖️', 300000, 2, 'Renowned recipe creator', ARRAY['Community challenges']),
-(20, 'Michelin Star', '⭐', 500000, 1, 'Legendary culinary master', ARRAY['Platform ambassador status']);
+-- Add the foreign key constraint separately after both table and data exist
+ALTER TABLE public.user_profiles
+ADD CONSTRAINT user_profiles_current_level_fkey 
+FOREIGN KEY (current_level) 
+REFERENCES public.chef_levels(level_number);
 
 -- Create function to award XP
 CREATE OR REPLACE FUNCTION award_experience_points(
@@ -73,6 +93,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create function to get level progress
+DROP FUNCTION IF EXISTS get_level_progress(UUID);
 CREATE OR REPLACE FUNCTION get_level_progress(
     user_id UUID
 ) RETURNS TABLE (
@@ -82,8 +103,7 @@ CREATE OR REPLACE FUNCTION get_level_progress(
     current_division INTEGER,
     current_xp INTEGER,
     xp_for_next_level INTEGER,
-    progress_percentage INTEGER,
-    rewards TEXT[]
+    progress_percentage INTEGER
 ) AS $$
 DECLARE
     user_xp INTEGER;
@@ -95,15 +115,13 @@ BEGIN
         up.current_level,
         cl.title,
         cl.icon,
-        cl.division,
-        cl.rewards
+        cl.division
     INTO 
         user_xp,
         current_level,
         current_title,
         current_icon,
-        current_division,
-        rewards
+        current_division
     FROM user_profiles up
     JOIN chef_levels cl ON up.current_level = cl.level_number
     WHERE up.id = user_id;
@@ -133,8 +151,7 @@ BEGIN
         current_division,
         user_xp,
         COALESCE(next_level_xp, user_xp) as xp_for_next_level,
-        progress_percentage,
-        rewards;
+        progress_percentage;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -155,16 +172,6 @@ BEGIN
                 PERFORM award_experience_points(
                     (SELECT user_id FROM posts WHERE id = NEW.post_id),
                     10
-                );
-            END IF;
-        WHEN 'comments' THEN
-            -- Getting comments on posts
-            IF TG_OP = 'INSERT' THEN
-                -- Award XP to both commenter and post creator
-                PERFORM award_experience_points(NEW.user_id, 5);
-                PERFORM award_experience_points(
-                    (SELECT user_id FROM posts WHERE id = NEW.post_id),
-                    15
                 );
             END IF;
     END CASE;

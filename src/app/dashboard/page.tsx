@@ -344,22 +344,6 @@ export default function Dashboard() {
                   {levelInfo.progress_percentage}% to next level
                 </p>
               </div>
-
-              {/* Rewards Section */}
-              <div className="mt-6">
-                <h4 className="text-sm font-medium text-primary mb-3">Current Level Rewards</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  {levelInfo.rewards.map((reward, index) => (
-                    <div 
-                      key={index}
-                      className="bg-accent bg-opacity-5 text-accent text-sm p-3 rounded-lg flex items-center gap-2"
-                    >
-                      <FaStar className="text-yellow-400" />
-                      {reward}
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
         </div>
