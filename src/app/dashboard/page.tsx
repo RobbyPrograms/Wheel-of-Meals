@@ -197,113 +197,126 @@ export default function Dashboard() {
 
       {/* Feature Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-        <button 
-          onClick={() => setIsFoodsPanelOpen(true)}
-          className="border border-border hover:shadow-medium transition-all duration-300 text-left"
+        {/* My Foods Card */}
+        <Link 
+          href="/dashboard/foods"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
         >
-          <div className="p-6">
-            <div className="bg-accent text-light w-12 h-12 flex items-center justify-center rounded-full mb-4">
-              <FaUtensils className="text-xl" />
-            </div>
-            <h3 className="text-lg font-medium mb-2 text-primary">My Foods</h3>
-            <p className="text-text-secondary text-sm mb-4">Manage your favorite meals and ingredients</p>
-            <div className="flex items-center text-accent text-sm font-medium">
-              <span>View Details</span>
-              <FaChevronRight className="ml-2 text-xs" />
-            </div>
+          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+            <FaUtensils className="text-accent text-xl" />
           </div>
-        </button>
+          <h3 className="text-lg font-semibold text-primary mb-2">My Foods</h3>
+          <p className="text-text-secondary text-sm mb-4">
+            Manage your favorite meals and ingredients
+          </p>
+          <div className="flex items-center text-accent text-sm font-medium">
+            <span>View Details</span>
+            <FaChevronRight className="ml-2 text-xs" />
+          </div>
+        </Link>
 
-        <button
-          onClick={() => setIsMealPlansPanelOpen(true)}
-          className="border border-border hover:shadow-medium transition-all duration-300 text-left"
+        {/* My Progress Card */}
+        <Link 
+          href="/dashboard/progress"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
         >
-          <div className="p-6">
-            <div className="bg-highlight text-light w-12 h-12 flex items-center justify-center rounded-full mb-4">
-              <FaTrophy className="text-xl" />
-            </div>
-            <h3 className="text-lg font-medium mb-2 text-primary">My Progress</h3>
-            <p className="text-text-secondary text-sm mb-4">Track your cooking journey and achievements</p>
-            <div className="flex items-center text-highlight text-sm font-medium">
-              <span>View Details</span>
-              <FaChevronRight className="ml-2 text-xs" />
-            </div>
+          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+            <FaTrophy className="text-accent text-xl" />
           </div>
-        </button>
+          <h3 className="text-lg font-semibold text-primary mb-2">My Progress</h3>
+          <p className="text-text-secondary text-sm mb-4">
+            Track your cooking journey and achievements
+          </p>
+          <div className="flex items-center text-accent text-sm font-medium">
+            <span>View Details</span>
+            <FaChevronRight className="ml-2 text-xs" />
+          </div>
+        </Link>
 
-        <Link
+        {/* Random Meal Card */}
+        <Link 
           href="/dashboard/random"
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
         >
           <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
             <FaRandom className="text-accent text-xl" />
           </div>
           <h3 className="text-lg font-semibold text-primary mb-2">Random Meal</h3>
-          <p className="text-text-secondary">
+          <p className="text-text-secondary text-sm mb-4">
             Get a random meal suggestion from your favorites
           </p>
+          <div className="flex items-center text-accent text-sm font-medium">
+            <span>View Details</span>
+            <FaChevronRight className="ml-2 text-xs" />
+          </div>
         </Link>
 
-        <Link
+        {/* Friends Card */}
+        <Link 
           href="/dashboard/friends"
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
         >
           <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
             <FaUserFriends className="text-accent text-xl" />
           </div>
           <h3 className="text-lg font-semibold text-primary mb-2">Friends</h3>
-          <p className="text-text-secondary">
+          <p className="text-text-secondary text-sm mb-4">
             Connect with friends and discover their favorite meals
           </p>
+          <div className="flex items-center text-accent text-sm font-medium">
+            <span>View Details</span>
+            <FaChevronRight className="ml-2 text-xs" />
+          </div>
         </Link>
 
-        <Link
+        {/* Explore Card */}
+        <Link 
           href="/dashboard/explore"
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
         >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-              <FaCompass className="text-2xl text-accent" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-primary">Explore</h3>
-              <p className="text-text-secondary">Discover meals from your friends</p>
-            </div>
+          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+            <FaCompass className="text-accent text-xl" />
+          </div>
+          <h3 className="text-lg font-semibold text-primary mb-2">Explore</h3>
+          <p className="text-text-secondary text-sm mb-4">
+            Discover meals from your friends
+          </p>
+          <div className="flex items-center text-accent text-sm font-medium">
+            <span>View Details</span>
+            <FaChevronRight className="ml-2 text-xs" />
           </div>
         </Link>
 
-        <button 
-          onClick={() => setIsAIPanelOpen(true)}
-          className="border border-border hover:shadow-medium transition-all duration-300 text-left"
+        {/* AI Suggestions Card */}
+        <Link 
+          href="/dashboard/suggestions"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
         >
-          <div className="p-6">
-            <div className="bg-primary text-light w-12 h-12 flex items-center justify-center rounded-full mb-4">
-              <FaLightbulb className="text-xl" />
-            </div>
-            <h3 className="text-lg font-medium mb-2 text-primary">AI Suggestions</h3>
-            <p className="text-text-secondary text-sm mb-4">Get personalized meal ideas</p>
-            <div className="flex items-center text-accent text-sm font-medium">
-              <span>View Details</span>
-              <FaChevronRight className="ml-2 text-xs" />
-            </div>
+          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+            <FaLightbulb className="text-accent text-xl" />
           </div>
-        </button>
+          <h3 className="text-lg font-semibold text-primary mb-2">AI Suggestions</h3>
+          <p className="text-text-secondary text-sm mb-4">
+            Get personalized meal ideas
+          </p>
+          <div className="flex items-center text-accent text-sm font-medium">
+            <span>View Details</span>
+            <FaChevronRight className="ml-2 text-xs" />
+          </div>
+        </Link>
       </div>
 
       {/* Stats and Progress Section */}
       {user && (
         <div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="border border-border p-6 rounded-lg">
+            <div className="bg-white rounded-xl shadow-md p-6">
               <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-2">TOTAL FOODS</h3>
               <div className="text-4xl font-medium text-accent">{foodCount || 0}</div>
               <p className="text-text-secondary text-sm mt-2">Saved favorite meals</p>
             </div>
             
-            <div 
-              className="border border-border p-6 rounded-lg cursor-pointer hover:border-highlight transition-colors"
-              onClick={() => setIsMealPlansPanelOpen(true)}
-            >
+            <div className="bg-white rounded-xl shadow-md p-6">
               <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-2">MEAL PLANS</h3>
               <div className="text-4xl font-medium text-highlight">{mealPlanCount || 0}</div>
               <p className="text-text-secondary text-sm mt-2">Created meal schedules</p>
@@ -311,7 +324,7 @@ export default function Dashboard() {
           </div>
           
           {levelInfo && (
-            <div className="border border-border p-6 rounded-lg">
+            <div className="bg-white rounded-xl shadow-md p-6 mb-10">
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h3 className="text-xs uppercase tracking-wider text-text-secondary mb-1">PROGRESS</h3>
