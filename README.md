@@ -1,6 +1,6 @@
-# Wheel of Meals
+# SavoryCircle
 
-Wheel of Meals is an interactive web application that helps users discover new meals based on their favorite foods. It includes features like user authentication, meal generation, meal planning, and AI-powered recipe suggestions.
+SavoryCircle is an interactive web application that helps users discover new meals based on their favorite foods. It includes features like user authentication, meal generation, meal planning, and AI-powered recipe suggestions.
 
 ## Features
 
@@ -30,8 +30,8 @@ Wheel of Meals is an interactive web application that helps users discover new m
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/wheel-of-meals.git
-   cd wheel-of-meals
+   git clone https://github.com/yourusername/savorycircle.git
+   cd savorycircle
    ```
 
 2. Install dependencies:
@@ -63,7 +63,7 @@ Alternatively, you can manually set up your database by following the instructio
 ## Project Structure
 
 ```
-wheel-of-meals/
+savorycircle/
 ├── public/              # Static assets
 ├── src/
 │   ├── app/             # Next.js app directory

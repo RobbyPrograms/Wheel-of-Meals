@@ -83,9 +83,8 @@ export default function HomePage() {
                   style={{ 
                     transform: `translateZ(${scrollY * 0.1}px) rotateX(${mousePosition.y * 5 - 2.5}deg) rotateY(${mousePosition.x * 5 - 2.5}deg)`,
                   }}>
-                <span className="block text-primary">WHEEL</span>
-                <span className="block text-accent">OF</span>
-                <span className="block text-primary">MEALS</span>
+                <span className="block text-primary">SAVORY</span>
+                <span className="block text-accent">CIRCLE</span>
               </h1>
               <p className="text-lg md:text-xl mb-12 text-text-secondary max-w-2xl mx-auto transform transition-transform duration-500"
                  style={{ 
@@ -139,7 +138,7 @@ export default function HomePage() {
                  }}>
               <h2 className="text-3xl md:text-4xl font-bold mb-6">( ABOUT )</h2>
               <p className="text-lg md:text-xl mb-8 leading-relaxed">
-                Wheel of Meals, founded in 2024, specializes in helping you decide what to eat. 
+                SavoryCircle, founded in 2024, specializes in helping you decide what to eat. 
                 As a meal planning tool, it offers premium food selection and organization features 
                 for those seeking an authentic and mindful eating experience.
               </p>
@@ -189,7 +188,7 @@ export default function HomePage() {
           <div className="container relative z-10">
             <h2 className="text-4xl md:text-5xl font-bold mb-6 text-center">Ready to Transform Your Meal Planning?</h2>
             <p className="text-lg md:text-xl mb-12 max-w-3xl mx-auto text-center">
-              Join Wheel of Meals today and take the guesswork out of "What's for dinner?"
+              Join SavoryCircle today and take the guesswork out of "What's for dinner?"
             </p>
             {mounted && (
               <div className="flex justify-center">
@@ -218,7 +217,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-8 md:mb-0">
-              <h3 className="text-xl font-display font-bold text-light">WHEEL OF MEALS</h3>
+              <h3 className="text-xl font-display font-bold text-light">SAVORYCIRCLE</h3>
               <p className="text-light text-opacity-70">© {new Date().getFullYear()} All rights reserved</p>
             </div>
             <div className="flex gap-8">

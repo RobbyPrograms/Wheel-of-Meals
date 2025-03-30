@@ -1,7 +1,7 @@
-# Wheel of Meals Leveling System
+# SavoryCircle Leveling System
 
 ## Overview
-The Wheel of Meals leveling system is designed to reward users for their engagement and contributions to the community. As users interact with the platform by creating recipes, receiving likes, and engaging with others, they earn experience points (XP) that help them progress through various culinary ranks.
+The SavoryCircle leveling system is designed to reward users for their engagement and contributions to the community. As users interact with the platform by creating recipes, receiving likes, and engaging with others, they earn experience points (XP) that help them progress through various culinary ranks.
 
 ## Level Progression
 

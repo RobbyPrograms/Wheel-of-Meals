@@ -80,7 +80,7 @@ export default function AboutPage() {
         <div className="relative container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
-              About Wheel of Meals
+              About SavoryCircle
             </h1>
             <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto">
               Helping you discover new meals and simplify your meal planning process.
@@ -98,13 +98,13 @@ export default function AboutPage() {
               <h2 className="text-4xl md:text-5xl font-bold text-primary mb-6">Our Mission</h2>
               <div className="space-y-6 text-lg text-text-secondary">
                 <p>
-                  Wheel of Meals was created to solve the age-old question: "What should we eat today?" 
+                  SavoryCircle was created to solve the age-old question: "What should we eat today?" 
                   Our mission is to help people discover new meal ideas, reduce decision fatigue, 
                   and make meal planning a fun and enjoyable process.
                 </p>
                 <p>
                   Whether you're cooking for yourself, your family, or planning meals for the week, 
-                  Wheel of Meals provides the tools you need to make meal decisions quickly and easily.
+                  SavoryCircle provides the tools you need to make meal decisions quickly and easily.
                 </p>
               </div>
             </div>
@@ -135,7 +135,7 @@ export default function AboutPage() {
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Key Features</h2>
             <p className="text-xl text-white/80 max-w-3xl mx-auto">
-              Discover the tools that make Wheel of Meals your perfect companion for meal planning.
+              Discover the tools that make SavoryCircle your perfect companion for meal planning.
             </p>
           </div>
 
@@ -164,7 +164,7 @@ export default function AboutPage() {
               Ready to Transform Your Meal Planning?
             </h2>
             <p className="text-xl text-text-secondary mb-12">
-              Join thousands of users who have simplified their meal decisions with Wheel of Meals.
+              Join thousands of users who have simplified their meal decisions with SavoryCircle.
             </p>
             <Link
               href="/signup"
@@ -181,7 +181,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4 py-12">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-8 md:mb-0">
-              <h3 className="text-2xl font-display font-bold text-white">WHEEL OF MEALS</h3>
+              <h3 className="text-2xl font-display font-bold text-white">SAVORYCIRCLE</h3>
               <p className="text-white/70">© {new Date().getFullYear()} All rights reserved</p>
             </div>
             <div className="flex gap-8">

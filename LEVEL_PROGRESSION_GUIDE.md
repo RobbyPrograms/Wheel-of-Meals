@@ -1,4 +1,4 @@
-# Wheel of Meals Level Progression Guide
+# SavoryCircle Level Progression Guide
 
 ## Ways to Earn XP
 - Create a new recipe post: 50 XP

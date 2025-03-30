@@ -83,7 +83,7 @@ export default function MealWheel() {
       <header className="bg-primary py-4">
         <div className="container flex justify-between items-center">
           <Link href="/" className="text-white text-xl font-bold">
-            Wheel of Meals
+            SavoryCircle
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/dashboard" className="text-white hover:text-white/80">

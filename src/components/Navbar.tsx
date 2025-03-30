@@ -88,7 +88,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center group">
             <span className="font-display font-bold text-2xl tracking-tight text-white group-hover:text-highlight transition-colors">
-              WHEELOFMEALS
+              SAVORYCIRCLE
             </span>
           </Link>
 

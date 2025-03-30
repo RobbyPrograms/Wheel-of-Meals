@@ -25,7 +25,7 @@ export async function POST(request: Request) {
         headers: {
           "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
           "HTTP-Referer": "http://localhost:3000",
-          "X-Title": "Wheel of Meals",
+          "X-Title": "SavoryCircle",
           "Content-Type": "application/json"
         },
         signal: controller.signal,

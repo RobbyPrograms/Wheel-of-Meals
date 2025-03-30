@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Wheel of Meals - Modern Meal Planning',
-  description: 'Discover new meal ideas with our intelligent food selection platform',
+  title: 'SavoryCircle - Modern Meal Planning',
+  description: 'Discover new meals and plan your next culinary adventure with SavoryCircle.',
   icons: {
     icon: '/favicon.ico',
   },

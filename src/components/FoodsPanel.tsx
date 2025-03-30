@@ -226,20 +226,20 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
   };
 
   const StarRating = ({ rating, onRatingChange }: { rating: number; onRatingChange: (rating: number) => void }) => {
-    const ratingId = Math.random().toString(36).substr(2, 9); // Generate unique ID for this instance
+    const ratingId = Math.random().toString(36).substring(2, 9);
     return (
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
-            key={`rating-${ratingId}-star-${star}`}
+            key={`rating-${ratingId}-${star}`}
             type="button"
             onClick={() => onRatingChange(star)}
             className="text-xl focus:outline-none"
           >
             {star <= rating ? (
-              <FaStarSolid key={`rating-${ratingId}-solid-${star}`} className="text-yellow-400" />
+              <FaStarSolid className="text-yellow-400" />
             ) : (
-              <FaStarOutline key={`rating-${ratingId}-outline-${star}`} className="text-gray-300 hover:text-yellow-400" />
+              <FaStarOutline className="text-gray-300 hover:text-yellow-400" />
             )}
           </button>
         ))}
@@ -303,14 +303,14 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-8"
         >
           <motion.div
-            initial={{ scale: 0.95 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0.95 }}
+            initial={{ scale: 0.95, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.95, y: 20 }}
             ref={panelRef}
-            className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col"
           >
             {/* Header */}
             <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex justify-between items-center">
@@ -398,11 +398,11 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                       {/* Rating Stars */}
                       <div className="mb-4">
                         {[1, 2, 3, 4, 5].map((star) => (
-                          <span key={`food-${food.id}-star-${star}`} className="text-lg">
+                          <span key={`food-${food.id}-rating-${star}`} className="text-lg">
                             {star <= (food.rating || 0) ? (
-                              <FaStarSolid key={`food-${food.id}-solid-${star}`} className="inline text-yellow-400" />
+                              <FaStarSolid className="inline text-yellow-400" />
                             ) : (
-                              <FaStarOutline key={`food-${food.id}-outline-${star}`} className="inline text-gray-300" />
+                              <FaStarOutline className="inline text-gray-300" />
                             )}
                           </span>
                         ))}
@@ -469,81 +469,6 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                   )}
                 </div>
               )}
-
-              {/* Feature Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                {/* My Foods Card */}
-                <Link 
-                  href="/dashboard/foods"
-                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
-                >
-                  <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-                    <FaUtensils className="text-accent text-xl" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-primary mb-2">My Foods</h3>
-                  <p className="text-text-secondary text-sm mb-4">
-                    Manage your favorite meals and ingredients
-                  </p>
-                  <div className="flex items-center text-accent text-sm font-medium">
-                    <span>View Details</span>
-                    <FaChevronRight className="ml-2 text-xs" />
-                  </div>
-                </Link>
-
-                {/* Explore Card */}
-                <Link 
-                  href="/dashboard/explore"
-                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
-                >
-                  <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-                    <FaCompass className="text-accent text-xl" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-primary mb-2">Explore</h3>
-                  <p className="text-text-secondary text-sm mb-4">
-                    Discover new recipes and meal ideas
-                  </p>
-                  <div className="flex items-center text-accent text-sm font-medium">
-                    <span>View Details</span>
-                    <FaChevronRight className="ml-2 text-xs" />
-                  </div>
-                </Link>
-
-                {/* Friends Card */}
-                <Link 
-                  href="/dashboard/friends"
-                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
-                >
-                  <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-                    <FaUserFriends className="text-accent text-xl" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-primary mb-2">Friends</h3>
-                  <p className="text-text-secondary text-sm mb-4">
-                    Connect with friends and discover their favorite meals
-                  </p>
-                  <div className="flex items-center text-accent text-sm font-medium">
-                    <span>View Details</span>
-                    <FaChevronRight className="ml-2 text-xs" />
-                  </div>
-                </Link>
-
-                {/* AI Suggestions Card */}
-                <div 
-                  onClick={() => setIsAIPanelOpen(true)}
-                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 cursor-pointer"
-                >
-                  <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-                    <FaLightbulb className="text-accent text-xl" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-primary mb-2">AI Suggestions</h3>
-                  <p className="text-text-secondary text-sm mb-4">
-                    Chat with AI to get personalized recipe ideas
-                  </p>
-                  <div className="flex items-center text-accent text-sm font-medium">
-                    <span>Open Chat</span>
-                    <FaChevronRight className="ml-2 text-xs" />
-                  </div>
-                </div>
-              </div>
             </div>
           </motion.div>
         </motion.div>
@@ -551,7 +476,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
 
       {/* Add Food Modal */}
       {isAddingFood && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center pt-8">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
             <div className="p-6 border-b border-gray-100">
               <h3 className="text-xl font-semibold text-primary">Add New Food</h3>
@@ -678,7 +603,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
 
       {/* View Recipe Modal */}
       {selectedFood && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center pt-8">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center">
               <h3 className="text-xl font-semibold text-primary">{selectedFood.name}</h3>
@@ -718,7 +643,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
 
       {/* Edit Food Modal */}
       {editingFood && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center pt-8">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center">
               <h3 className="text-xl font-semibold text-primary">Edit Food</h3>
@@ -780,7 +705,22 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                 <label className="block text-sm font-medium text-text-secondary mb-2">
                   Rating
                 </label>
-                <StarRating rating={editingFood.rating} onRatingChange={handleEditRatingChange} />
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={`edit-food-${editingFood.id}-star-${star}`}
+                      type="button"
+                      onClick={() => handleEditRatingChange(star)}
+                      className="text-xl focus:outline-none"
+                    >
+                      {star <= editingFood.rating ? (
+                        <FaStarSolid className="text-yellow-400" />
+                      ) : (
+                        <FaStarOutline className="text-gray-300 hover:text-yellow-400" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>

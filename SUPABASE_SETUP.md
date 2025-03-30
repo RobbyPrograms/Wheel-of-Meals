@@ -1,6 +1,6 @@
-# Supabase Setup for Wheel of Meals
+# Supabase Setup for SavoryCircle
 
-Follow these steps to set up your Supabase database for the Wheel of Meals application:
+Follow these steps to set up your Supabase database for the SavoryCircle application:
 
 ## 1. Create Database Functions
 
