@@ -185,11 +185,23 @@ export default function Dashboard() {
           Welcome to your dashboard
         </h1>
         {levelInfo && (
-          <div className="flex items-center gap-2 bg-accent bg-opacity-10 text-accent px-4 py-2 rounded-lg">
-            <span className="text-2xl">{levelInfo.current_icon}</span>
-            <div>
-              <div className="font-medium">{levelInfo.current_title}</div>
-              <div className="text-xs">Division {levelInfo.current_division}</div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 bg-accent bg-opacity-10 text-accent px-4 py-2 rounded-lg">
+              <span className="text-2xl">{levelInfo.current_icon}</span>
+              <div>
+                <div className="font-medium">{levelInfo.current_title}</div>
+                <div className="text-xs">Division {levelInfo.current_division}</div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm p-3">
+              <div className="text-xs uppercase tracking-wider text-text-secondary mb-1">CURRENT XP</div>
+              <div className="flex items-center justify-between">
+                <div className="text-2xl font-bold text-accent">{levelInfo.current_xp}</div>
+                <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  <FaStar className="text-yellow-400" />
+                  <span>+{levelInfo.xp_for_next_level - levelInfo.current_xp} to next level</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -208,6 +220,24 @@ export default function Dashboard() {
           <h3 className="text-lg font-semibold text-primary mb-2">My Foods</h3>
           <p className="text-text-secondary text-sm mb-4">
             Manage your favorite meals and ingredients
+          </p>
+          <div className="flex items-center text-accent text-sm font-medium">
+            <span>View Details</span>
+            <FaChevronRight className="ml-2 text-xs" />
+          </div>
+        </Link>
+
+        {/* Meal Plans Card */}
+        <Link 
+          href="/dashboard/meal-plans"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
+        >
+          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
+            <FaCalendarAlt className="text-accent text-xl" />
+          </div>
+          <h3 className="text-lg font-semibold text-primary mb-2">Meal Plans</h3>
+          <p className="text-text-secondary text-sm mb-4">
+            Create and manage your meal schedules
           </p>
           <div className="flex items-center text-accent text-sm font-medium">
             <span>View Details</span>
@@ -269,41 +299,23 @@ export default function Dashboard() {
           </div>
         </Link>
 
-        {/* Explore Card */}
-        <Link 
-          href="/dashboard/explore"
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
-        >
-          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-            <FaCompass className="text-accent text-xl" />
-          </div>
-          <h3 className="text-lg font-semibold text-primary mb-2">Explore</h3>
-          <p className="text-text-secondary text-sm mb-4">
-            Discover meals from your friends
-          </p>
-          <div className="flex items-center text-accent text-sm font-medium">
-            <span>View Details</span>
-            <FaChevronRight className="ml-2 text-xs" />
-          </div>
-        </Link>
-
         {/* AI Suggestions Card */}
-        <Link 
-          href="/dashboard/suggestions"
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
+        <div 
+          onClick={() => setIsAIPanelOpen(true)}
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 cursor-pointer"
         >
           <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
             <FaLightbulb className="text-accent text-xl" />
           </div>
           <h3 className="text-lg font-semibold text-primary mb-2">AI Suggestions</h3>
           <p className="text-text-secondary text-sm mb-4">
-            Get personalized meal ideas
+            Chat with AI to get personalized recipe ideas
           </p>
           <div className="flex items-center text-accent text-sm font-medium">
-            <span>View Details</span>
+            <span>Open Chat</span>
             <FaChevronRight className="ml-2 text-xs" />
           </div>
-        </Link>
+        </div>
       </div>
 
       {/* Stats and Progress Section */}
@@ -422,7 +434,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-primary">AI Meal Suggestions</h2>
+              <h2 className="text-2xl font-bold text-primary">Chat with AI Chef</h2>
               <button
                 onClick={() => setIsAIPanelOpen(false)}
                 className="text-text-secondary hover:text-primary transition-colors"
@@ -431,7 +443,11 @@ export default function Dashboard() {
               </button>
             </div>
             <div className="p-6">
-              <AISuggestions onAddToFavorites={handleAddToFavorites} />
+              <AISuggestions onAddToFavorites={(meal) => {
+                handleAddToFavorites(meal);
+                // Optional: Close the panel after adding to favorites
+                // setIsAIPanelOpen(false);
+              }} />
             </div>
           </div>
         </div>
