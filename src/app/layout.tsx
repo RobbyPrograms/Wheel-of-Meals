@@ -13,7 +13,17 @@ export const metadata: Metadata = {
   title: 'SavoryCircle - Modern Meal Planning',
   description: 'Discover new meals and plan your next culinary adventure with SavoryCircle.',
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      {
+        url: '/logo.svg',
+        type: 'image/svg+xml',
+      },
+      {
+        url: '/favicon.ico',
+        sizes: '32x32',
+      }
+    ],
+    apple: '/logo.svg',
   },
 };
 

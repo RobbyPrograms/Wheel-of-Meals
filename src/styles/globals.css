@@ -81,11 +81,11 @@
   }
   
   .btn-primary {
-    @apply btn bg-accent text-light hover:bg-highlight;
+    @apply bg-[#319141] text-white hover:bg-[#3CAB50] transition-colors duration-300;
   }
   
   .btn-secondary {
-    @apply btn bg-transparent border border-accent text-accent hover:bg-accent hover:text-light;
+    @apply bg-white text-[#319141] border-2 border-[#319141] hover:bg-[#319141] hover:text-white transition-colors duration-300;
   }
 
   .btn-text {
@@ -281,4 +281,20 @@ html.has-scroll-dragging {
 .has-scroll-dragging .c-scrollbar_thumb {
   cursor: -webkit-grabbing;
   cursor: grabbing;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 } 

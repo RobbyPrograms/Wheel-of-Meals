@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight, FaLightbulb, FaUserFriends, FaCompass, FaTrophy, FaStar } from 'react-icons/fa';
+import { FaUtensils, FaCalendarAlt, FaRandom, FaChevronRight, FaLightbulb, FaUserFriends, FaCompass, FaTrophy, FaStar, FaDice, FaRobot } from 'react-icons/fa';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -180,42 +180,42 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 p-8 rounded-2xl mb-8 border border-emerald-100/50">
+      <div className="bg-gradient-to-br from-[#319141]/10 via-white to-[#319141]/5 p-8 rounded-2xl mb-8 border border-[#319141]/20">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-emerald-900 mb-2">
+            <h1 className="text-3xl font-bold text-[#0F1E0F] mb-2">
               Welcome back{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name.split(' ')[0]}` : ''}
             </h1>
-            <p className="text-emerald-700">What would you like to cook today?</p>
+            <p className="text-[#319141]">What would you like to cook today?</p>
           </div>
           {levelInfo && (
             <div className="flex flex-col gap-3 min-w-[280px]">
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-4 border border-emerald-100">
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-4 border border-[#319141]/20">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center">
                     <span className="text-2xl">{levelInfo.current_icon}</span>
                   </div>
                   <div>
-                    <div className="font-bold text-emerald-900">{levelInfo.current_title}</div>
-                    <div className="text-sm text-emerald-700">Division {levelInfo.current_division}</div>
+                    <div className="font-bold text-[#0F1E0F]">{levelInfo.current_title}</div>
+                    <div className="text-sm text-[#319141]">Division {levelInfo.current_division}</div>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-emerald-700">Current XP</span>
-                    <span className="font-medium text-emerald-900">{levelInfo.current_xp}</span>
+                    <span className="text-[#319141]">Current XP</span>
+                    <span className="font-medium text-[#0F1E0F]">{levelInfo.current_xp}</span>
                   </div>
-                  <div className="relative w-full h-2 bg-emerald-100 rounded-full overflow-hidden">
+                  <div className="relative w-full h-2 bg-[#319141]/10 rounded-full overflow-hidden">
                     <div 
-                      className="absolute top-0 left-0 h-full bg-emerald-500 rounded-full transition-all duration-500"
+                      className="absolute top-0 left-0 h-full bg-[#319141] rounded-full transition-all duration-500"
                       style={{ width: `${levelInfo.progress_percentage}%` }}
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-emerald-700">{levelInfo.progress_percentage}% to next level</span>
-                    <div className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">
+                    <span className="text-[#319141]">{levelInfo.progress_percentage}% to next level</span>
+                    <div className="flex items-center gap-1 text-[#319141] bg-[#319141]/10 px-2 py-1 rounded-full">
                       <FaStar className="text-yellow-400 text-xs" />
                       <span>+{levelInfo.xp_for_next_level - levelInfo.current_xp} XP needed</span>
                     </div>
@@ -232,16 +232,16 @@ export default function Dashboard() {
         {/* My Foods Card */}
         <Link 
           href="/dashboard/foods"
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 hover:bg-[#319141]/5"
         >
-          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-            <FaUtensils className="text-accent text-xl" />
+          <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center mb-4">
+            <FaUtensils className="text-[#319141] text-xl" />
           </div>
-          <h3 className="text-lg font-semibold text-primary mb-2">My Foods</h3>
-          <p className="text-text-secondary text-sm mb-4">
+          <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">My Foods</h3>
+          <p className="text-gray-600 text-sm mb-4">
             Manage your favorite meals and ingredients
           </p>
-          <div className="flex items-center text-accent text-sm font-medium">
+          <div className="flex items-center text-[#319141] text-sm font-medium">
             <span>View Details</span>
             <FaChevronRight className="ml-2 text-xs" />
           </div>
@@ -250,16 +250,16 @@ export default function Dashboard() {
         {/* Meal Plans Card */}
         <Link 
           href="/dashboard/meal-plans"
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 hover:bg-[#319141]/5"
         >
-          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-            <FaCalendarAlt className="text-accent text-xl" />
+          <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center mb-4">
+            <FaCalendarAlt className="text-[#319141] text-xl" />
           </div>
-          <h3 className="text-lg font-semibold text-primary mb-2">Meal Plans</h3>
-          <p className="text-text-secondary text-sm mb-4">
+          <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">Meal Plans</h3>
+          <p className="text-gray-600 text-sm mb-4">
             Create and manage your meal schedules
           </p>
-          <div className="flex items-center text-accent text-sm font-medium">
+          <div className="flex items-center text-[#319141] text-sm font-medium">
             <span>View Details</span>
             <FaChevronRight className="ml-2 text-xs" />
           </div>
@@ -268,16 +268,16 @@ export default function Dashboard() {
         {/* Explore Card */}
         <Link 
           href="/dashboard/explore"
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 hover:bg-[#319141]/5"
         >
-          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-            <FaCompass className="text-accent text-xl" />
+          <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center mb-4">
+            <FaCompass className="text-[#319141] text-xl" />
           </div>
-          <h3 className="text-lg font-semibold text-primary mb-2">Explore</h3>
-          <p className="text-text-secondary text-sm mb-4">
-            Discover new recipes and meal ideas
+          <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">Explore</h3>
+          <p className="text-gray-600 text-sm mb-4">
+            Discover new meals and cuisines
           </p>
-          <div className="flex items-center text-accent text-sm font-medium">
+          <div className="flex items-center text-[#319141] text-sm font-medium">
             <span>View Details</span>
             <FaChevronRight className="ml-2 text-xs" />
           </div>
@@ -286,16 +286,16 @@ export default function Dashboard() {
         {/* Friends Card */}
         <Link 
           href="/dashboard/friends"
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 hover:bg-[#319141]/5"
         >
-          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-            <FaUserFriends className="text-accent text-xl" />
+          <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center mb-4">
+            <FaUserFriends className="text-[#319141] text-xl" />
           </div>
-          <h3 className="text-lg font-semibold text-primary mb-2">Friends</h3>
-          <p className="text-text-secondary text-sm mb-4">
-            Connect with friends and discover their favorite meals
+          <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">Friends</h3>
+          <p className="text-gray-600 text-sm mb-4">
+            Connect with friends and share meals
           </p>
-          <div className="flex items-center text-accent text-sm font-medium">
+          <div className="flex items-center text-[#319141] text-sm font-medium">
             <span>View Details</span>
             <FaChevronRight className="ml-2 text-xs" />
           </div>
@@ -304,16 +304,16 @@ export default function Dashboard() {
         {/* Random Meal Card */}
         <Link 
           href="/dashboard/random"
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 hover:bg-[#319141]/5"
         >
-          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-            <FaRandom className="text-accent text-xl" />
+          <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center mb-4">
+            <FaDice className="text-[#319141] text-xl" />
           </div>
-          <h3 className="text-lg font-semibold text-primary mb-2">Random Meal</h3>
-          <p className="text-text-secondary text-sm mb-4">
-            Get a random meal suggestion from your favorites
+          <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">Random Meal</h3>
+          <p className="text-gray-600 text-sm mb-4">
+            Let us pick your next meal for you
           </p>
-          <div className="flex items-center text-accent text-sm font-medium">
+          <div className="flex items-center text-[#319141] text-sm font-medium">
             <span>View Details</span>
             <FaChevronRight className="ml-2 text-xs" />
           </div>
@@ -322,16 +322,16 @@ export default function Dashboard() {
         {/* AI Suggestions Card */}
         <div 
           onClick={() => setIsAIPanelOpen(true)}
-          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 cursor-pointer"
+          className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 hover:bg-[#319141]/5 cursor-pointer"
         >
-          <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-            <FaLightbulb className="text-accent text-xl" />
+          <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center mb-4">
+            <FaRobot className="text-[#319141] text-xl" />
           </div>
-          <h3 className="text-lg font-semibold text-primary mb-2">AI Suggestions</h3>
-          <p className="text-text-secondary text-sm mb-4">
-            Chat with AI to get personalized recipe ideas
+          <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">AI Suggestions</h3>
+          <p className="text-gray-600 text-sm mb-4">
+            Get personalized meal recommendations
           </p>
-          <div className="flex items-center text-accent text-sm font-medium">
+          <div className="flex items-center text-[#319141] text-sm font-medium">
             <span>Open Chat</span>
             <FaChevronRight className="ml-2 text-xs" />
           </div>
@@ -451,8 +451,8 @@ export default function Dashboard() {
 
       {/* AI Suggestions Panel */}
       {isAIPanelOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-20 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[80vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex justify-between items-center">
               <h2 className="text-2xl font-bold text-primary">Chat with AI Chef</h2>
               <button

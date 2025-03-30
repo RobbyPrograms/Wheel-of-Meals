@@ -87,7 +87,12 @@ export default function Navbar() {
         <div className="flex justify-between items-center">
           {/* Logo */}
           <Link href="/" className="flex items-center group">
-            <span className="font-display font-bold text-2xl tracking-tight text-white group-hover:text-highlight transition-colors">
+            <img 
+              src="/logo.svg" 
+              alt="SavoryCircle Logo" 
+              className="w-10 h-10 mr-3 transition-transform duration-300 group-hover:scale-110" 
+            />
+            <span className="font-display font-bold text-2xl tracking-tight text-white group-hover:text-[#319141] transition-colors">
               SAVORYCIRCLE
             </span>
           </Link>
