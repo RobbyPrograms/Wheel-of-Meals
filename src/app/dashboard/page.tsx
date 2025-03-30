@@ -180,31 +180,51 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-medium text-primary">
-          Welcome to your dashboard
-        </h1>
-        {levelInfo && (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 bg-accent bg-opacity-10 text-accent px-4 py-2 rounded-lg">
-              <span className="text-2xl">{levelInfo.current_icon}</span>
-              <div>
-                <div className="font-medium">{levelInfo.current_title}</div>
-                <div className="text-xs">Division {levelInfo.current_division}</div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-3">
-              <div className="text-xs uppercase tracking-wider text-text-secondary mb-1">CURRENT XP</div>
-              <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold text-accent">{levelInfo.current_xp}</div>
-                <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                  <FaStar className="text-yellow-400" />
-                  <span>+{levelInfo.xp_for_next_level - levelInfo.current_xp} to next level</span>
+      <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 p-8 rounded-2xl mb-8 border border-emerald-100/50">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div>
+            <h1 className="text-3xl font-bold text-emerald-900 mb-2">
+              Welcome back{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name.split(' ')[0]}` : ''}
+            </h1>
+            <p className="text-emerald-700">What would you like to cook today?</p>
+          </div>
+          {levelInfo && (
+            <div className="flex flex-col gap-3 min-w-[280px]">
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-4 border border-emerald-100">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">{levelInfo.current_icon}</span>
+                  </div>
+                  <div>
+                    <div className="font-bold text-emerald-900">{levelInfo.current_title}</div>
+                    <div className="text-sm text-emerald-700">Division {levelInfo.current_division}</div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-emerald-700">Current XP</span>
+                    <span className="font-medium text-emerald-900">{levelInfo.current_xp}</span>
+                  </div>
+                  <div className="relative w-full h-2 bg-emerald-100 rounded-full overflow-hidden">
+                    <div 
+                      className="absolute top-0 left-0 h-full bg-emerald-500 rounded-full transition-all duration-500"
+                      style={{ width: `${levelInfo.progress_percentage}%` }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-emerald-700">{levelInfo.progress_percentage}% to next level</span>
+                    <div className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">
+                      <FaStar className="text-yellow-400 text-xs" />
+                      <span>+{levelInfo.xp_for_next_level - levelInfo.current_xp} XP needed</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Feature Cards */}
