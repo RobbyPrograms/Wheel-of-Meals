@@ -11,6 +11,7 @@ import FoodsPanel from '@/components/FoodsPanel';
 import MealPlansPanel from '@/components/MealPlansPanel';
 import MealPlansDashboard from '@/components/MealPlansDashboard';
 import AISuggestions from '@/components/AISuggestions';
+import LevelCard from '@/components/LevelCard';
 
 interface LevelInfo {
   current_level: number;
@@ -196,38 +197,12 @@ export default function Dashboard() {
                 
                 {levelInfo && (
                   <div className="w-full md:w-auto md:min-w-[320px]">
-                    <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm p-4 border border-[#319141]/20">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-[#319141]/10 rounded-full flex items-center justify-center">
-                          <span className="text-xl">{levelInfo.current_icon}</span>
-                        </div>
-                        <div>
-                          <div className="font-bold text-[#0F1E0F]">{levelInfo.current_title}</div>
-                          <div className="text-sm text-[#319141]">Division {levelInfo.current_division}</div>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-[#319141]">Current XP</span>
-                          <span className="font-medium text-[#0F1E0F]">{levelInfo.current_xp}</span>
-                        </div>
-                        <div className="relative w-full h-2 bg-[#319141]/10 rounded-full overflow-hidden">
-                          <div 
-                            className="absolute top-0 left-0 h-full bg-[#319141] rounded-full transition-all duration-500"
-                            style={{ width: `${levelInfo.progress_percentage}%` }}
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-[#319141]">{levelInfo.progress_percentage}% to next level</span>
-                          <div className="flex items-center gap-1 text-[#319141] bg-[#319141]/10 px-2 py-1 rounded-full">
-                            <FaStar className="text-yellow-400 text-xs" />
-                            <span>+{levelInfo.xp_for_next_level - levelInfo.current_xp} XP needed</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <LevelCard
+                      currentXP={levelInfo.current_xp}
+                      division={levelInfo.current_title}
+                      xpToNextLevel={Math.max(0, levelInfo.xp_for_next_level - levelInfo.current_xp)}
+                      icon={levelInfo.current_icon}
+                    />
                   </div>
                 )}
               </div>
