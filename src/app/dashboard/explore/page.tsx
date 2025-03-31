@@ -446,61 +446,59 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col gap-8 mb-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-primary">Explore</h1>
-          <Link
-            href="/dashboard/create"
-            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
-            onClick={(e) => {
-              e.preventDefault();
-              setIsCreatePostModalOpen(true);
-            }}
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex flex-col gap-4">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <h1 className="text-2xl font-bold text-[#0F1E0F]">Explore</h1>
+          <button
+            onClick={() => setIsCreatePostModalOpen(true)}
+            className="bg-[#319141] text-white px-4 py-2 rounded-xl hover:bg-[#0F1E0F] transition-colors flex items-center justify-center gap-2 sm:ml-auto"
           >
-            <FaPlus className="w-5 h-5" /> Create Post
-          </Link>
+            <FaPlus className="text-sm" /> Create Post
+          </button>
         </div>
 
-        <div className="flex gap-2 bg-white rounded-lg shadow-sm p-2">
+        {/* Navigation Tabs */}
+        <div className="flex flex-wrap gap-2 bg-white rounded-xl shadow-sm p-2">
           <button
             onClick={() => setViewMode('explore')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm transition-colors ${
               viewMode === 'explore'
-                ? 'bg-accent text-white'
-                : 'text-text-secondary hover:text-primary hover:bg-gray-50'
+                ? 'bg-[#319141] text-white'
+                : 'text-[#0F1E0F] hover:bg-gray-50'
             }`}
           >
-            <FaGlobe className="w-4 h-4" />
-            Explore
+            <FaGlobe className="text-sm" />
+            <span>Explore</span>
           </button>
           <button
             onClick={() => setViewMode('trending')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm transition-colors ${
               viewMode === 'trending'
-                ? 'bg-accent text-white'
-                : 'text-text-secondary hover:text-primary hover:bg-gray-50'
+                ? 'bg-[#319141] text-white'
+                : 'text-[#0F1E0F] hover:bg-gray-50'
             }`}
           >
-            <FaChartLine className="w-4 h-4" />
-            Trending
+            <FaChartLine className="text-sm" />
+            <span>Trending</span>
           </button>
           <button
             onClick={() => setViewMode('my-posts')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm transition-colors ${
               viewMode === 'my-posts'
-                ? 'bg-accent text-white'
-                : 'text-text-secondary hover:text-primary hover:bg-gray-50'
+                ? 'bg-[#319141] text-white'
+                : 'text-[#0F1E0F] hover:bg-gray-50'
             }`}
           >
-            <FaUser className="w-4 h-4" />
-            My Posts
+            <FaUser className="text-sm" />
+            <span>My Posts</span>
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="mb-8 p-4 bg-red-50 text-red-500 rounded-lg">
+        <div className="mt-6 p-4 bg-red-50 text-red-500 rounded-xl">
           {error}
         </div>
       )}

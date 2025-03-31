@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { FaHatWizard, FaLock, FaEnvelope, FaCheck, FaMagic, FaUser } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaLock, FaCheck } from 'react-icons/fa';
 import Navbar from '@/components/Navbar';
 
 export default function Signup() {
@@ -37,13 +37,13 @@ export default function Signup() {
     
     // Validate passwords match
     if (password !== confirmPassword) {
-      setError('Your incantations do not match');
+      setError('Passwords do not match');
       return;
     }
     
     // Validate password strength
     if (password.length < 6) {
-      setError('Your spell must be at least 6 characters long');
+      setError('Password must be at least 6 characters long');
       return;
     }
     
@@ -65,7 +65,7 @@ export default function Signup() {
         router.push('/dashboard');
       }, 2000);
     } catch (err) {
-      setError('A magical disturbance occurred');
+      setError('An error occurred during signup');
       console.error(err);
     } finally {
       setLoading(false);
@@ -76,55 +76,52 @@ export default function Signup() {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
 
-      <main className="flex-1 flex items-center justify-center p-4">
-        <div className="relative w-full max-w-md">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
+        <div className="relative w-full max-w-[380px] mx-auto">
           {/* Background Pattern */}
-          <div className="absolute inset-0 bg-[url('/food-pattern.png')] opacity-5 rounded-3xl"></div>
+          <div className="absolute inset-0 bg-[url('/food-pattern.png')] opacity-5 rounded-2xl sm:rounded-3xl"></div>
           
           {/* Signup Container */}
-          <div className="relative bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-gray-100">
-            <div className="text-center mb-8">
-              <div className="flex justify-center mb-4">
-                <FaHatWizard className="text-4xl text-accent" />
-              </div>
-              <h1 className="text-3xl font-bold text-primary mb-2">Join the Wizards</h1>
-              <p className="text-text-secondary">Begin your magical culinary journey</p>
+          <div className="relative bg-white/80 backdrop-blur-sm p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-lg border border-gray-100">
+            <div className="text-center mb-6 sm:mb-8">
+              <h1 className="text-2xl sm:text-3xl font-bold text-[#319141] mb-2">Join SavoryCircle</h1>
+              <p className="text-sm sm:text-base text-gray-600">Start your culinary adventure today</p>
             </div>
             
             {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg">
+              <div className="bg-red-50 border-l-4 border-red-500 p-3 sm:p-4 mb-6 rounded-lg text-sm">
                 <p className="text-red-700">{error}</p>
               </div>
             )}
             
             {success && (
-              <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-lg flex items-center">
+              <div className="bg-green-50 border-l-4 border-green-500 p-3 sm:p-4 mb-6 rounded-lg flex items-center text-sm">
                 <FaCheck className="text-green-500 mr-2" />
-                <p className="text-green-700">Your magical powers are ready! Entering the realm...</p>
+                <p className="text-green-700">Account created successfully! Redirecting to dashboard...</p>
               </div>
             )}
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
               <div>
-                <label htmlFor="username" className="flex items-center text-sm font-medium text-text-secondary mb-2">
-                  <FaUser className="mr-2 text-accent" /> Choose Your Wizard Name (Optional)
+                <label htmlFor="username" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                  <FaUser className="mr-2 text-[#319141]" /> Choose Your Username
                 </label>
                 <input
                   id="username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-200"
-                  placeholder="wizardname (optional)"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border border-gray-200 focus:border-[#319141] focus:ring-2 focus:ring-[#319141]/20 transition-all duration-200 text-sm sm:text-base"
+                  placeholder="username (optional)"
                   pattern="^[a-zA-Z0-9_]+$"
                   minLength={3}
                 />
-                <p className="mt-1 text-sm text-text-secondary">Letters, numbers, and underscores only (optional)</p>
+                <p className="mt-1 text-xs sm:text-sm text-gray-500">Letters, numbers, and underscores only (optional)</p>
               </div>
 
               <div>
-                <label htmlFor="email" className="flex items-center text-sm font-medium text-text-secondary mb-2">
-                  <FaEnvelope className="mr-2 text-accent" /> Magic Scroll (Email)
+                <label htmlFor="email" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                  <FaEnvelope className="mr-2 text-[#319141]" /> Email Address
                 </label>
                 <input
                   id="email"
@@ -132,14 +129,14 @@ export default function Signup() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-200"
-                  placeholder="your@magic.spell"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border border-gray-200 focus:border-[#319141] focus:ring-2 focus:ring-[#319141]/20 transition-all duration-200 text-sm sm:text-base"
+                  placeholder="your@email.com"
                 />
               </div>
               
               <div>
-                <label htmlFor="password" className="flex items-center text-sm font-medium text-text-secondary mb-2">
-                  <FaLock className="mr-2 text-accent" /> Secret Incantation
+                <label htmlFor="password" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                  <FaLock className="mr-2 text-[#319141]" /> Password
                 </label>
                 <input
                   id="password"
@@ -147,16 +144,16 @@ export default function Signup() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-200"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border border-gray-200 focus:border-[#319141] focus:ring-2 focus:ring-[#319141]/20 transition-all duration-200 text-sm sm:text-base"
                   placeholder="••••••••"
                   minLength={6}
                 />
-                <p className="mt-1 text-sm text-text-secondary">Must be at least 6 magical characters</p>
+                <p className="mt-1 text-xs sm:text-sm text-gray-500">Must be at least 6 characters</p>
               </div>
               
               <div>
-                <label htmlFor="confirmPassword" className="flex items-center text-sm font-medium text-text-secondary mb-2">
-                  <FaMagic className="mr-2 text-accent" /> Confirm Incantation
+                <label htmlFor="confirmPassword" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                  <FaLock className="mr-2 text-[#319141]" /> Confirm Password
                 </label>
                 <input
                   id="confirmPassword"
@@ -164,7 +161,7 @@ export default function Signup() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-200"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border border-gray-200 focus:border-[#319141] focus:ring-2 focus:ring-[#319141]/20 transition-all duration-200 text-sm sm:text-base"
                   placeholder="••••••••"
                 />
               </div>
@@ -172,33 +169,33 @@ export default function Signup() {
               <button
                 type="submit"
                 disabled={loading || success}
-                className="w-full bg-accent hover:bg-highlight text-white font-medium py-3 rounded-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full bg-[#319141] hover:bg-[#319141]/90 text-white font-medium py-2.5 sm:py-3 rounded-lg sm:rounded-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm sm:text-base"
               >
                 {loading ? (
                   <div className="flex items-center justify-center">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Casting Spell...
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Creating Account...
                   </div>
                 ) : (
-                  'Become a Wizard'
+                  'Create Account'
                 )}
               </button>
             </form>
             
-            <div className="mt-8 text-center">
+            <div className="mt-6 sm:mt-8 text-center">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white/80 text-text-secondary">Already a wizard?</span>
+                  <span className="px-4 bg-white/80 text-gray-600 text-xs sm:text-sm">Already have an account?</span>
                 </div>
               </div>
               <Link 
                 href="/login" 
-                className="inline-block mt-4 text-accent hover:text-highlight transition-colors duration-200"
+                className="inline-block mt-3 sm:mt-4 text-[#319141] hover:text-[#319141]/80 transition-colors duration-200 text-sm sm:text-base"
               >
-                Enter the Realm
+                Sign In
               </Link>
             </div>
           </div>
