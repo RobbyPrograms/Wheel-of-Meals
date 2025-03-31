@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: 'your-google-verification-code', // You'll get this from Google Search Console
+    google: 'MHnBtsYcoex9jc5gg0BuMayX_qzG2DyIQP8gs4Rw1_Y',
   },
   icons: {
     icon: [
