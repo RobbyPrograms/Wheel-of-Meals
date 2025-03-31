@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -17,6 +17,7 @@ export default function SignUpForm() {
   const [error, setError] = useState<string | null>(null);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const usernameTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Check username availability with debounce
   const checkUsername = async (username: string) => {
@@ -49,11 +50,11 @@ export default function SignUpForm() {
       // Only check if there's a value and it matches the format
       if (/^[a-zA-Z0-9_]+$/.test(value)) {
         // Clear any previous timer
-        if (window.usernameTimeout) {
-          clearTimeout(window.usernameTimeout);
+        if (usernameTimeoutRef.current) {
+          clearTimeout(usernameTimeoutRef.current);
         }
         // Set new timer
-        window.usernameTimeout = setTimeout(() => {
+        usernameTimeoutRef.current = setTimeout(() => {
           checkUsername(value);
         }, 500);
       } else {
