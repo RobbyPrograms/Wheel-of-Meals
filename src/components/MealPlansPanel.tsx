@@ -602,54 +602,60 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
                           </div>
 
                           <div className="space-y-6 mt-6">
-                            {Object.entries(selectedPlan.plan).map(([day, meals]) => (
-                              <div key={day} className="border border-border rounded-lg overflow-hidden">
-                                <div className="bg-gray-50 px-4 py-3 border-b border-border">
-                                  <h3 className="font-medium text-primary">{day}</h3>
+                            {Object.entries(selectedPlan.plan)
+                              .sort((a, b) => {
+                                const dateA = new Date(a[0].replace(/\([^)]*\)/g, '').trim());
+                                const dateB = new Date(b[0].replace(/\([^)]*\)/g, '').trim());
+                                return dateA.getTime() - dateB.getTime();
+                              })
+                              .map(([day, meals]) => (
+                                <div key={day} className="border border-border rounded-lg overflow-hidden mb-4">
+                                  <div className="bg-gray-50 px-4 py-3 border-b border-border">
+                                    <h3 className="font-medium text-primary">{day}</h3>
+                                  </div>
+                                  <div className="p-4 space-y-4">
+                                    {(meals.breakfast || selectedPlan.plan[day].breakfast) && (
+                                      <div className="flex items-center">
+                                        <div className="w-24 text-sm font-medium text-text-secondary">Breakfast:</div>
+                                        <div className="flex-1 text-primary">{meals.breakfast?.name || 'None'}</div>
+                                        <button
+                                          onClick={() => handleMealChange(day, 'breakfast', selectedPlan.plan)}
+                                          className="ml-2 text-accent hover:text-accent-dark"
+                                          title="Change breakfast"
+                                        >
+                                          <FaRandom className="text-sm" />
+                                        </button>
+                                      </div>
+                                    )}
+                                    {(meals.lunch || selectedPlan.plan[day].lunch) && (
+                                      <div className="flex items-center">
+                                        <div className="w-24 text-sm font-medium text-text-secondary">Lunch:</div>
+                                        <div className="flex-1 text-primary">{meals.lunch?.name || 'None'}</div>
+                                        <button
+                                          onClick={() => handleMealChange(day, 'lunch', selectedPlan.plan)}
+                                          className="ml-2 text-accent hover:text-accent-dark"
+                                          title="Change lunch"
+                                        >
+                                          <FaRandom className="text-sm" />
+                                        </button>
+                                      </div>
+                                    )}
+                                    {(meals.dinner || selectedPlan.plan[day].dinner) && (
+                                      <div className="flex items-center">
+                                        <div className="w-24 text-sm font-medium text-text-secondary">Dinner:</div>
+                                        <div className="flex-1 text-primary">{meals.dinner?.name || 'None'}</div>
+                                        <button
+                                          onClick={() => handleMealChange(day, 'dinner', selectedPlan.plan)}
+                                          className="ml-2 text-accent hover:text-accent-dark"
+                                          title="Change lunch"
+                                        >
+                                          <FaRandom className="text-sm" />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="p-4 space-y-4">
-                                  {(meals.breakfast || selectedPlan.plan[day].breakfast) && (
-                                    <div className="flex items-center">
-                                      <div className="w-24 text-sm font-medium text-text-secondary">Breakfast:</div>
-                                      <div className="flex-1 text-primary">{meals.breakfast?.name || 'None'}</div>
-                                      <button
-                                        onClick={() => handleMealChange(day, 'breakfast', selectedPlan.plan)}
-                                        className="ml-2 text-accent hover:text-accent-dark"
-                                        title="Change breakfast"
-                                      >
-                                        <FaRandom className="text-sm" />
-                                      </button>
-                                    </div>
-                                  )}
-                                  {(meals.lunch || selectedPlan.plan[day].lunch) && (
-                                    <div className="flex items-center">
-                                      <div className="w-24 text-sm font-medium text-text-secondary">Lunch:</div>
-                                      <div className="flex-1 text-primary">{meals.lunch?.name || 'None'}</div>
-                                      <button
-                                        onClick={() => handleMealChange(day, 'lunch', selectedPlan.plan)}
-                                        className="ml-2 text-accent hover:text-accent-dark"
-                                        title="Change lunch"
-                                      >
-                                        <FaRandom className="text-sm" />
-                                      </button>
-                                    </div>
-                                  )}
-                                  {(meals.dinner || selectedPlan.plan[day].dinner) && (
-                                    <div className="flex items-center">
-                                      <div className="w-24 text-sm font-medium text-text-secondary">Dinner:</div>
-                                      <div className="flex-1 text-primary">{meals.dinner?.name || 'None'}</div>
-                                      <button
-                                        onClick={() => handleMealChange(day, 'dinner', selectedPlan.plan)}
-                                        className="ml-2 text-accent hover:text-accent-dark"
-                                        title="Change lunch"
-                                      >
-                                        <FaRandom className="text-sm" />
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
+                              ))}
                           </div>
                         </div>
                       ) : isCreatingPlan ? (

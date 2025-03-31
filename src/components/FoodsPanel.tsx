@@ -303,9 +303,9 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-4 sm:pt-20 p-4"
+          className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-4 sm:pt-20 p-4"
         >
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[95vh] flex flex-col">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
             {/* Sticky Header */}
             <div className="sticky top-0 bg-white z-10 rounded-t-2xl border-b border-gray-100">
               <div className="p-4 flex justify-between items-center">
@@ -350,98 +350,59 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-4">
               {loading ? (
-                <div className="flex justify-center items-center h-40">
+                <div className="flex justify-center items-center h-32">
                   <div className="w-8 h-8 border-4 border-[#319141] border-t-transparent rounded-full animate-spin"></div>
                 </div>
               ) : foods.length > 0 ? (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {filteredFoods.map((food) => (
-                    <div
+                    <div 
                       key={food.id}
-                      className="bg-gray-50 rounded-xl p-6 border border-gray-100 hover:border-accent/30 transition-all duration-200"
+                      className="bg-[#319141]/5 rounded-xl p-4 hover:bg-[#319141]/10 transition-colors"
                     >
-                      <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-lg font-semibold text-primary">{food.name}</h3>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-medium text-[#0F1E0F]">{food.name}</h3>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => startEditing(food)}
-                            className="text-accent hover:text-highlight transition-colors"
+                            className="p-1.5 text-gray-500 hover:text-[#319141] transition-colors"
                           >
                             <FaEdit />
                           </button>
                           <button
                             onClick={() => handleDeleteFood(food.id)}
-                            className="text-red-500 hover:text-red-700 transition-colors"
+                            className="p-1.5 text-gray-500 hover:text-red-500 transition-colors"
                           >
                             <FaTrash />
                           </button>
                         </div>
                       </div>
-
-                      {/* Rating Stars */}
-                      <div className="mb-4">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <span key={`food-${food.id}-rating-${star}`} className="text-lg">
-                            {star <= (food.rating || 0) ? (
-                              <FaStarSolid className="inline text-yellow-400" />
-                            ) : (
-                              <FaStarOutline className="inline text-gray-300" />
-                            )}
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {food.meal_types?.map((type: string, index: number) => (
+                          <span 
+                            key={index}
+                            className="px-2 py-0.5 bg-[#319141]/10 text-[#319141] rounded text-xs"
+                          >
+                            {type}
                           </span>
                         ))}
                       </div>
-
-                      {/* Meal Types */}
-                      {food.meal_types && food.meal_types.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {food.meal_types.map((type) => (
-                            <span
-                              key={type}
-                              className="px-3 py-1 bg-accent/10 text-accent rounded-full text-sm"
-                            >
-                              {type.charAt(0).toUpperCase() + type.slice(1)}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Ingredients */}
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-text-secondary mb-2">Ingredients:</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {food.ingredients.map((ingredient, index) => (
-                            <span
-                              key={index}
-                              className="px-2 py-1 bg-white rounded-lg text-sm text-text-secondary border border-gray-200"
-                            >
-                              {ingredient}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Recipe Preview */}
-                      <div>
-                        <h4 className="text-sm font-medium text-text-secondary mb-2">Recipe:</h4>
-                        <p className="text-sm text-text-secondary line-clamp-3">{food.recipe}</p>
-                        <button
-                          onClick={() => setSelectedFood(food)}
-                          className="text-accent hover:text-highlight text-sm mt-2 flex items-center gap-1"
-                        >
-                          View Full Recipe
-                          <FaChevronLeft className="transform rotate-180" />
-                        </button>
-                      </div>
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {Array.isArray(food.ingredients) 
+                          ? food.ingredients.join(', ') 
+                          : food.ingredients || 'No ingredients listed'
+                        }
+                      </p>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-[#319141]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-[#319141]/10 rounded-full flex items-center justify-center mx-auto mb-3">
                     <FaUtensils className="text-[#319141] text-2xl" />
                   </div>
                   <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">No foods added yet</h3>
-                  <p className="text-[#319141] mb-4">Start building your collection of favorite meals</p>
+                  <p className="text-gray-600 mb-4">Start building your collection of favorite meals</p>
                 </div>
               )}
             </div>
