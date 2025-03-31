@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { FaUtensils, FaDharmachakra, FaCalendarAlt, FaLightbulb, FaHeart, FaUsers, FaRocket, FaShare, FaComments, FaStar, FaBookOpen } from 'react-icons/fa';
+import { FaUtensils, FaDharmachakra, FaCalendarAlt, FaLightbulb, FaHeart, FaUsers, FaRocket, FaShare, FaComments, FaStar, FaBookOpen, FaCheckCircle, FaArrowRight, FaUser } from 'react-icons/fa';
 
 export default function AboutPage() {
   const [mounted, setMounted] = useState(false);
@@ -84,6 +84,27 @@ export default function AboutPage() {
     }
   ];
 
+  const testimonials = [
+    {
+      name: "Sarah Johnson",
+      role: "Busy Parent",
+      content: "SavoryCircle has transformed how I plan meals for my family. The AI suggestions are spot-on!",
+      avatar: "/testimonials/avatar1.jpg"
+    },
+    {
+      name: "Mike Chen",
+      role: "Food Enthusiast",
+      content: "The meal wheel feature is genius! It makes deciding what to cook actually fun.",
+      avatar: "/testimonials/avatar2.jpg"
+    },
+    {
+      name: "Emily Rodriguez",
+      role: "Health Coach",
+      content: "I recommend SavoryCircle to all my clients. It makes meal planning accessible and enjoyable.",
+      avatar: "/testimonials/avatar3.jpg"
+    }
+  ];
+
   if (!mounted) {
     return (
       <div className="min-h-screen flex flex-col bg-[#1B3523]">
@@ -99,7 +120,7 @@ export default function AboutPage() {
     <div className="min-h-screen flex flex-col bg-[#1B3523] overflow-hidden">
       <Navbar />
 
-      {/* Hero Section */}
+      {/* Hero Section - Enhanced with more compelling copy */}
       <motion.section 
         ref={heroRef}
         className="relative min-h-[90vh] flex items-center justify-center overflow-hidden"
@@ -120,20 +141,32 @@ export default function AboutPage() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8 }}
           >
-            About SavoryCircle
+            Revolutionizing Meal Planning
           </motion.h1>
           <motion.p 
-            className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto"
+            className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-8"
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            Helping you discover new meals and simplify your meal planning process.
+            Transform your meal planning experience with SavoryCircle's innovative approach.
           </motion.p>
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+          >
+            <Link 
+              href="/auth"
+              className="inline-flex items-center px-8 py-4 bg-[#319141] text-white rounded-full text-lg font-semibold hover:bg-[#1B3523] transition-colors duration-300"
+            >
+              Get Started Free <FaArrowRight className="ml-2" />
+            </Link>
+          </motion.div>
         </motion.div>
       </motion.section>
 
-      {/* Mission Section */}
+      {/* Mission Section - Enhanced with more details */}
       <section ref={missionRef} className="py-24 relative z-10 bg-white">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
@@ -147,13 +180,18 @@ export default function AboutPage() {
               <h2 className="text-4xl md:text-5xl font-bold text-[#319141] mb-6">Our Mission</h2>
               <div className="space-y-6 text-lg text-gray-600">
                 <p>
-                  SavoryCircle was created to solve the age-old question: "What should we eat today?" 
-                  Our mission is to help people discover new meal ideas, reduce decision fatigue, 
-                  and make meal planning a fun and enjoyable process.
+                  At SavoryCircle, we're on a mission to eliminate the daily stress of meal planning. 
+                  We believe that deciding what to eat shouldn't be a source of anxiety but an 
+                  opportunity for creativity and enjoyment.
                 </p>
                 <p>
-                  Whether you're cooking for yourself, your family, or planning meals for the week, 
-                  SavoryCircle provides the tools you need to make meal decisions quickly and easily.
+                  Founded in 2024, our platform combines cutting-edge AI technology with community wisdom 
+                  to create a unique meal planning experience that adapts to your preferences and lifestyle.
+                </p>
+                <p>
+                  Whether you're a busy parent, a health enthusiast, or someone who simply wants to bring 
+                  more variety to their meals, SavoryCircle is designed to make your life easier and your 
+                  meals more exciting.
                 </p>
               </div>
             </motion.div>
@@ -187,6 +225,45 @@ export default function AboutPage() {
                 </motion.div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-24 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <motion.h2 
+            className="text-4xl font-bold text-center text-[#319141] mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            What Our Users Say
+          </motion.h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {testimonials.map((testimonial, index) => (
+              <motion.div
+                key={index}
+                className="bg-white p-8 rounded-2xl shadow-lg"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.2 }}
+              >
+                <div className="flex items-center mb-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-[#319141] flex items-center justify-center">
+                      <FaUser className="text-white text-xl" />
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <div className="font-semibold text-gray-900">{testimonial.name}</div>
+                    <div className="text-sm text-gray-600">{testimonial.role}</div>
+                  </div>
+                </div>
+                <p className="text-gray-600">{testimonial.content}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -242,33 +319,38 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 bg-white relative">
-        <div className="container mx-auto px-4">
-          <motion.div 
-            className="max-w-4xl mx-auto text-center"
-            initial={{ opacity: 0, y: 30 }}
+      {/* Call to Action Section */}
+      <section className="py-24 bg-[#319141]">
+        <div className="container mx-auto px-4 text-center">
+          <motion.h2 
+            className="text-4xl md:text-5xl font-bold text-white mb-8"
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-[#319141] mb-6">
-              Ready to Transform Your Meal Planning?
-            </h2>
-            <p className="text-xl text-gray-600 mb-12">
-              Join thousands of users who have simplified their meal decisions with SavoryCircle.
-            </p>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            Ready to Transform Your Meal Planning?
+          </motion.h2>
+          <motion.p 
+            className="text-xl text-white/90 mb-12 max-w-2xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+          >
+            Join thousands of satisfied users who have made meal planning effortless with SavoryCircle.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.4 }}
+          >
+            <Link 
+              href="/auth"
+              className="inline-flex items-center px-8 py-4 bg-white text-[#319141] rounded-full text-lg font-semibold hover:bg-gray-100 transition-colors duration-300"
             >
-              <Link
-                href="/signup"
-                className="inline-flex items-center px-8 py-4 bg-[#319141] hover:bg-[#319141]/90 text-white text-lg font-medium rounded-xl transition-all duration-300"
-              >
-                Get Started Today
-              </Link>
-            </motion.div>
+              Get Started Free <FaArrowRight className="ml-2" />
+            </Link>
           </motion.div>
         </div>
       </section>
