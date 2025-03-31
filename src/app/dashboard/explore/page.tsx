@@ -505,7 +505,7 @@ export default function ExplorePage() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <FaSpinner className="animate-spin text-accent text-2xl" />
+          <FaSpinner className="animate-spin text-[#319141] text-2xl" />
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-12">
@@ -516,15 +516,15 @@ export default function ExplorePage() {
               ? 'No trending posts yet. Check back later for new posts!'
               : 'You haven\'t created any posts yet.'}
           </p>
-          <Link
-            href="/dashboard/create"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+          <button
+            onClick={() => setIsCreatePostModalOpen(true)}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#319141] text-white rounded-lg hover:bg-[#0F1E0F] transition-colors"
           >
             <FaPlus /> Create Post
-          </Link>
+          </button>
         </div>
       ) : (
-        <div className="grid gap-8">
+        <div className="grid gap-6 mt-8">
           {posts.map((post) => (
             <div 
               key={post.reposted_by_username 
