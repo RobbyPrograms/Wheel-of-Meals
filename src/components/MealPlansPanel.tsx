@@ -853,7 +853,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
                             <button
                               onClick={generateMealPlan}
                               disabled={isGenerating || favoriteFoods.length === 0 || Object.values(selectedMealTypes).filter(Boolean).length === 0}
-                              className="w-full bg-[#2B5C40] hover:bg-[#224931] text-white px-4 py-2 rounded-md flex items-center justify-center mb-4 transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                              className="w-full bg-[#319141] hover:bg-[#224931] text-white px-4 py-2 rounded-md flex items-center justify-center mb-4 transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
                               {isGenerating ? (
                                 <>
@@ -1041,7 +1041,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
                           {/* Create Plan Button */}
                           <button
                             onClick={() => setIsCreatingPlan(true)}
-                            className="w-full bg-[#2B5C40] hover:bg-[#224931] text-white px-4 py-3 rounded-md flex items-center justify-center mb-6 transition-colors duration-200"
+                            className="w-full bg-[#319141] hover:bg-[#224931] text-white px-4 py-3 rounded-md flex items-center justify-center mb-6 transition-colors duration-200"
                           >
                             <FaPlus className="mr-2" />
                             Create New Meal Plan
@@ -1116,14 +1116,14 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
                                     <div className="flex space-x-2">
                                       <button
                                         onClick={() => viewMealPlan(plan)}
-                                        className="bg-[#2B5C40] hover:bg-[#224931] text-white px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
+                                        className="bg-[#319141] hover:bg-[#224931] text-white px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
                                       >
                                         <FaEdit className="mr-1" />
                                         View Details
                                       </button>
                                       <button
                                         onClick={() => exportMealPlan(plan)}
-                                        className="border border-[#2B5C40] text-[#2B5C40] hover:bg-[#2B5C40] hover:text-white px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
+                                        className="border border-[#319141] text-[#2B5C40] hover:bg-[#319141] hover:text-white px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
                                       >
                                         <FaRandom className="mr-1" />
                                         Export CSV
