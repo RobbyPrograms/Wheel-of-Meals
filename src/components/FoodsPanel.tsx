@@ -63,13 +63,30 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
   // Add useEffect to prevent background scrolling when panel is open
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      // Only prevent scrolling on desktop
+      if (window.innerWidth >= 640) { // sm breakpoint
+        document.body.style.overflow = 'hidden';
+      }
     } else {
       document.body.style.overflow = 'auto';
     }
     return () => {
       document.body.style.overflow = 'auto';
     };
+  }, [isOpen]);
+
+  // Add useEffect to handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (isOpen && window.innerWidth >= 640) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = 'auto';
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [isOpen]);
 
   // Add useEffect to clear error notification after 3 seconds
@@ -394,7 +411,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                   </div>
                   <button
                     onClick={onClose}
-                    className="text-gray-500 hover:text-[#0F1E0F] transition-colors"
+                    className="text-gray-500 hover:text-[#0F1E0F] transition-colors p-2"
                   >
                     ✕
                   </button>
