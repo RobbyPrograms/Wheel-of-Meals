@@ -9,8 +9,6 @@ The SavoryCircle leveling system is designed to reward users for their engagemen
 Users can earn XP through various actions:
 - Creating a new recipe post: 50 XP
 - Receiving a like on your recipe: 10 XP
-- Receiving a comment on your recipe: 15 XP
-- Commenting on others' recipes: 5 XP
 
 ### Ranks and Divisions
 Each rank (except Michelin Star) has 4 divisions to progress through, creating more granular progression:
@@ -24,21 +22,18 @@ Each rank (except Michelin Star) has 4 divisions to progress through, creating m
    - Division 2: 250 XP
    - Division 3: 500 XP
    - Division 4: 1,000 XP
-   - Rewards: Custom recipe collections, sharing capabilities, meal planning, weekly highlights
 
 3. **Home Cook** 🏠
    - Division 1: 2,000 XP
    - Division 2: 3,500 XP
    - Division 3: 5,000 XP
    - Division 4: 7,000 XP
-   - Rewards: Recipe modification tools, ingredient substitutions, advanced filters, recipe scaling
 
 4. **Culinary Enthusiast** 🌟
    - Division 1: 10,000 XP
    - Division 2: 15,000 XP
    - Division 3: 20,000 XP
    - Division 4: 30,000 XP
-   - Rewards: Featured placement, custom collections, video uploads, premium templates
 
 5. **Master Chef** 👑
    - Division 1: 50,000 XP
@@ -49,11 +44,9 @@ Each rank (except Michelin Star) has 4 divisions to progress through, creating m
 6. **Gourmet Guru** 🎖️
    - Division 1: 200,000 XP
    - Division 2: 300,000 XP
-   - Rewards: Premium analytics, community challenges
 
 7. **Michelin Star** ⭐
    - Single Division: 500,000 XP
-   - Reward: Platform ambassador status
 
 ## Features
 
