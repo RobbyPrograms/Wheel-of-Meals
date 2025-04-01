@@ -12,6 +12,7 @@ import MealPlansPanel from '@/components/MealPlansPanel';
 import MealPlansDashboard from '@/components/MealPlansDashboard';
 import AISuggestions from '@/components/AISuggestions';
 import LevelCard from '@/components/LevelCard';
+import FoodDetailsModal from '@/components/FoodDetailsModal';
 
 interface LevelInfo {
   current_level: number;
@@ -38,6 +39,7 @@ export default function Dashboard() {
   const [isFoodsPanelOpen, setIsFoodsPanelOpen] = useState(false);
   const [isMealPlansPanelOpen, setIsMealPlansPanelOpen] = useState(false);
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
+  const [selectedFood, setSelectedFood] = useState<any>(null);
 
   // Check for query parameters to open panels and clear them after
   useEffect(() => {
@@ -361,7 +363,11 @@ export default function Dashboard() {
               </div>
               <div className="space-y-2">
                 {recentFoods.map((food) => (
-                  <div key={food.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl">
+                  <div 
+                    key={food.id} 
+                    className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors"
+                    onClick={() => setSelectedFood(food)}
+                  >
                     <div>
                       <h3 className="font-medium text-[#0F1E0F]">{food.name}</h3>
                       <p className="text-sm text-gray-600 line-clamp-1">{food.ingredients.join(', ')}</p>
@@ -418,6 +424,15 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Food Details Modal */}
+      {selectedFood && (
+        <FoodDetailsModal
+          isOpen={!!selectedFood}
+          onClose={() => setSelectedFood(null)}
+          food={selectedFood}
+        />
       )}
     </div>
   );

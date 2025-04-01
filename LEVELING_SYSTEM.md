@@ -45,7 +45,6 @@ Each rank (except Michelin Star) has 4 divisions to progress through, creating m
    - Division 2: 75,000 XP
    - Division 3: 100,000 XP
    - Division 4: 150,000 XP
-   - Rewards: Recipe monetization, badge creation, live sessions, exclusive events
 
 6. **Gourmet Guru** 🎖️
    - Division 1: 200,000 XP
