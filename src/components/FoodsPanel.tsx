@@ -479,7 +479,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
               </div>
 
               {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto p-6 pb-24">
+              <div className="flex-1 overflow-y-auto p-6 pb-32">
                 {loading ? (
                   <div className="flex justify-center items-center h-32">
                     <div className="w-8 h-8 border-4 border-[#319141] border-t-transparent rounded-full animate-spin"></div>
@@ -573,11 +573,17 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center"
+            className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center sm:items-center pt-4 sm:pt-0"
           >
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] my-4 overflow-y-auto">
-              <div className="sticky top-0 bg-white z-10 border-b border-gray-100 p-6">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mb-4">
+              <div className="sticky top-0 bg-white z-10 border-b border-gray-100 p-4 flex justify-between items-center">
                 <h3 className="text-xl font-semibold text-[#319141]">Add New Food</h3>
+                <button
+                  onClick={() => setIsAddingFood(false)}
+                  className="text-gray-500 hover:text-[#0F1E0F] transition-colors"
+                >
+                  <FaTimes />
+                </button>
               </div>
               <form onSubmit={handleAddFood} className="p-6 space-y-4 pb-24">
                 <div>
@@ -783,10 +789,10 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center"
+          className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center sm:items-center pt-4 sm:pt-0"
         >
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] my-4 overflow-y-auto">
-            <div className="sticky top-0 bg-white z-10 border-b border-gray-100 p-6 flex justify-between items-center">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mb-4">
+            <div className="sticky top-0 bg-white z-10 border-b border-gray-100 p-4 flex justify-between items-center">
               <h3 className="text-xl font-semibold text-[#319141]">Edit Food</h3>
               <button
                 onClick={() => setEditingFood(null)}
