@@ -45,12 +45,42 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [filters, setFilters] = useState({
+    mealTypes: [] as MealType[],
+    minRating: 0
+  });
+  const [errorNotification, setErrorNotification] = useState<{
+    show: boolean;
+    message: string;
+  }>({ show: false, message: '' });
 
   useEffect(() => {
     if (isOpen && user) {
       fetchFoods();
     }
   }, [isOpen, user]);
+
+  // Add useEffect to prevent background scrolling when panel is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isOpen]);
+
+  // Add useEffect to clear error notification after 3 seconds
+  useEffect(() => {
+    if (errorNotification.show) {
+      const timer = setTimeout(() => {
+        setErrorNotification({ show: false, message: '' });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorNotification.show]);
 
   const fetchFoods = async () => {
     if (!user) return;
@@ -79,6 +109,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
   const handleAddFood = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setErrorNotification({ show: false, message: '' });
 
     // Convert comma-separated ingredients to array
     const ingredientsArray = newFood.ingredients
@@ -106,11 +137,21 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
 
       if (error) {
         console.error('Error adding food:', error);
-        setError('Failed to add food. Please try again.');
+        if (error.code === '23505') {
+          setErrorNotification({
+            show: true,
+            message: `"${newFood.name}" already exists in your food collection`
+          });
+        } else {
+          setErrorNotification({
+            show: true,
+            message: 'Failed to add food. Please try again.'
+          });
+        }
         return;
       }
 
-      // Clear form
+      // Clear form and close modal
       setNewFood({ 
         name: '', 
         ingredients: '', 
@@ -126,7 +167,10 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
       if (onFoodAdded) onFoodAdded();
     } catch (error) {
       console.error('Error adding food:', error);
-      setError('Failed to add food. Please try again.');
+      setErrorNotification({
+        show: true,
+        message: 'Failed to add food. Please try again.'
+      });
     }
   };
 
@@ -195,12 +239,19 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
     }
   };
 
-  const filteredFoods = foods.filter(food => 
-    food.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (Array.isArray(food.ingredients) && food.ingredients.some(ingredient => 
-      ingredient.toLowerCase().includes(searchTerm.toLowerCase())
-    ))
-  );
+  const filteredFoods = foods.filter(food => {
+    const matchesSearch = food.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (Array.isArray(food.ingredients) && food.ingredients.some(ingredient => 
+        ingredient.toLowerCase().includes(searchTerm.toLowerCase())
+      ));
+    
+    const matchesMealType = filters.mealTypes.length === 0 || 
+      (food.meal_types && food.meal_types.some(type => filters.mealTypes.includes(type)));
+    
+    const matchesRating = filters.minRating === 0 ? true : food.rating === filters.minRating;
+
+    return matchesSearch && matchesMealType && matchesRating;
+  });
 
   const startEditing = (food: Food) => {
     setEditingFood(food);
@@ -297,112 +348,427 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
+    <>
+      {/* Error Notification */}
+      <AnimatePresence>
+        {errorNotification.show && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 right-4 z-[70] bg-red-50 text-red-600 px-4 py-3 rounded-xl shadow-lg border border-red-100 flex items-center gap-2"
+          >
+            <div className="text-red-600">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            {errorNotification.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Panel */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            key="foods-panel"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center"
+          >
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-b-2xl sm:rounded-2xl shadow-xl w-full max-w-2xl max-h-screen sm:max-h-[90vh] flex flex-col"
+            >
+              {/* Sticky Header */}
+              <div className="sticky top-0 bg-white z-10 rounded-t-2xl border-b border-gray-100">
+                <div className="p-4 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <FaUtensils className="text-[#319141] text-xl" />
+                    <h2 className="text-2xl font-bold text-[#0F1E0F]">My Foods</h2>
+                  </div>
+                  <button
+                    onClick={onClose}
+                    className="text-gray-500 hover:text-[#0F1E0F] transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Add New Food Button - Always visible */}
+                <div className="px-4 pb-4">
+                  <button
+                    onClick={() => setIsAddingFood(true)}
+                    className="w-full bg-[#319141] text-white p-3 rounded-xl hover:bg-[#0F1E0F] transition-colors flex items-center justify-center gap-2"
+                  >
+                    <FaPlus className="text-sm" />
+                    Add New Food
+                  </button>
+                </div>
+
+                {/* Search and Filters Section */}
+                <div className="px-4 pb-4 space-y-4">
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search foods by name or ingredient"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full p-3 pr-10 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-[#319141] focus:ring-1 focus:ring-[#319141]"
+                    />
+                    <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  </div>
+
+                  {/* Filters */}
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-[#0F1E0F] mb-2">
+                        Filter by Meal Type
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {mealTypeOptions.map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => {
+                              setFilters(prev => ({
+                                ...prev,
+                                mealTypes: prev.mealTypes.includes(type)
+                                  ? prev.mealTypes.filter(t => t !== type)
+                                  : [...prev.mealTypes, type]
+                              }));
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                              filters.mealTypes.includes(type)
+                                ? 'bg-[#319141] text-white'
+                                : 'bg-[#319141]/10 text-[#319141] hover:bg-[#319141]/20'
+                            }`}
+                          >
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#0F1E0F] mb-2">
+                        Minimum Rating
+                      </label>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {[0, 1, 2, 3, 4, 5].map((rating) => (
+                          <button
+                            key={rating}
+                            onClick={() => setFilters(prev => ({ ...prev, minRating: rating }))}
+                            className={`min-w-[40px] px-2 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                              filters.minRating === rating
+                                ? 'bg-[#319141] text-white'
+                                : 'bg-[#319141]/10 text-[#319141] hover:bg-[#319141]/20'
+                            }`}
+                          >
+                            {rating === 0 ? 'All' : `${rating}★`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-6 pb-24">
+                {loading ? (
+                  <div className="flex justify-center items-center h-32">
+                    <div className="w-8 h-8 border-4 border-[#319141] border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : foods.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-3">
+                    {filteredFoods.map((food) => (
+                      <div 
+                        key={food.id}
+                        className="bg-[#319141]/5 rounded-xl p-4 hover:bg-[#319141]/10 transition-colors cursor-pointer"
+                        onClick={() => setSelectedFood(food)}
+                      >
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-medium text-[#0F1E0F] mb-1">{food.name}</h3>
+                              <div className="flex flex-wrap gap-1 mb-2">
+                                {food.meal_types?.map((type: string, index: number) => (
+                                  <span 
+                                    key={index}
+                                    className="px-2 py-0.5 bg-[#319141]/10 text-[#319141] rounded text-xs"
+                                  >
+                                    {type}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {food.rating > 0 && (
+                                <div className="flex items-center gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <FaStarSolid
+                                      key={star}
+                                      className={`w-3.5 h-3.5 ${star <= food.rating ? "text-yellow-400" : "text-gray-200"}`}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    startEditing(food);
+                                  }}
+                                  className="p-1.5 text-gray-500 hover:text-[#319141] transition-colors"
+                                >
+                                  <FaEdit />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteFood(food.id);
+                                  }}
+                                  className="p-1.5 text-gray-500 hover:text-red-500 transition-colors"
+                                >
+                                  <FaTrash />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600 line-clamp-2">
+                            {Array.isArray(food.ingredients) 
+                              ? food.ingredients.join(', ') 
+                              : food.ingredients || 'No ingredients listed'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-[#319141]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <FaUtensils className="text-[#319141] text-2xl" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">No foods added yet</h3>
+                    <p className="text-gray-600 mb-4">Start building your collection of favorite meals</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Food Modal */}
+      <AnimatePresence>
+        {isAddingFood && (
+          <motion.div
+            key="add-food-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center"
+          >
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] my-4 overflow-y-auto">
+              <div className="sticky top-0 bg-white z-10 border-b border-gray-100 p-6">
+                <h3 className="text-xl font-semibold text-[#319141]">Add New Food</h3>
+              </div>
+              <form onSubmit={handleAddFood} className="p-6 space-y-4 pb-24">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-2">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    value={newFood.name}
+                    onChange={(e) => setNewFood({ ...newFood, name: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="ingredients" className="block text-sm font-medium text-text-secondary mb-2">
+                    Ingredients (comma-separated)
+                  </label>
+                  <textarea
+                    id="ingredients"
+                    value={newFood.ingredients}
+                    onChange={(e) => setNewFood({ ...newFood, ingredients: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 min-h-[100px]"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="recipe" className="block text-sm font-medium text-text-secondary mb-2">
+                    Recipe Instructions
+                  </label>
+                  <textarea
+                    id="recipe"
+                    value={newFood.recipe}
+                    onChange={(e) => setNewFood({ ...newFood, recipe: e.target.value })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 min-h-[150px]"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    Rating
+                  </label>
+                  <StarRating rating={newFood.rating} onRatingChange={handleRatingChange} />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    Meal Types
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {mealTypeOptions.map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => handleMealTypeToggle(type)}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                          newFood.meal_types.includes(type)
+                            ? 'bg-accent text-white'
+                            : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                        }`}
+                      >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    Visibility
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setNewFood({ ...newFood, visibility: 'public' })}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                        newFood.visibility === 'public'
+                          ? 'bg-accent text-white'
+                          : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                      }`}
+                    >
+                      <FaEye /> Public
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewFood({ ...newFood, visibility: 'private' })}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                        newFood.visibility === 'private'
+                          ? 'bg-accent text-white'
+                          : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                      }`}
+                    >
+                      <FaEyeSlash /> Private
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingFood(false)}
+                    className="px-6 py-2 rounded-xl border border-gray-200 text-text-secondary hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 rounded-xl bg-accent text-white hover:bg-highlight transition-colors"
+                  >
+                    Add Food
+                  </button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Food Details Modal */}
+      {selectedFood && (
         <motion.div
+          key="food-details-modal"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-4 sm:pt-20 p-4"
+          className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex sm:items-center items-start justify-center sm:p-4"
         >
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-            {/* Sticky Header */}
-            <div className="sticky top-0 bg-white z-10 rounded-t-2xl border-b border-gray-100">
-              <div className="p-4 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <FaUtensils className="text-[#319141] text-xl" />
-                  <h2 className="text-2xl font-bold text-[#0F1E0F]">My Foods</h2>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="text-gray-500 hover:text-[#0F1E0F] transition-colors"
-                >
-                  ✕
-                </button>
+          <div className="bg-white rounded-b-2xl sm:rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-100 flex justify-between items-center p-4">
+              <div>
+                <h3 className="text-xl font-semibold text-[#319141] mb-2">{selectedFood.name}</h3>
+                {selectedFood.rating > 0 && (
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <FaStarSolid
+                        key={star}
+                        className={star <= selectedFood.rating ? "text-yellow-400" : "text-gray-200"}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {/* Add New Food Button - Always visible */}
-              <div className="px-4 pb-4">
-                <button
-                  onClick={() => setIsAddingFood(true)}
-                  className="w-full bg-[#319141] text-white p-3 rounded-xl hover:bg-[#0F1E0F] transition-colors flex items-center justify-center gap-2"
-                >
-                  <FaPlus className="text-sm" />
-                  Add New Food
-                </button>
-              </div>
-
-              {/* Search Bar - Always visible */}
-              <div className="px-4 pb-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search foods by name or ingredient"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full p-3 pr-10 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:border-[#319141] focus:ring-1 focus:ring-[#319141]"
-                  />
-                  <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                </div>
-              </div>
+              <button
+                onClick={() => setSelectedFood(null)}
+                className="text-gray-500 hover:text-[#0F1E0F] transition-colors"
+              >
+                <FaTimes />
+              </button>
             </div>
-
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {loading ? (
-                <div className="flex justify-center items-center h-32">
-                  <div className="w-8 h-8 border-4 border-[#319141] border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              ) : foods.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {filteredFoods.map((food) => (
-                    <div 
-                      key={food.id}
-                      className="bg-[#319141]/5 rounded-xl p-4 hover:bg-[#319141]/10 transition-colors"
+            <div className="p-4 space-y-4">
+              <div>
+                <h4 className="font-medium text-[#0F1E0F] mb-2">Meal Types</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedFood.meal_types?.map((type: string, index: number) => (
+                    <span
+                      key={index}
+                      className="px-2 py-0.5 bg-[#319141]/10 text-[#319141] rounded text-sm"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-medium text-[#0F1E0F]">{food.name}</h3>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => startEditing(food)}
-                            className="p-1.5 text-gray-500 hover:text-[#319141] transition-colors"
-                          >
-                            <FaEdit />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteFood(food.id)}
-                            className="p-1.5 text-gray-500 hover:text-red-500 transition-colors"
-                          >
-                            <FaTrash />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {food.meal_types?.map((type: string, index: number) => (
-                          <span 
-                            key={index}
-                            className="px-2 py-0.5 bg-[#319141]/10 text-[#319141] rounded text-xs"
-                          >
-                            {type}
-                          </span>
-                        ))}
-                      </div>
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {Array.isArray(food.ingredients) 
-                          ? food.ingredients.join(', ') 
-                          : food.ingredients || 'No ingredients listed'
-                        }
-                      </p>
-                    </div>
+                      {type}
+                    </span>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-[#319141]/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <FaUtensils className="text-[#319141] text-2xl" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">No foods added yet</h3>
-                  <p className="text-gray-600 mb-4">Start building your collection of favorite meals</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-[#0F1E0F] mb-2">Ingredients</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  {Array.isArray(selectedFood.ingredients) 
+                    ? selectedFood.ingredients.map((ingredient, index) => (
+                        <li key={index} className="text-gray-600">{ingredient}</li>
+                      ))
+                    : <li className="text-gray-600">No ingredients listed</li>
+                  }
+                </ul>
+              </div>
+              {selectedFood.recipe && (
+                <div>
+                  <h4 className="font-medium text-[#0F1E0F] mb-2">Instructions</h4>
+                  <ol className="list-none space-y-2">
+                    {selectedFood.recipe.split('\n')
+                      .filter(step => step.trim() !== '')
+                      .map((step, index) => (
+                        <li key={index} className="flex gap-2">
+                          <span className="text-[#319141] font-medium">{index + 1}.</span>
+                          <span className="text-gray-600">{step}</span>
+                        </li>
+                    ))}
+                  </ol>
                 </div>
               )}
             </div>
@@ -410,187 +776,26 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
         </motion.div>
       )}
 
-      {/* Add Food Modal */}
-      {isAddingFood && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center pt-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
-            <div className="p-6 border-b border-gray-100">
-              <h3 className="text-xl font-semibold text-primary">Add New Food</h3>
-            </div>
-            <form onSubmit={handleAddFood} className="p-6 space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-2">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  value={newFood.name}
-                  onChange={(e) => setNewFood({ ...newFood, name: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="ingredients" className="block text-sm font-medium text-text-secondary mb-2">
-                  Ingredients (comma-separated)
-                </label>
-                <textarea
-                  id="ingredients"
-                  value={newFood.ingredients}
-                  onChange={(e) => setNewFood({ ...newFood, ingredients: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 min-h-[100px]"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="recipe" className="block text-sm font-medium text-text-secondary mb-2">
-                  Recipe Instructions
-                </label>
-                <textarea
-                  id="recipe"
-                  value={newFood.recipe}
-                  onChange={(e) => setNewFood({ ...newFood, recipe: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 min-h-[150px]"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Rating
-                </label>
-                <StarRating rating={newFood.rating} onRatingChange={handleRatingChange} />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Meal Types
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {mealTypeOptions.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => handleMealTypeToggle(type)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                        newFood.meal_types.includes(type)
-                          ? 'bg-accent text-white'
-                          : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
-                      }`}
-                    >
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Visibility
-                </label>
-                <div className="flex items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setNewFood({ ...newFood, visibility: 'public' })}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                      newFood.visibility === 'public'
-                        ? 'bg-accent text-white'
-                        : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
-                    }`}
-                  >
-                    <FaEye /> Public
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNewFood({ ...newFood, visibility: 'private' })}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                      newFood.visibility === 'private'
-                        ? 'bg-accent text-white'
-                        : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
-                    }`}
-                  >
-                    <FaEyeSlash /> Private
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsAddingFood(false)}
-                  className="px-6 py-2 rounded-xl border border-gray-200 text-text-secondary hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 rounded-xl bg-accent text-white hover:bg-highlight transition-colors"
-                >
-                  Add Food
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* View Recipe Modal */}
-      {selectedFood && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center pt-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-primary">{selectedFood.name}</h3>
-              <button
-                onClick={() => setSelectedFood(null)}
-                className="text-text-secondary hover:text-primary transition-colors"
-              >
-                <FaTimes />
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              <div>
-                <h4 className="text-sm font-medium text-text-secondary mb-3">Ingredients:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedFood.ingredients.map((ingredient, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-gray-50 rounded-lg text-sm text-text-secondary"
-                    >
-                      {ingredient}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-text-secondary mb-3">Recipe Instructions:</h4>
-                <div className="prose prose-sm max-w-none">
-                  {selectedFood.recipe.split('\n').map((step, index) => (
-                    <p key={index} className="mb-2">{step}</p>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Edit Food Modal */}
       {editingFood && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center pt-8">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-primary">Edit Food</h3>
+        <motion.div
+          key="edit-food-modal"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center"
+        >
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] my-4 overflow-y-auto">
+            <div className="sticky top-0 bg-white z-10 border-b border-gray-100 p-6 flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-[#319141]">Edit Food</h3>
               <button
                 onClick={() => setEditingFood(null)}
-                className="text-text-secondary hover:text-primary transition-colors"
+                className="text-gray-500 hover:text-[#0F1E0F] transition-colors"
               >
                 <FaTimes />
               </button>
             </div>
-            <form onSubmit={handleEditFood} className="p-6 space-y-4">
+            <form onSubmit={handleEditFood} className="p-6 space-y-4 pb-24">
               <div>
                 <label htmlFor="edit-name" className="block text-sm font-medium text-text-secondary mb-2">
                   Name
@@ -706,8 +911,8 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
               </div>
             </form>
           </div>
-        </div>
+        </motion.div>
       )}
-    </AnimatePresence>
+    </>
   );
 } 
