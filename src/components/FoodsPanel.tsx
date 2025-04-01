@@ -13,7 +13,7 @@ type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert';
 type Food = {
   id: string;
   name: string;
-  ingredients: string[];
+  ingredients: string[] | string;
   recipe: string;
   rating: number;
   meal_types: MealType[];
@@ -49,7 +49,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
     mealTypes: [] as MealType[],
     minRating: 0
   });
-  const [errorNotification, setErrorNotification] = useState<{
+  const [notification, setNotification] = useState<{
     show: boolean;
     message: string;
   }>({ show: false, message: '' });
@@ -91,13 +91,13 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
 
   // Add useEffect to clear error notification after 3 seconds
   useEffect(() => {
-    if (errorNotification.show) {
+    if (notification.show) {
       const timer = setTimeout(() => {
-        setErrorNotification({ show: false, message: '' });
+        setNotification({ show: false, message: '' });
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [errorNotification.show]);
+  }, [notification.show]);
 
   const fetchFoods = async () => {
     if (!user) return;
@@ -126,7 +126,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
   const handleAddFood = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setErrorNotification({ show: false, message: '' });
+    setNotification({ show: false, message: '' });
 
     // Convert comma-separated ingredients to array
     const ingredientsArray = newFood.ingredients
@@ -155,12 +155,12 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
       if (error) {
         console.error('Error adding food:', error);
         if (error.code === '23505') {
-          setErrorNotification({
+          setNotification({
             show: true,
             message: `"${newFood.name}" already exists in your food collection`
           });
         } else {
-          setErrorNotification({
+          setNotification({
             show: true,
             message: 'Failed to add food. Please try again.'
           });
@@ -184,7 +184,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
       if (onFoodAdded) onFoodAdded();
     } catch (error) {
       console.error('Error adding food:', error);
-      setErrorNotification({
+      setNotification({
         show: true,
         message: 'Failed to add food. Please try again.'
       });
@@ -323,11 +323,16 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
       setLoading(true);
       setError(null);
 
+      // Convert comma-separated string to array before saving
+      const ingredientsArray = typeof editingFood.ingredients === 'string'
+        ? editingFood.ingredients.split(',').map(item => item.trim()).filter(item => item.length > 0)
+        : editingFood.ingredients;
+
       const { error: updateError } = await supabase
         .from('favorite_foods')
         .update({
           name: editingFood.name,
-          ingredients: editingFood.ingredients,
+          ingredients: ingredientsArray,
           recipe: editingFood.recipe,
           rating: editingFood.rating,
           meal_types: editingFood.meal_types,
@@ -368,7 +373,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
     <>
       {/* Error Notification */}
       <AnimatePresence>
-        {errorNotification.show && (
+        {notification.show && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -380,7 +385,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
             </div>
-            {errorNotification.message}
+            {notification.message}
           </motion.div>
         )}
       </AnimatePresence>
@@ -813,7 +818,7 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
               <h3 className="text-xl font-semibold text-[#319141]">Edit Food</h3>
               <button
                 onClick={() => setEditingFood(null)}
-                className="text-gray-500 hover:text-[#0F1E0F] transition-colors"
+                className="text-gray-500 hover:text-[#0F1E0F] transition-colors p-2"
               >
                 <FaTimes />
               </button>
@@ -839,14 +844,8 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
                 </label>
                 <textarea
                   id="edit-ingredients"
-                  value={Array.isArray(editingFood.ingredients) ? editingFood.ingredients.join(', ') : ''}
-                  onChange={(e) => {
-                    const ingredientsArray = e.target.value
-                      .split(',')
-                      .map(item => item.trim())
-                      .filter(item => item.length > 0);
-                    setEditingFood({ ...editingFood, ingredients: ingredientsArray });
-                  }}
+                  value={Array.isArray(editingFood.ingredients) ? editingFood.ingredients.join(', ') : editingFood.ingredients}
+                  onChange={(e) => setEditingFood({ ...editingFood, ingredients: e.target.value })}
                   className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 min-h-[100px]"
                   required
                 />

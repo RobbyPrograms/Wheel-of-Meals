@@ -15,17 +15,19 @@ export const metadata: Metadata = {
   title: 'SavoryCircle - Modern Meal Planning',
   description: 'Simplify your meal planning with SavoryCircle. Create custom meal schedules, discover new recipes, and organize your favorite dishes all in one place. Free meal planning tool for individuals and families.',
   metadataBase: new URL('https://savorycircle.com'), // Replace with your actual domain
-  keywords: ['meal planning', 'recipe organization', 'food planner', 'meal scheduler', 'cooking', 'meal prep', 'recipe manager', 'meal ideas'],
+  keywords: ['meal planning', 'recipe organization', 'food planner', 'meal scheduler', 'cooking', 'meal prep', 'recipe manager', 'meal ideas', 'AI Meal Planner', 'AI Recipe Generator', 'AI Recipe Search', 'AI Recipe Suggestions', 'AI Recipe Recommendations', 'AI Recipe Suggestions', 'AI Recipe Recommendations', 'AI Recipe Suggestions', 'AI Recipe Recommendations', 'Free Meal Planner', 'Free Recipe Planner', 'Free Recipe Organizer', 'Free Recipe Manager', 'Free Recipe Search', 'Free Recipe Suggestions', 'Free Recipe Recommendations', 'Recipe Sharing', 'Recipe Collection', 'Recipe Management', 'Recipe Search', 'Recipe Suggestions', 'Recipe Recommendations', 'Recipe Sharing', 'Recipe Collection', 'Recipe Management', 'Recipe Search', 'Recipe Suggestions', 'Recipe Recommendations'],
   authors: [{ name: 'SavoryCircle' }],
   openGraph: {
     type: 'website',
     title: 'SavoryCircle - Modern Meal Planning Made Easy',
     description: 'Simplify your meal planning with SavoryCircle. Create custom meal schedules, discover new recipes, and organize your favorite dishes all in one place.',
+    siteName: 'SavoryCircle',
     images: [
       {
-        url: '/og-image.jpg', // You'll need to create this
-        width: 1200,
-        height: 630,
+        url: '/logo.svg',
+        type: 'image/svg+xml',
+        width: 512,
+        height: 512,
         alt: 'SavoryCircle - Modern Meal Planning Platform'
       }
     ],
@@ -34,7 +36,9 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'SavoryCircle - Modern Meal Planning Made Easy',
     description: 'Simplify your meal planning with SavoryCircle. Create custom meal schedules, discover new recipes, and organize your favorite dishes all in one place.',
-    images: ['/og-image.jpg'], // Same image as OpenGraph
+    images: ['/logo.svg'],
+    site: '@savorycircle', // Replace with your Twitter handle
+    creator: '@savorycircle', // Replace with your Twitter handle
   },
   robots: {
     index: true,
@@ -55,13 +59,27 @@ export const metadata: Metadata = {
       {
         url: '/logo.svg',
         type: 'image/svg+xml',
-      },
-      {
-        url: '/favicon.ico',
-        sizes: '32x32',
       }
     ],
+    shortcut: '/logo.svg',
     apple: '/logo.svg',
+    other: [
+      {
+        rel: 'mask-icon',
+        url: '/logo.svg',
+        color: '#319141',
+      },
+    ],
+  },
+  manifest: '/manifest.json',
+  applicationName: 'SavoryCircle',
+  appleWebApp: {
+    capable: true,
+    title: 'SavoryCircle',
+    statusBarStyle: 'default',
+  },
+  formatDetection: {
+    telephone: false,
   },
 };
 

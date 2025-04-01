@@ -1,0 +1,16 @@
+{
+  "name": "SavoryCircle",
+  "short_name": "SavoryCircle",
+  "description": "Modern Meal Planning Made Easy",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#319141",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ]
+} 
