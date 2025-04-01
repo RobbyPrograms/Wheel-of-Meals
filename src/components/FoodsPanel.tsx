@@ -376,14 +376,14 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center"
+            className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center sm:items-center sm:p-4"
           >
             <motion.div
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -20, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="bg-white rounded-b-2xl sm:rounded-2xl shadow-xl w-full max-w-2xl max-h-screen sm:max-h-[90vh] flex flex-col"
+              className="bg-white rounded-b-2xl sm:rounded-2xl shadow-xl w-full max-w-2xl max-h-screen sm:max-h-[80vh] flex flex-col my-0 sm:my-2"
             >
               {/* Sticky Header */}
               <div className="sticky top-0 bg-white z-10 rounded-t-2xl border-b border-gray-100">
@@ -573,9 +573,9 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center sm:items-center pt-4 sm:pt-0"
+            className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center sm:items-center pt-4 sm:p-4"
           >
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mb-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto mb-4 sm:my-2">
               <div className="sticky top-0 bg-white z-10 border-b border-gray-100 p-4 flex justify-between items-center">
                 <h3 className="text-xl font-semibold text-[#319141]">Add New Food</h3>
                 <button
@@ -713,9 +713,9 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex sm:items-center items-start justify-center sm:p-4"
+          className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center sm:items-center pt-4 sm:p-4"
         >
-          <div className="bg-white rounded-b-2xl sm:rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto mb-4 sm:my-2">
             <div className="sticky top-0 bg-white border-b border-gray-100 flex justify-between items-center p-4">
               <div>
                 <h3 className="text-xl font-semibold text-[#319141] mb-2">{selectedFood.name}</h3>
@@ -789,9 +789,9 @@ export default function FoodsPanel({ isOpen, onClose, onFoodAdded }: FoodsPanelP
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center sm:items-center pt-4 sm:pt-0"
+          className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-start justify-center sm:items-center pt-4 sm:p-4"
         >
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mb-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto mb-4 sm:my-2">
             <div className="sticky top-0 bg-white z-10 border-b border-gray-100 p-4 flex justify-between items-center">
               <h3 className="text-xl font-semibold text-[#319141]">Edit Food</h3>
               <button
