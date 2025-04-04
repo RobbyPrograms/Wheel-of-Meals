@@ -59,7 +59,17 @@ export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) 
       const suggestions = parseSuggestions(content);
 
       if (suggestions.length === 0) {
-        throw new Error('Could not parse any meal suggestions from the AI response');
+        // Check if the AI returned content but it was filtered out due to lack of ingredients
+        if (data.choices[0].message.content.includes('Name:')) {
+          throw new Error(
+            'We couldn\'t get clear ingredient lists from the AI. Try adding more details like:\n' +
+            '• "I want a chicken dish with vegetables"\n' +
+            '• "Suggest a quick pasta meal with tomatoes"\n' +
+            '• "What can I make with beef and potatoes for dinner?"'
+          );
+        } else {
+          throw new Error('Could not parse any meal suggestions from the AI response');
+        }
       }
 
       setSuggestions(suggestions);
@@ -79,6 +89,8 @@ export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) 
     let currentSuggestion: any = {};
     let isParsingRecipe = false;
     let recipeSteps: string[] = [];
+    let isParsingIngredients = false;
+    let ingredientsList: string[] = [];
 
     for (const line of lines) {
       const trimmedLine = line.trim();
@@ -87,21 +99,51 @@ export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) 
       if (trimmedLine.startsWith('Name:')) {
         if (currentSuggestion.name) {
           currentSuggestion.recipe = recipeSteps;
-          suggestions.push({ ...currentSuggestion });
+          
+          // If we have ingredients from a multi-line list, use those
+          if (ingredientsList.length > 0) {
+            currentSuggestion.ingredients = ingredientsList;
+          }
+          
+          // Only add suggestions that have ingredients
+          if (currentSuggestion.ingredients && currentSuggestion.ingredients.length > 0) {
+            suggestions.push({ ...currentSuggestion });
+          }
+          
           currentSuggestion = {};
           recipeSteps = [];
+          ingredientsList = [];
           isParsingRecipe = false;
+          isParsingIngredients = false;
         }
         currentSuggestion.name = trimmedLine.substring(5).trim();
       } else if (trimmedLine.startsWith('Description:')) {
         currentSuggestion.description = trimmedLine.substring(12).trim();
       } else if (trimmedLine.startsWith('Ingredients:')) {
-        currentSuggestion.ingredients = trimmedLine
-          .substring(12)
-          .split(',')
-          .map((i: string) => i.trim())
-          .filter(Boolean);
+        isParsingIngredients = true;
+        
+        // Check if there are inline ingredients (comma-separated)
+        const inlineIngredients = trimmedLine.substring(12).trim();
+        if (inlineIngredients) {
+          currentSuggestion.ingredients = inlineIngredients
+            .split(',')
+            .map((i: string) => i.trim())
+            .filter(Boolean);
+        } else {
+          // Start collecting multi-line ingredients
+          ingredientsList = [];
+        }
+      } else if (isParsingIngredients && trimmedLine.startsWith('-')) {
+        // Handle bullet-point style ingredients
+        ingredientsList.push(trimmedLine.substring(1).trim());
+      } else if (isParsingIngredients && /^\d+\./.test(trimmedLine)) {
+        // Handle numbered ingredients list
+        ingredientsList.push(trimmedLine.replace(/^\d+\.\s*/, '').trim());
+      } else if (isParsingIngredients && !trimmedLine.startsWith('Recipe')) {
+        // Add other lines as ingredients until we hit Recipe Instructions
+        ingredientsList.push(trimmedLine);
       } else if (trimmedLine.startsWith('Recipe Instructions:')) {
+        isParsingIngredients = false;
         isParsingRecipe = true;
       } else if (isParsingRecipe && /^\d+\./.test(trimmedLine)) {
         // This line starts with a number and period, so it's a recipe step
@@ -111,7 +153,16 @@ export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) 
 
     if (currentSuggestion.name) {
       currentSuggestion.recipe = recipeSteps;
-      suggestions.push(currentSuggestion);
+      
+      // If we have ingredients from a multi-line list, use those
+      if (ingredientsList.length > 0) {
+        currentSuggestion.ingredients = ingredientsList;
+      }
+      
+      // Only add suggestions that have ingredients
+      if (currentSuggestion.ingredients && currentSuggestion.ingredients.length > 0) {
+        suggestions.push(currentSuggestion);
+      }
     }
 
     console.log('Parsed suggestions:', suggestions);
@@ -151,9 +202,12 @@ export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) 
             id="prompt"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="E.g., 'I want a healthy vegetarian dinner that's quick to prepare' or 'Suggest a spicy Asian dish with chicken'"
+            placeholder="E.g., 'Suggest a healthy dinner with chicken and vegetables' or 'I need a pasta recipe with tomatoes and garlic'"
             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-200 min-h-[100px]"
           />
+          <p className="mt-1 text-xs text-gray-500">
+            Tip: For best results, mention specific ingredients you'd like to use in your request. Be specific about cuisine type, dietary restrictions, or cooking methods.
+          </p>
         </div>
 
         <button
@@ -175,7 +229,7 @@ export default function AISuggestions({ onAddToFavorites }: AISuggestionsProps) 
       {error && (
         <div className="p-4 bg-red-50 text-red-700 rounded-lg border-l-4 border-red-500">
           <p className="font-medium">Error getting suggestions</p>
-          <p className="text-sm mt-1">{error}</p>
+          <div className="text-sm mt-1 whitespace-pre-line">{error}</div>
         </div>
       )}
 
