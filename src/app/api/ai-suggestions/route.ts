@@ -38,11 +38,19 @@ export async function POST(request: Request) {
 
 Name: [Meal Name]
 Description: [Brief description of the meal]
-Ingredients: [List key ingredients, separated by commas]
+Ingredients:
+- [ingredient 1]
+- [ingredient 2]
+- [ingredient 3]
+- [continue listing all ingredients]
 Recipe Instructions:
 1. [First step]
 2. [Second step]
 3. [Continue with remaining steps]
+
+IMPORTANT: You MUST include a comprehensive list of ingredients for each meal suggestion. List ingredients on separate lines using bullet points. For simpler queries (like "meal for dinner"), suggest popular, well-known dishes with common ingredients.
+
+Even for basic requests like "I want a meal" or "suggest dinner ideas", always include a complete set of ingredients. Never leave the ingredients section empty or incomplete.
 
 Provide 3 meal suggestions that match the user's request.`
             },
