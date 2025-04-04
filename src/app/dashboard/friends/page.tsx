@@ -458,7 +458,7 @@ export default function FriendsPage() {
                               <button
                                 onClick={() => addToMyFoods(meal)}
                                 className="text-accent hover:text-accent/80 transition-colors"
-                                title="Add to My Foods"
+                                title="Add to My Meals"
                               >
                                 <FaPlus />
                               </button>

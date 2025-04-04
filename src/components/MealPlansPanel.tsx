@@ -895,7 +895,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
                                             <div className="flex-1 text-sm text-primary">
                                               {meals.breakfast?.name || (
                                                 <span className="text-amber-600 text-xs">
-                                                  No breakfast options available. Add some breakfast meals in "My Foods" to see options here.
+                                                  No breakfast options available. Add some breakfast meals in "My Meals" to see options here.
                                                 </span>
                                               )}
                                             </div>
@@ -922,7 +922,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
                                             <div className="flex-1 text-sm text-primary">
                                               {meals.lunch?.name || (
                                                 <span className="text-amber-600 text-xs">
-                                                  No lunch options available. Add some lunch meals in "My Foods" to see options here.
+                                                  No lunch options available. Add some lunch meals in "My Meals" to see options here.
                                                 </span>
                                               )}
                                             </div>
@@ -949,7 +949,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
                                             <div className="flex-1 text-sm text-primary">
                                               {meals.dinner?.name || (
                                                 <span className="text-amber-600 text-xs">
-                                                  No dinner options available. Add some dinner meals in "My Foods" to see options here.
+                                                  No dinner options available. Add some dinner meals in "My Meals" to see options here.
                                                 </span>
                                               )}
                                             </div>
