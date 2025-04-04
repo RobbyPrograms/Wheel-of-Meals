@@ -29,7 +29,7 @@ export default function DashboardSidebar() {
       icon: <FaChartPie className="text-lg" />,
     },
     {
-      name: 'My Foods',
+      name: 'My Meals',
       path: '/dashboard/foods',
       icon: <FaUtensils className="text-lg" />,
     },
