@@ -14,7 +14,7 @@ async function triggerDailyRecipe() {
     console.log('CRON_SECRET_KEY:', process.env.CRON_SECRET_KEY ? '✓ Found' : '✗ Missing');
     
     console.log('\nTriggering daily recipe update...');
-    const response = await fetch('http://localhost:3000/api/cron/update-daily-recipe', {
+    const response = await fetch('https://food-app-git-mealoftheday-robbyprograms-projects.vercel.app/api/cron/update-daily-recipe', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${process.env.CRON_SECRET_KEY}`
@@ -39,7 +39,7 @@ async function triggerDailyRecipe() {
   } catch (error: any) {
     console.error('\nError:', error?.message || 'Unknown error occurred');
     if (typeof error?.message === 'string' && error.message.includes('ECONNREFUSED')) {
-      console.log('\nTip: Make sure your local development server is running (npm run dev)');
+      console.log('\nTip: Make sure the production server is accessible');
     }
     process.exit(1);
   }
