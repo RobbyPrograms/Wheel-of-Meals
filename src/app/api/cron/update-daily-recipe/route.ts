@@ -128,9 +128,10 @@ export async function GET(request: Request) {
       nutrition
     };
 
-    // Get today's date in UTC
+    // Get today's date in UTC and format it as YYYY-MM-DD
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
+    const formattedDate = today.toISOString().split('T')[0];
 
     console.log('Storing recipe in Supabase...'); // Debug Supabase
     // Store the recipe in Supabase
@@ -138,7 +139,7 @@ export async function GET(request: Request) {
       .from('daily_recipes')
       .upsert({
         id: recipe.id,
-        date: today.toISOString(),
+        date: formattedDate,
         recipe_data: combinedRecipe
       });
 
