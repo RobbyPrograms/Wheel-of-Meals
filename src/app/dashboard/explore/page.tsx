@@ -324,6 +324,27 @@ export default function ExplorePage() {
           return defaultValue;
         };
 
+        // Helper function to format recipe string
+        const formatRecipe = (recipe: any): string => {
+          if (!recipe) return '';
+          if (typeof recipe === 'string') {
+            try {
+              // If it's a JSON string array, parse and join with newlines
+              const parsed = JSON.parse(recipe);
+              if (Array.isArray(parsed)) {
+                return parsed.join('\n');
+              }
+            } catch {
+              // If it's not JSON, return as is
+              return recipe;
+            }
+          }
+          if (Array.isArray(recipe)) {
+            return recipe.join('\n');
+          }
+          return String(recipe || '');
+        };
+
         // Log individual post data for debugging
         console.log('Processing post:', post);
         
@@ -336,7 +357,7 @@ export default function ExplorePage() {
           is_explore: Boolean(post.is_explore),
           food_name: String(post.food_name || ''),
           food_ingredients: safeJsonParse(post.food_ingredients),
-          food_recipe: String(post.food_recipe || ''),
+          food_recipe: formatRecipe(post.food_recipe),
           food_meal_types: safeJsonParse(post.food_meal_types),
           food_visibility: String(post.food_visibility || 'public'),
           username: String(post.username || ''),
@@ -640,9 +661,16 @@ export default function ExplorePage() {
                 {post.food_recipe && (
                   <div>
                     <h3 className="font-medium text-primary mb-2">Recipe</h3>
-                    <p className="text-text-secondary text-sm whitespace-pre-wrap">
-                      {post.food_recipe}
-                    </p>
+                    <div className="space-y-2">
+                      {post.food_recipe.split('\n').map((step, idx) => (
+                          <div key={idx} className="flex gap-2">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm">
+                              {idx + 1}
+                            </span>
+                            <p className="text-text-secondary text-sm">{step}</p>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 )}
               </div>
