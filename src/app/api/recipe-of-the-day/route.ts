@@ -5,12 +5,12 @@ export async function GET() {
   try {
     // Check environment variables
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing Supabase environment variables:', {
         hasUrl: !!supabaseUrl,
-        hasKey: !!supabaseKey
+        hasServiceKey: !!supabaseServiceKey
       });
       return NextResponse.json(
         { error: 'Supabase configuration missing' },
@@ -18,8 +18,8 @@ export async function GET() {
       );
     }
 
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Initialize Supabase client with service role key for full access
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get today's date in UTC and format it as YYYY-MM-DD
     const today = new Date();
@@ -31,25 +31,28 @@ export async function GET() {
     // Fetch today's recipe from Supabase
     const { data, error } = await supabase
       .from('daily_recipes')
-      .select('recipe_data')
+      .select('recipe_data, date')
       .eq('date', formattedDate)
       .single();
 
     if (error) {
-      console.error('Supabase error:', error);
+      console.error('Error fetching today\'s recipe:', error);
       
       // Try to get the most recent recipe instead
       console.log('Attempting to fetch most recent recipe...');
       const { data: latestData, error: latestError } = await supabase
         .from('daily_recipes')
-        .select('recipe_data')
+        .select('recipe_data, date')
         .order('date', { ascending: false })
         .limit(1)
         .single();
 
       if (latestError) {
         console.error('Error fetching latest recipe:', latestError);
-        throw latestError;
+        return NextResponse.json(
+          { error: 'Failed to fetch recipe', details: latestError.message },
+          { status: 500 }
+        );
       }
 
       if (!latestData) {
@@ -60,7 +63,7 @@ export async function GET() {
         );
       }
 
-      console.log('Found latest recipe');
+      console.log('Found latest recipe from:', latestData.date);
       return NextResponse.json(latestData.recipe_data);
     }
 
@@ -69,14 +72,17 @@ export async function GET() {
       // Try to get the most recent recipe instead
       const { data: latestData, error: latestError } = await supabase
         .from('daily_recipes')
-        .select('recipe_data')
+        .select('recipe_data, date')
         .order('date', { ascending: false })
         .limit(1)
         .single();
 
       if (latestError) {
         console.error('Error fetching latest recipe:', latestError);
-        throw latestError;
+        return NextResponse.json(
+          { error: 'Failed to fetch recipe', details: latestError.message },
+          { status: 500 }
+        );
       }
 
       if (!latestData) {
@@ -87,7 +93,7 @@ export async function GET() {
         );
       }
 
-      console.log('Found latest recipe');
+      console.log('Found latest recipe from:', latestData.date);
       return NextResponse.json(latestData.recipe_data);
     }
 
@@ -96,7 +102,10 @@ export async function GET() {
   } catch (error) {
     console.error('Error in recipe-of-the-day route:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch recipe', details: error instanceof Error ? error.message : String(error) },
+      { 
+        error: 'Failed to fetch recipe', 
+        details: error instanceof Error ? error.message : String(error) 
+      },
       { status: 500 }
     );
   }
