@@ -1,5 +1,5 @@
-const dotenv = require('dotenv');
-const path = require('path');
+import * as dotenv from 'dotenv';
+import * as path from 'path';
 
 // Load environment variables from .env.local
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -86,8 +86,8 @@ async function triggerDailyRecipe() {
 
     console.log('\nSuccess: Daily recipe has been updated!');
 
-  } catch (error) {
-    console.error('\nError:', error instanceof Error ? error.message : 'An unknown error occurred');
+  } catch (error: any) {
+    console.error('\nError:', error?.message || 'An unknown error occurred');
     
     if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
       console.log('\nTip: Make sure your local development server is running (npm run dev)');
