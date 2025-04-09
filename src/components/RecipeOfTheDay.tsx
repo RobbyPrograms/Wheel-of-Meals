@@ -49,25 +49,47 @@ export default function RecipeOfTheDay() {
         const lastFetchDate = localStorage.getItem('recipeOfTheDayDate');
         const today = new Date().toDateString();
 
+        console.log('Cache check:', {
+          hasCachedRecipe: !!cachedRecipe,
+          lastFetchDate,
+          today,
+          isCacheValid: cachedRecipe && lastFetchDate === today
+        });
+
         if (cachedRecipe && lastFetchDate === today) {
+          console.log('Using cached recipe');
           setRecipe(JSON.parse(cachedRecipe));
           setLoading(false);
           return;
         }
 
+        console.log('Fetching new recipe...');
         const response = await fetch('/api/recipe-of-the-day');
+        
         if (!response.ok) {
-          throw new Error('Failed to fetch recipe');
+          console.error('API Error:', {
+            status: response.status,
+            statusText: response.statusText
+          });
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
+          throw new Error(`Failed to fetch recipe: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
-        setRecipe(data);
+        console.log('Received recipe:', {
+          id: data.id,
+          title: data.title,
+          hasNutrition: !!data.nutrition,
+          hasIngredients: Array.isArray(data.extendedIngredients)
+        });
 
+        setRecipe(data);
         localStorage.setItem('recipeOfTheDay', JSON.stringify(data));
         localStorage.setItem('recipeOfTheDayDate', today);
       } catch (err) {
-        setError('Failed to load recipe of the day');
-        console.error('Error fetching recipe:', err);
+        console.error('Detailed error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load recipe of the day');
       } finally {
         setLoading(false);
       }

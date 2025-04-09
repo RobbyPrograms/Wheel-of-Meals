@@ -1,30 +1,53 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
 export async function GET(request: Request) {
   try {
-    // Verify the request is from our cron job
-    const authHeader = request.headers.get('authorization');
-    console.log('Auth header:', authHeader); // Debug auth
-    console.log('Expected:', `Bearer ${process.env.CRON_SECRET_KEY}`); // Debug auth
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET_KEY}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Check environment variables first
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const spoonacularApiKey = process.env.SPOONACULAR_API_KEY;
+    const cronSecretKey = process.env.CRON_SECRET_KEY;
+
+    // Log environment variable status
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      hasSpoonacularKey: !!spoonacularApiKey,
+      hasCronKey: !!cronSecretKey
+    });
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase configuration missing');
     }
 
-    const apiKey = process.env.SPOONACULAR_API_KEY;
-    if (!apiKey) {
+    if (!spoonacularApiKey) {
       throw new Error('Spoonacular API key not configured');
     }
 
-    console.log('Fetching random recipe...'); // Debug API call
+    if (!cronSecretKey) {
+      throw new Error('CRON_SECRET_KEY not configured');
+    }
+
+    // Verify the request is from our cron job
+    const authHeader = request.headers.get('authorization');
+    console.log('Auth check:', {
+      receivedHeader: authHeader,
+      expectedHeader: `Bearer ${cronSecretKey}`,
+      matches: authHeader === `Bearer ${cronSecretKey}`
+    });
+
+    if (authHeader !== `Bearer ${cronSecretKey}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    console.log('Fetching random recipe...'); 
     // Get a random recipe
     const response = await fetch(
-      `https://api.spoonacular.com/recipes/random?apiKey=${apiKey}&number=1&tags=main%20course`,
+      `https://api.spoonacular.com/recipes/random?apiKey=${spoonacularApiKey}&number=1&tags=main%20course`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -34,19 +57,19 @@ export async function GET(request: Request) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Spoonacular random recipe error:', errorText); // Debug API error
+      console.error('Spoonacular random recipe error:', errorText);
       throw new Error(`Spoonacular API request failed with status ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('Random recipe fetched:', data.recipes[0].title); // Debug recipe data
+    console.log('Random recipe fetched:', data.recipes[0].title);
 
     const recipe = data.recipes[0];
 
     // Get nutrition data
-    console.log('Fetching nutrition data...'); // Debug nutrition API call
+    console.log('Fetching nutrition data...');
     const nutritionResponse = await fetch(
-      `https://api.spoonacular.com/recipes/${recipe.id}/nutritionWidget.json?apiKey=${apiKey}`,
+      `https://api.spoonacular.com/recipes/${recipe.id}/nutritionWidget.json?apiKey=${spoonacularApiKey}`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -57,15 +80,15 @@ export async function GET(request: Request) {
     let nutritionData;
     if (nutritionResponse.ok) {
       nutritionData = await nutritionResponse.json();
-      console.log('Nutrition data fetched successfully'); // Debug nutrition data
+      console.log('Nutrition data fetched successfully');
     } else {
-      console.error('Failed to fetch nutrition data:', await nutritionResponse.text()); // Debug nutrition error
+      console.error('Failed to fetch nutrition data:', await nutritionResponse.text());
     }
 
     // Get detailed recipe information
-    console.log('Fetching detailed recipe information...'); // Debug detailed info API call
+    console.log('Fetching detailed recipe information...');
     const detailedResponse = await fetch(
-      `https://api.spoonacular.com/recipes/${recipe.id}/information?apiKey=${apiKey}&includeNutrition=true`,
+      `https://api.spoonacular.com/recipes/${recipe.id}/information?apiKey=${spoonacularApiKey}&includeNutrition=true`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -75,12 +98,12 @@ export async function GET(request: Request) {
 
     if (!detailedResponse.ok) {
       const errorText = await detailedResponse.text();
-      console.error('Detailed recipe error:', errorText); // Debug detailed recipe error
+      console.error('Detailed recipe error:', errorText);
       throw new Error(`Spoonacular API request failed with status ${detailedResponse.status}: ${errorText}`);
     }
 
     const detailedRecipe = await detailedResponse.json();
-    console.log('Detailed recipe info fetched successfully'); // Debug detailed recipe data
+    console.log('Detailed recipe info fetched successfully');
 
     // Helper function to parse nutrition value
     const parseNutritionValue = (value: any): number => {
@@ -133,7 +156,7 @@ export async function GET(request: Request) {
     today.setUTCHours(0, 0, 0, 0);
     const formattedDate = today.toISOString().split('T')[0];
 
-    console.log('Storing recipe in Supabase...'); // Debug Supabase
+    console.log('Storing recipe in Supabase...');
     // Store the recipe in Supabase
     const { error: supabaseError } = await supabase
       .from('daily_recipes')
@@ -144,17 +167,34 @@ export async function GET(request: Request) {
       });
 
     if (supabaseError) {
-      console.error('Supabase error:', supabaseError); // Debug Supabase error
+      console.error('Supabase error:', supabaseError);
       throw supabaseError;
     }
 
-    console.log('Recipe stored successfully'); // Debug success
+    console.log('Recipe stored successfully');
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating daily recipe:', error);
-    return NextResponse.json(
-      { error: 'Failed to update daily recipe', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
+    console.error('Error in daily recipe update:', error);
+    
+    // Properly format the error response
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : typeof error === 'string'
+      ? error
+      : 'An unknown error occurred';
+
+    const errorResponse = {
+      success: false,
+      error: errorMessage,
+      details: error instanceof Error ? {
+        name: error.name,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      } : undefined
+    };
+
+    return new Response(JSON.stringify(errorResponse), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 } 
