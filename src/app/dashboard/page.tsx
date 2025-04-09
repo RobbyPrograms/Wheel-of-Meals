@@ -13,6 +13,7 @@ import MealPlansDashboard from '@/components/MealPlansDashboard';
 import { AISuggestions } from '@/components/AISuggestions';
 import LevelCard from '@/components/LevelCard';
 import FoodDetailsModal from '@/components/FoodDetailsModal';
+import RecipeOfTheDay from '@/components/RecipeOfTheDay';
 
 interface LevelInfo {
   current_level: number;
@@ -432,299 +433,311 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Email confirmation success message */}
-      {showEmailConfirmed && (
-        <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-lg animate-fade-in">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm leading-5 font-medium text-green-800">
-                Email confirmed successfully! Your account is now fully activated.
-              </p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left column - Recipe of the Day */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-8">
+              <h2 className="text-2xl font-bold text-primary mb-6">Recipe of the Day</h2>
+              <RecipeOfTheDay />
             </div>
           </div>
-        </div>
-      )}
-      
-      <div className="flex flex-col items-center w-full max-w-7xl mx-auto">
-        {/* Main Content Area */}
-        <div className="w-full">
-          {/* Welcome Section */}
-          <div className="w-full px-4 sm:px-6 mb-6">
-            <div className="bg-gradient-to-br from-[#319141]/10 via-white to-[#319141]/5 rounded-2xl border border-[#319141]/20">
-              <div className="p-4 sm:p-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                  <div className="text-center md:text-left">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-[#0F1E0F] mb-2">
-                      Welcome back{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name.split(' ')[0]}` : ''}
-                    </h1>
-                    <p className="text-gray-600">What would you like to cook today?</p>
+
+          {/* Middle and right columns - Existing content */}
+          <div className="lg:col-span-2">
+            {/* Email confirmation success message */}
+            {showEmailConfirmed && (
+              <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-lg animate-fade-in">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
                   </div>
-                  
-                  {levelInfo && (
-                    <div className="w-full md:w-auto md:min-w-[320px]">
-                      <LevelCard
-                        currentXP={levelInfo.current_xp}
-                        division={levelInfo.current_title}
-                        xpToNextLevel={Math.max(0, levelInfo.xp_for_next_level - levelInfo.current_xp)}
-                        icon={levelInfo.current_icon}
-                      />
+                  <div className="ml-3">
+                    <p className="text-sm leading-5 font-medium text-green-800">
+                      Email confirmed successfully! Your account is now fully activated.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex flex-col items-center w-full max-w-7xl mx-auto">
+              {/* Main Content Area */}
+              <div className="w-full">
+                {/* Welcome Section */}
+                <div className="w-full px-4 sm:px-6 mb-6">
+                  <div className="bg-gradient-to-br from-[#319141]/10 via-white to-[#319141]/5 rounded-2xl border border-[#319141]/20">
+                    <div className="p-4 sm:p-6">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                        <div className="text-center md:text-left">
+                          <h1 className="text-2xl sm:text-3xl font-bold text-[#0F1E0F] mb-2">
+                            Welcome back{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name.split(' ')[0]}` : ''}
+                          </h1>
+                          <p className="text-gray-600">What would you like to cook today?</p>
+                        </div>
+                        
+                        {levelInfo && (
+                          <div className="w-full md:w-auto md:min-w-[320px]">
+                            <LevelCard
+                              currentXP={levelInfo.current_xp}
+                              division={levelInfo.current_title}
+                              xpToNextLevel={Math.max(0, levelInfo.xp_for_next_level - levelInfo.current_xp)}
+                              icon={levelInfo.current_icon}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Feature Cards */}
-          <div className="w-full px-4 sm:px-6 mb-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-[1200px] mx-auto">
-              {/* My Meals Card */}
-              <Link 
-                href="/dashboard/foods"
-                className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <FaUtensils className="text-[#319141] text-xl" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-[#0F1E0F]">My Meals</h3>
-                    <p className="text-gray-600 text-sm">
-                      Manage your favorite meals and ingredients
-                    </p>
-                  </div>
-                  <FaChevronRight className="text-gray-400" />
-                </div>
-              </Link>
-
-              {/* Meal Plans Card */}
-              <Link 
-                href="/dashboard/meal-plans"
-                className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <FaCalendarAlt className="text-[#319141] text-xl" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-[#0F1E0F]">Meal Plans</h3>
-                    <p className="text-gray-600 text-sm">
-                      Create and manage your meal schedules
-                    </p>
-                  </div>
-                  <FaChevronRight className="text-gray-400" />
-                </div>
-              </Link>
-
-              {/* Explore Card */}
-              <Link 
-                href="/dashboard/explore"
-                className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <FaCompass className="text-[#319141] text-xl" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-[#0F1E0F]">Explore</h3>
-                    <p className="text-gray-600 text-sm">
-                      Discover new meals and cuisines
-                    </p>
-                  </div>
-                  <FaChevronRight className="text-gray-400" />
-                </div>
-              </Link>
-
-              {/* Friends Card */}
-              <Link 
-                href="/dashboard/friends"
-                className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <FaUserFriends className="text-[#319141] text-xl" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-[#0F1E0F]">Friends</h3>
-                    <p className="text-gray-600 text-sm">
-                      Connect with friends and share meals
-                    </p>
-                  </div>
-                  <FaChevronRight className="text-gray-400" />
-                </div>
-              </Link>
-
-              {/* Random Meal Card */}
-              <Link 
-                href="/dashboard/random"
-                className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <FaDice className="text-[#319141] text-xl" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-[#0F1E0F]">Random Meal</h3>
-                    <p className="text-gray-600 text-sm">
-                      Let us pick your next meal for you
-                    </p>
-                  </div>
-                  <FaChevronRight className="text-gray-400" />
-                </div>
-              </Link>
-
-              {/* AI Suggestions Card */}
-              <div 
-                onClick={() => setIsAIPanelOpen(true)}
-                className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full cursor-pointer"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <FaRobot className="text-[#319141] text-xl" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-[#0F1E0F]">AI Suggestions</h3>
-                    <p className="text-gray-600 text-sm">
-                      Get personalized meal recommendations
-                    </p>
-                  </div>
-                  <FaChevronRight className="text-gray-400" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats and Progress Section */}
-          <div className="w-full px-4 sm:px-6 mb-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-[1200px] mx-auto">
-              {/* Total Foods Card */}
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                <div className="text-4xl font-semibold text-[#0F1E0F]">{foodCount || 0}</div>
-                <p className="text-gray-600 mt-1">Saved favorite meals</p>
-              </div>
-              
-              {/* Meal Plans Card */}
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                <div className="text-4xl font-semibold text-[#0F1E0F]">{mealPlanCount || 0}</div>
-                <p className="text-gray-600 mt-1">Created meal schedules</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Foods Section */}
-          <div className="w-full px-4 sm:px-6">
-            <div className="flex flex-col gap-4">
-              <div className="bg-white rounded-2xl shadow-sm p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <h2 className="text-lg font-semibold text-[#0F1E0F]">Recent Meals</h2>
-                    <p className="text-sm text-gray-600">Your latest added meals</p>
-                  </div>
-                  <Link href="/dashboard/foods" className="text-[#319141] text-sm hover:text-[#0F1E0F] transition-colors">
-                    View All →
-                  </Link>
-                </div>
-                <div className="space-y-2">
-                  {recentFoods.map((food) => (
-                    <div 
-                      key={food.id} 
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors"
-                      onClick={() => setSelectedFood(food)}
+                {/* Feature Cards */}
+                <div className="w-full px-4 sm:px-6 mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-[1200px] mx-auto">
+                    {/* My Meals Card */}
+                    <Link 
+                      href="/dashboard/foods"
+                      className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full"
                     >
-                      <div>
-                        <h3 className="font-medium text-[#0F1E0F]">{food.name}</h3>
-                        <p className="text-sm text-gray-600 line-clamp-1">{food.ingredients.join(', ')}</p>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                          <FaUtensils className="text-[#319141] text-xl" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-[#0F1E0F]">My Meals</h3>
+                          <p className="text-gray-600 text-sm">
+                            Manage your favorite meals and ingredients
+                          </p>
+                        </div>
+                        <FaChevronRight className="text-gray-400" />
                       </div>
-                      <span className="text-sm text-gray-500">{food.meal_type}</span>
-                    </div>
-                  ))}
-                  {recentFoods.length === 0 && (
-                    <div className="text-center py-4">
-                      <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <FaUtensils className="text-[#319141] text-xl" />
+                    </Link>
+
+                    {/* Meal Plans Card */}
+                    <Link 
+                      href="/dashboard/meal-plans"
+                      className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                          <FaCalendarAlt className="text-[#319141] text-xl" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-[#0F1E0F]">Meal Plans</h3>
+                          <p className="text-gray-600 text-sm">
+                            Create and manage your meal schedules
+                          </p>
+                        </div>
+                        <FaChevronRight className="text-gray-400" />
                       </div>
-                      <p className="text-gray-600 text-sm">No foods added yet</p>
+                    </Link>
+
+                    {/* Explore Card */}
+                    <Link 
+                      href="/dashboard/explore"
+                      className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                          <FaCompass className="text-[#319141] text-xl" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-[#0F1E0F]">Explore</h3>
+                          <p className="text-gray-600 text-sm">
+                            Discover new meals and cuisines
+                          </p>
+                        </div>
+                        <FaChevronRight className="text-gray-400" />
+                      </div>
+                    </Link>
+
+                    {/* Friends Card */}
+                    <Link 
+                      href="/dashboard/friends"
+                      className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                          <FaUserFriends className="text-[#319141] text-xl" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-[#0F1E0F]">Friends</h3>
+                          <p className="text-gray-600 text-sm">
+                            Connect with friends and share meals
+                          </p>
+                        </div>
+                        <FaChevronRight className="text-gray-400" />
+                      </div>
+                    </Link>
+
+                    {/* Random Meal Card */}
+                    <Link 
+                      href="/dashboard/random"
+                      className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                          <FaDice className="text-[#319141] text-xl" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-[#0F1E0F]">Random Meal</h3>
+                          <p className="text-gray-600 text-sm">
+                            Let us pick your next meal for you
+                          </p>
+                        </div>
+                        <FaChevronRight className="text-gray-400" />
+                      </div>
+                    </Link>
+
+                    {/* AI Suggestions Card */}
+                    <div 
+                      onClick={() => setIsAIPanelOpen(true)}
+                      className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 hover:bg-[#319141]/5 w-full cursor-pointer"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                          <FaRobot className="text-[#319141] text-xl" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-[#0F1E0F]">AI Suggestions</h3>
+                          <p className="text-gray-600 text-sm">
+                            Get personalized meal recommendations
+                          </p>
+                        </div>
+                        <FaChevronRight className="text-gray-400" />
+                      </div>
                     </div>
-                  )}
+                  </div>
+                </div>
+
+                {/* Stats and Progress Section */}
+                <div className="w-full px-4 sm:px-6 mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-[1200px] mx-auto">
+                    {/* Total Foods Card */}
+                    <div className="bg-white rounded-xl shadow-sm p-4">
+                      <div className="text-4xl font-semibold text-[#0F1E0F]">{foodCount || 0}</div>
+                      <p className="text-gray-600 mt-1">Saved favorite meals</p>
+                    </div>
+                    
+                    {/* Meal Plans Card */}
+                    <div className="bg-white rounded-xl shadow-sm p-4">
+                      <div className="text-4xl font-semibold text-[#0F1E0F]">{mealPlanCount || 0}</div>
+                      <p className="text-gray-600 mt-1">Created meal schedules</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Foods Section */}
+                <div className="w-full px-4 sm:px-6">
+                  <div className="flex flex-col gap-4">
+                    <div className="bg-white rounded-2xl shadow-sm p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h2 className="text-lg font-semibold text-[#0F1E0F]">Recent Meals</h2>
+                          <p className="text-sm text-gray-600">Your latest added meals</p>
+                        </div>
+                        <Link href="/dashboard/foods" className="text-[#319141] text-sm hover:text-[#0F1E0F] transition-colors">
+                          View All →
+                        </Link>
+                      </div>
+                      <div className="space-y-2">
+                        {recentFoods.map((food) => (
+                          <div 
+                            key={food.id} 
+                            className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors"
+                            onClick={() => setSelectedFood(food)}
+                          >
+                            <div>
+                              <h3 className="font-medium text-[#0F1E0F]">{food.name}</h3>
+                              <p className="text-sm text-gray-600 line-clamp-1">{food.ingredients.join(', ')}</p>
+                            </div>
+                            <span className="text-sm text-gray-500">{food.meal_type}</span>
+                          </div>
+                        ))}
+                        {recentFoods.length === 0 && (
+                          <div className="text-center py-4">
+                            <div className="w-12 h-12 bg-[#319141]/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                              <FaUtensils className="text-[#319141] text-xl" />
+                            </div>
+                            <p className="text-gray-600 text-sm">No foods added yet</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Panels */}
+              <FoodsPanel 
+                isOpen={isFoodsPanelOpen} 
+                onClose={handleFoodsPanelClose} 
+                onFoodAdded={handleDataUpdated}
+              />
+              
+              <MealPlansPanel 
+                isOpen={isMealPlansPanelOpen} 
+                onClose={handleMealPlansPanelClose} 
+                onMealPlanAdded={handleDataUpdated}
+              />
+
+              {/* AI Suggestions Modal */}
+              {isAIPanelOpen && (
+                <div className="fixed inset-0 bg-gray-800/75 z-50 flex items-start justify-center">
+                  <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-2 my-2 flex flex-col max-h-[98vh] h-[98vh] overflow-hidden">
+                    <div className="p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
+                      <h2 className="text-xl font-semibold text-[#0F1E0F] flex items-center">
+                        <FaRobot className="mr-2 text-[#319141]" />
+                        Chat with AI Chef
+                      </h2>
+                      <button
+                        onClick={() => setIsAIPanelOpen(false)}
+                        className="text-gray-400 hover:text-gray-500"
+                        aria-label="Close AI suggestions panel"
+                      >
+                        <FaTimes className="h-6 w-6" />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4">
+                      <AISuggestions onAddMeal={handleAddMealFromAI} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Food Details Modal */}
+              {selectedFood && (
+                <FoodDetailsModal
+                  isOpen={!!selectedFood}
+                  onClose={() => setSelectedFood(null)}
+                  food={{
+                    name: selectedFood.name || '',
+                    meal_type: selectedFood.meal_type || '',
+                    ingredients: Array.isArray(selectedFood.ingredients) ? selectedFood.ingredients : [],
+                    instructions: selectedFood.recipe ? 
+                      (typeof selectedFood.recipe === 'string' ? 
+                        (selectedFood.recipe.startsWith('[') && selectedFood.recipe.endsWith(']') ? 
+                          (() => {
+                            try {
+                              return JSON.parse(selectedFood.recipe);
+                            } catch (e) {
+                              return selectedFood.recipe.split(/[\n.]+/).filter(Boolean);
+                            }
+                          })() 
+                          : selectedFood.recipe.split(/[\n.]+/).filter(Boolean)
+                        )
+                        : selectedFood.recipe
+                      ) : [],
+                    prep_time: selectedFood.prep_time,
+                    servings: selectedFood.servings
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>
-
-        {/* Panels */}
-        <FoodsPanel 
-          isOpen={isFoodsPanelOpen} 
-          onClose={handleFoodsPanelClose} 
-          onFoodAdded={handleDataUpdated}
-        />
-        
-        <MealPlansPanel 
-          isOpen={isMealPlansPanelOpen} 
-          onClose={handleMealPlansPanelClose} 
-          onMealPlanAdded={handleDataUpdated}
-        />
-
-        {/* AI Suggestions Modal */}
-        {isAIPanelOpen && (
-          <div className="fixed inset-0 bg-gray-800/75 z-50 flex items-start justify-center">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-2 my-2 flex flex-col max-h-[98vh] h-[98vh] overflow-hidden">
-              <div className="p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
-                <h2 className="text-xl font-semibold text-[#0F1E0F] flex items-center">
-                  <FaRobot className="mr-2 text-[#319141]" />
-                  Chat with AI Chef
-                </h2>
-                <button
-                  onClick={() => setIsAIPanelOpen(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                  aria-label="Close AI suggestions panel"
-                >
-                  <FaTimes className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                <AISuggestions onAddMeal={handleAddMealFromAI} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Food Details Modal */}
-        {selectedFood && (
-          <FoodDetailsModal
-            isOpen={!!selectedFood}
-            onClose={() => setSelectedFood(null)}
-            food={{
-              name: selectedFood.name || '',
-              meal_type: selectedFood.meal_type || '',
-              ingredients: Array.isArray(selectedFood.ingredients) ? selectedFood.ingredients : [],
-              // Ensure instructions is properly formatted before passing to modal
-              instructions: selectedFood.recipe ? 
-                (typeof selectedFood.recipe === 'string' ? 
-                  // If it's a string that looks like JSON, parse it
-                  (selectedFood.recipe.startsWith('[') && selectedFood.recipe.endsWith(']') ? 
-                    // Try to parse, fall back to original if parse fails
-                    (() => {
-                      try {
-                        return JSON.parse(selectedFood.recipe);
-                      } catch (e) {
-                        return selectedFood.recipe.split(/[\n.]+/).filter(Boolean);
-                      }
-                    })() 
-                    : selectedFood.recipe.split(/[\n.]+/).filter(Boolean)
-                  )
-                  : selectedFood.recipe // Already an array, keep as is
-                ) : [],
-              prep_time: selectedFood.prep_time,
-              servings: selectedFood.servings
-            }}
-          />
-        )}
       </div>
     </div>
   );
