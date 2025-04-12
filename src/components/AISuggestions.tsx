@@ -428,6 +428,18 @@ export function AISuggestions({ onAddMeal }: AISuggestionsProps) {
                         </div>
                       </div>
                     )}
+                    {suggestion.recipe && suggestion.recipe.length > 0 && (
+                      <div className="mt-4">
+                        <h5 className="text-sm font-medium text-primary mb-2">Recipe Instructions:</h5>
+                        <ol className="list-decimal list-inside space-y-1">
+                          {suggestion.recipe.map((step: string, i: number) => (
+                            <li key={i} className="text-sm text-text-secondary">
+                              {step}
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     {!addedMeals.has(suggestion.name) && (
