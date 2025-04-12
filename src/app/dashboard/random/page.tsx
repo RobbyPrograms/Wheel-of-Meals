@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import type { FavoriteFood } from '@/lib/supabase';
-import { FaUtensils, FaArrowLeft, FaHeart, FaXmark, FaDice, FaHandPointer, FaCalendarPlus, FaTrash } from 'react-icons/fa6';
+import { FaUtensils, FaArrowLeft, FaHeart, FaXmark, FaDice, FaHandPointer, FaCalendarPlus, FaTrash, FaRepeat } from 'react-icons/fa6';
 
 export default function RandomMealPage() {
   const { user } = useAuth();
@@ -24,7 +24,9 @@ export default function RandomMealPage() {
   const [lastX, setLastX] = useState(0);
   const [lastTime, setLastTime] = useState(0);
   const [likedMeals, setLikedMeals] = useState<FavoriteFood[]>([]);
+  const [dislikedMeals, setDislikedMeals] = useState<FavoriteFood[]>([]);
   const [showLikedPanel, setShowLikedPanel] = useState(false);
+  const [allowRepeats, setAllowRepeats] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -51,24 +53,89 @@ export default function RandomMealPage() {
 
       if (error) throw error;
 
-      setMeals(meals || []);
-      shuffleAndSetMeals(meals || []);
+      // Normalize meal types to always be lowercase arrays
+      const normalizedMeals = meals?.map(meal => ({
+        ...meal,
+        meal_types: Array.isArray(meal.meal_types) 
+          ? meal.meal_types.map(type => type?.toLowerCase()).filter(Boolean)
+          : []
+      })) || [];
+
+      setMeals(normalizedMeals);
+      shuffleAndSetMeals(normalizedMeals);
       
       // Get unique meal types
-      const types = new Set<string>();
-      meals?.forEach(meal => {
-        meal.meal_types?.forEach((type: string) => types.add(type));
+      const types = new Set<string>(['breakfast', 'lunch', 'dinner', 'snack']);
+      normalizedMeals.forEach(meal => {
+        if (Array.isArray(meal.meal_types)) {
+          meal.meal_types.forEach((type: string | null) => {
+            if (type) types.add(type.toLowerCase());
+          });
+        }
       });
-      setAvailableMealTypes(Array.from(types));
+
+      // Convert to array and sort in specific order
+      const sortedTypes = Array.from(types).sort((a, b) => {
+        const order = ['breakfast', 'lunch', 'dinner', 'snack'];
+        return order.indexOf(a) - order.indexOf(b);
+      });
+      setAvailableMealTypes(sortedTypes);
     } catch (err) {
       console.error('Error fetching meals:', err);
     }
   };
 
   const shuffleAndSetMeals = (mealsToShuffle: FavoriteFood[]) => {
-    const filteredMeals = selectedFilters.length > 0
-      ? mealsToShuffle.filter(meal => meal.meal_types?.some(type => selectedFilters.includes(type)))
-      : mealsToShuffle;
+    let availableMeals = [...mealsToShuffle];
+    
+    console.log('Selected Filters:', selectedFilters);
+    
+    // If repeats are not allowed, remove already liked/seen meals and disliked meals
+    if (!allowRepeats) {
+      availableMeals = availableMeals.filter(meal => 
+        !likedMeals.some(liked => liked.id === meal.id) &&
+        !dislikedMeals.some(disliked => disliked.id === meal.id)
+      );
+    }
+
+    // Apply type filters
+    let filteredMeals = availableMeals;
+    
+    if (selectedFilters.length > 0) {
+      console.log('Filtering meals...');
+      filteredMeals = availableMeals.filter(meal => {
+        console.log('Checking meal:', meal.name);
+        console.log('Raw meal_types:', meal.meal_types);
+        
+        // Ensure meal_types is a valid array of lowercase strings
+        const mealTypes = Array.isArray(meal.meal_types) 
+          ? meal.meal_types
+              .filter(Boolean)  // Remove null/undefined values
+              .map(type => typeof type === 'string' ? type.toLowerCase() : '')
+              .filter(type => type !== '')  // Remove empty strings
+          : [];
+          
+        console.log('Processed meal_types:', mealTypes);
+        
+        // If no meal types and filters are selected, exclude the meal
+        if (mealTypes.length === 0) {
+          console.log('Meal has no types, excluding');
+          return false;
+        }
+
+        // Check if ANY of the selected filters match the meal's types
+        const hasMatchingType = selectedFilters.some(filter => {
+          const matches = mealTypes.includes(filter);
+          console.log(`Checking if ${filter} matches any of`, mealTypes, ':', matches);
+          return matches;
+        });
+
+        console.log('Meal matches filter:', hasMatchingType);
+        return hasMatchingType;
+      });
+    }
+
+    console.log('Filtered meals:', filteredMeals.map(m => ({ name: m.name, types: m.meal_types })));
 
     // Fisher-Yates shuffle
     const shuffled = [...filteredMeals];
@@ -88,8 +155,11 @@ export default function RandomMealPage() {
     }
 
     const deltaTime = currentTime - lastTime;
+    if (deltaTime === 0) return 0;
+
     const deltaX = currentX - lastX;
-    const newVelocity = deltaX / deltaTime;
+    // Smooth out the velocity calculation
+    const newVelocity = deltaX / Math.max(deltaTime, 16); // Cap minimum time difference at 16ms
 
     setLastX(currentX);
     setLastTime(currentTime);
@@ -107,66 +177,128 @@ export default function RandomMealPage() {
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return;
-    e.preventDefault(); // Prevent text selection
+    e.preventDefault();
+
+    // Calculate new position
     const currentX = e.clientX - startX;
-    setOffsetX(currentX);
+    
+    // Apply smoothing to the movement
+    const smoothedX = currentX * 0.95; // Slightly dampen the movement
+    
+    setOffsetX(smoothedX);
     
     // Calculate velocity for swipe momentum
     const newVelocity = calculateVelocity(e.clientX, e.timeStamp);
-    setVelocity(newVelocity);
+    // Smooth out velocity changes
+    setVelocity(prev => prev * 0.5 + newVelocity * 0.5);
   };
 
   const handleMouseUp = () => {
     if (!isDragging) return;
+    
+    // Reset all drag-related states
     setIsDragging(false);
     setLastTime(0);
+    setVelocity(0);
+    setStartX(0);
 
-    // Use velocity to determine swipe direction
-    const swipeThreshold = Math.abs(velocity) > 0.5 ? 50 : 100;
+    // Use absolute offset for threshold check to make it more consistent
+    const absOffset = Math.abs(offsetX);
+    // Make threshold more forgiving for slow movements
+    const baseThreshold = currentMeals.length === 1 ? 40 : 75; // Lower threshold for last card
+    const velocityThreshold = Math.abs(velocity) > 0.5 ? baseThreshold * 0.5 : baseThreshold;
     
-    if (Math.abs(offsetX) > swipeThreshold) {
+    if (absOffset > velocityThreshold) {
       const isRight = offsetX > 0;
       handleSwipe(isRight);
     } else {
-      // Animate back to center with spring effect
+      // Reset position and ensure no toast is shown for incomplete swipes
       setOffsetX(0);
+      setSelectedMeal(null);
     }
   };
 
-  const handleSwipe = (isRight: boolean) => {
+  const handleSwipe = (isRight: boolean, isButtonClick: boolean = false) => {
     if (currentMeals.length === 0) return;
 
     const meal = currentMeals[0];
+    const isLastCard = currentMeals.length === 1;
     
-    if (isRight) {
-      // Don't set selectedMeal immediately
-      setTimeout(() => {
-        setSelectedMeal(meal);
-        // Reset selected meal after a delay
-        setTimeout(() => {
-          setSelectedMeal(null);
-        }, 2000);
-      }, 300);
-
+    // Reset transform immediately to prevent stuck animations
+    setOffsetX(0);
+    setIsDragging(false);
+    
+    // Always process if it's a button click, otherwise check swipe threshold
+    if (isButtonClick || (isRight && Math.abs(offsetX) > (currentMeals.length === 1 ? 50 : 75))) {
+      // Handle liked meal
       setLikedMeals(prev => {
-        // Don't add if already in liked meals
+        // Always add if repeats are allowed
+        if (allowRepeats) return [...prev, meal];
+        // Don't add if already in liked meals and repeats not allowed
         if (prev.some(m => m.id === meal.id)) return prev;
         return [...prev, meal];
       });
-    } else {
+
+      // Show the selected meal toast
+      setSelectedMeal(meal);
+      setTimeout(() => {
+        setSelectedMeal(null);
+      }, 2000);
+    } else if (!isButtonClick) {
+      // Add to disliked meals if swiping left
+      setDislikedMeals(prev => {
+        if (prev.some(m => m.id === meal.id)) return prev;
+        return [...prev, meal];
+      });
       setSelectedMeal(null);
     }
-    
-    // Remove the top card
-    setTimeout(() => {
-      setCurrentMeals(prev => prev.slice(1));
-      setOffsetX(0);
 
-      // Refill the deck if running low
-      if (currentMeals.length <= 2) {
-        shuffleAndSetMeals(meals);
+    // Remove just the top card
+    setCurrentMeals(prev => prev.slice(1));
+
+    // If this was the last card, check for more meals immediately
+    if (isLastCard) {
+      // Get available meals based on current filters and repeat settings
+      let availableMeals = [...meals];
+      
+      // If repeats are not allowed, remove already liked/seen meals and disliked meals
+      if (!allowRepeats) {
+        availableMeals = availableMeals.filter(meal => 
+          !likedMeals.some(liked => liked.id === meal.id) &&
+          !dislikedMeals.some(disliked => disliked.id === meal.id)
+        );
       }
-    }, 300);
+
+      // Apply type filters if any are selected
+      if (selectedFilters.length > 0) {
+        availableMeals = availableMeals.filter(meal => {
+          const mealTypes = Array.isArray(meal.meal_types) 
+            ? meal.meal_types
+                .filter(Boolean)
+                .map(type => typeof type === 'string' ? type.toLowerCase() : '')
+                .filter(type => type !== '')
+            : [];
+          
+          if (mealTypes.length === 0) return false;
+          
+          return selectedFilters.some(filter => 
+            mealTypes.includes(filter.toLowerCase())
+          );
+        });
+      }
+
+      // Only set new meals if there are available ones
+      if (availableMeals.length > 0 && (allowRepeats || availableMeals.length > likedMeals.length)) {
+        const shuffled = [...availableMeals].sort(() => Math.random() - 0.5);
+        setTimeout(() => {
+          setCurrentMeals(shuffled.slice(0, 5));
+        }, 300); // Small delay to ensure smooth transition
+      }
+    }
+    // Only refill if we're completely out of cards
+    else if (currentMeals.length === 0) {
+      shuffleAndSetMeals(meals);
+    }
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -177,19 +309,33 @@ export default function RandomMealPage() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
+    
+    // Calculate new position with smoothing
     const currentX = e.touches[0].clientX - startX;
-    setOffsetX(currentX);
+    const smoothedX = currentX * 0.95; // Apply same smoothing as mouse movement
+    
+    setOffsetX(smoothedX);
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!isDragging) return;
+    
+    // Reset all touch-related states
     setIsDragging(false);
+    setTouchStart(0);
+    setStartX(0);
 
-    if (Math.abs(offsetX) > 100) {
+    // Use absolute offset for threshold check
+    const absOffset = Math.abs(offsetX);
+    const swipeThreshold = currentMeals.length === 1 ? 50 : 75;
+    
+    if (absOffset > swipeThreshold) {
       const isRight = offsetX > 0;
       handleSwipe(isRight);
     } else {
+      // Reset position and ensure no toast is shown for incomplete swipes
       setOffsetX(0);
+      setSelectedMeal(null);
     }
   };
 
@@ -238,6 +384,102 @@ export default function RandomMealPage() {
     }
   };
 
+  const handleFilterClick = (type: string) => {
+    console.log('Filter clicked:', type);
+    const normalizedType = type.toLowerCase();
+    console.log('Normalized type:', normalizedType);
+    
+    const newFilters = selectedFilters.includes(normalizedType)
+      ? [] // If clicking the active filter, clear all filters
+      : [normalizedType]; // Otherwise, set only this filter
+    
+    console.log('New filters:', newFilters);
+    setSelectedFilters(newFilters);
+    
+    // Use the new filters immediately instead of waiting for state update
+    let availableMeals = [...meals];
+    
+    // If repeats are not allowed, remove already liked/seen meals
+    if (!allowRepeats) {
+      availableMeals = availableMeals.filter(meal => 
+        !likedMeals.some(liked => liked.id === meal.id)
+      );
+    }
+
+    // Apply type filters using newFilters instead of selectedFilters
+    let filteredMeals = availableMeals;
+    
+    if (newFilters.length > 0) {
+      console.log('Filtering meals with new filters:', newFilters);
+      filteredMeals = availableMeals.filter(meal => {
+        console.log('Checking meal:', meal.name);
+        console.log('Raw meal_types:', meal.meal_types);
+        
+        // Ensure meal_types is a valid array of lowercase strings
+        const mealTypes = Array.isArray(meal.meal_types) 
+          ? meal.meal_types
+              .filter(Boolean)  // Remove null/undefined values
+              .map(type => typeof type === 'string' ? type.toLowerCase() : '')
+              .filter(type => type !== '')  // Remove empty strings
+          : [];
+          
+        console.log('Processed meal_types:', mealTypes);
+        
+        // If no meal types and filters are selected, exclude the meal
+        if (mealTypes.length === 0) {
+          console.log('Meal has no types, excluding');
+          return false;
+        }
+
+        // Check if ANY of the selected filters match the meal's types
+        const hasMatchingType = newFilters.some(filter => {
+          const matches = mealTypes.includes(filter);
+          console.log(`Checking if ${filter} matches any of`, mealTypes, ':', matches);
+          return matches;
+        });
+
+        console.log('Meal matches filter:', hasMatchingType);
+        return hasMatchingType;
+      });
+    }
+
+    console.log('Filtered meals:', filteredMeals.map(m => ({ name: m.name, types: m.meal_types })));
+
+    // Fisher-Yates shuffle
+    const shuffled = [...filteredMeals];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    setCurrentMeals(shuffled.slice(0, 5)); // Show 5 cards at a time
+  };
+
+  // Add cleanup effect to reset states when component unmounts
+  useEffect(() => {
+    return () => {
+      setIsDragging(false);
+      setOffsetX(0);
+      setStartX(0);
+      setTouchStart(0);
+      setLastTime(0);
+      setVelocity(0);
+    };
+  }, []);
+
+  // Clear all meals handler
+  const handleClearAll = () => {
+    // Clear liked and disliked meals
+    setLikedMeals([]);
+    setDislikedMeals([]);
+    // Clear any filters that might be active
+    setSelectedFilters([]);
+    // Get all meals and shuffle them
+    const shuffled = [...meals].sort(() => Math.random() - 0.5);
+    // Set the current meals immediately
+    setCurrentMeals(shuffled.slice(0, 5));
+  };
+
   if (!user) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -284,26 +526,54 @@ export default function RandomMealPage() {
                   {availableMealTypes.map((type) => (
                     <button
                       key={type}
-                      onClick={() => {
-                        setSelectedFilters(prev =>
-                          prev.includes(type)
-                            ? prev.filter(t => t !== type)
-                            : [...prev, type]
-                        );
-                        shuffleAndSetMeals(meals);
-                      }}
+                      onClick={() => handleFilterClick(type)}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                        selectedFilters.includes(type)
+                        selectedFilters.includes(type.toLowerCase())
                           ? 'bg-accent text-white'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
-                      {type}
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
                     </button>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Add Repeat Meals Toggle */}
+            <div className="mb-8 bg-white rounded-xl p-4 shadow-sm hover:shadow transition-all duration-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-200 ${
+                    allowRepeats ? 'bg-accent/10' : 'bg-gray-50'
+                  }`}>
+                    <FaRepeat className={`h-4 w-4 transition-colors duration-200 ${
+                      allowRepeats ? 'text-accent' : 'text-gray-400'
+                    }`} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Allow Repeat Meals</h3>
+                    <p className="text-xs text-gray-500">Add the same meal multiple times to your plan</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setAllowRepeats(!allowRepeats);
+                    shuffleAndSetMeals(meals);
+                  }}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-opacity-75 ${
+                    allowRepeats ? 'bg-accent' : 'bg-gray-200'
+                  }`}
+                >
+                  <span className="sr-only">Toggle repeat meals</span>
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                      allowRepeats ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
 
             <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
               {isMobile ? (
@@ -335,106 +605,133 @@ export default function RandomMealPage() {
 
           <div className="relative mx-auto" style={{ height: '400px' }}>
             <div className="absolute inset-0">
-              {currentMeals.map((meal, index) => (
-                <div
-                  key={meal.id}
-                  ref={index === 0 ? cardRef : null}
-                  className={`absolute inset-0 bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 select-none touch-none ${
-                    index === 0 ? 'z-10' : 'z-0'
-                  } ${isDragging ? 'cursor-grabbing' : index === 0 && !isMobile ? 'cursor-grab' : 'cursor-default'}`}
-                  style={{
-                    transform: index === 0 
-                      ? `translateX(${offsetX}px) rotate(${offsetX * 0.05}deg)`
-                      : `translateY(${index * 4}px) scale(${1 - index * 0.05})`,
-                    opacity: index === 0 ? 1 : 1 - index * 0.2,
-                    transition: isDragging ? 'none' : 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                    touchAction: 'none'
-                  }}
-                  onMouseDown={!isMobile ? handleMouseDown : undefined}
-                  onMouseMove={!isMobile ? handleMouseMove : undefined}
-                  onMouseUp={!isMobile ? handleMouseUp : undefined}
-                  onMouseLeave={!isMobile ? handleMouseUp : undefined}
-                  onTouchStart={isMobile ? handleTouchStart : undefined}
-                  onTouchMove={isMobile ? handleTouchMove : undefined}
-                  onTouchEnd={isMobile ? handleTouchEnd : undefined}
-                >
-                  <div className="p-4 h-full flex flex-col select-none">
-                    <div className="flex-1 select-none">
-                      <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <FaUtensils className="h-6 w-6 text-accent" />
+              {currentMeals.length > 0 ? (
+                currentMeals.map((meal, index) => (
+                  <div
+                    key={meal.id}
+                    ref={index === 0 ? cardRef : null}
+                    className={`absolute inset-0 bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 select-none touch-none ${
+                      index === 0 ? 'z-10' : 'z-0'
+                    } ${isDragging ? 'cursor-grabbing' : index === 0 && !isMobile ? 'cursor-grab' : 'cursor-default'}`}
+                    style={{
+                      transform: index === 0 
+                        ? `translateX(${offsetX}px) rotate(${offsetX * 0.03}deg)`
+                        : currentMeals.length === 1
+                          ? `translateY(4px) scale(0.98) rotate(2deg)`
+                          : `translateY(${index * 4}px) scale(${1 - index * 0.05})`,
+                      opacity: index === 0 ? 1 : currentMeals.length === 1 ? 0.1 : 1 - index * 0.2,
+                      transition: isDragging 
+                        ? 'none' 
+                        : 'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                      touchAction: 'none'
+                    }}
+                    onMouseDown={!isMobile ? handleMouseDown : undefined}
+                    onMouseMove={!isMobile ? handleMouseMove : undefined}
+                    onMouseUp={!isMobile ? handleMouseUp : undefined}
+                    onMouseLeave={!isMobile ? handleMouseUp : undefined}
+                    onTouchStart={isMobile ? handleTouchStart : undefined}
+                    onTouchMove={isMobile ? handleTouchMove : undefined}
+                    onTouchEnd={isMobile ? handleTouchEnd : undefined}
+                  >
+                    <div className="p-4 h-full flex flex-col select-none">
+                      <div className="flex-1 select-none">
+                        <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <FaUtensils className="h-6 w-6 text-accent" />
+                        </div>
+                        <h3 className="text-xl font-bold text-primary mb-2 text-center">{meal.name}</h3>
+                        {meal.meal_types && meal.meal_types.length > 0 && (
+                          <div className="flex justify-center gap-2 mb-2">
+                            {meal.meal_types.map((type, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2 py-0.5 bg-accent/10 text-accent rounded-full text-sm"
+                              >
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <h3 className="text-xl font-bold text-primary mb-2 text-center">{meal.name}</h3>
-                      {meal.meal_types && meal.meal_types.length > 0 && (
-                        <div className="flex justify-center gap-2 mb-2">
-                          {meal.meal_types.map((type, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-0.5 bg-accent/10 text-accent rounded-full text-sm"
-                            >
-                              {type}
-                            </span>
-                          ))}
+                      {index === 0 && !isMobile && (
+                        <div className="flex justify-center gap-6 mt-2 select-none">
+                          <button
+                            onClick={() => handleSwipe(false, true)}
+                            className="w-10 h-10 flex items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors"
+                          >
+                            <FaXmark className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleSwipe(true, true)}
+                            className="w-10 h-10 flex items-center justify-center rounded-full bg-green-100 text-green-500 hover:bg-green-200 transition-colors"
+                          >
+                            <FaHeart className="h-5 w-5" />
+                          </button>
+                        </div>
+                      )}
+                      {currentMeals.length === 1 && index === 0 && (
+                        <div className="mt-4 text-center">
+                          <span className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-sm">
+                            <FaDice className="h-3 w-3" />
+                            Last card - swipe to reshuffle
+                          </span>
                         </div>
                       )}
                     </div>
-                    {index === 0 && !isMobile && (
-                      <div className="flex justify-center gap-6 mt-2 select-none">
-                        <button
-                          onClick={() => handleSwipe(false)}
-                          className="w-10 h-10 flex items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors"
-                        >
-                          <FaXmark className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleSwipe(true)}
-                          className="w-10 h-10 flex items-center justify-center rounded-full bg-green-100 text-green-500 hover:bg-green-200 transition-colors"
-                        >
-                          <FaHeart className="h-5 w-5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
 
-                  <div 
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                      opacity: Math.min(Math.abs(offsetX) / 75, 1),
-                      background: offsetX > 0 
-                        ? 'linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.1) 100%)'
-                        : offsetX < 0
-                        ? 'linear-gradient(-90deg, transparent 0%, rgba(239, 68, 68, 0.1) 100%)'
-                        : 'transparent',
-                      transition: isDragging ? 'none' : 'all 0.3s ease'
-                    }}
-                  >
                     <div 
-                      className={`absolute top-1/2 -translate-y-1/2 ${offsetX > 0 ? 'right-8' : 'left-8'} transition-transform duration-200`}
+                      className="absolute inset-0 pointer-events-none"
                       style={{
                         opacity: Math.min(Math.abs(offsetX) / 75, 1),
-                        transform: `translate(${offsetX > 0 ? offsetX * 0.1 : offsetX * -0.1}px, -50%) scale(${1 + Math.min(Math.abs(offsetX) / 500, 0.2)})`,
+                        background: offsetX > 0 
+                          ? 'linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.1) 100%)'
+                          : offsetX < 0
+                          ? 'linear-gradient(-90deg, transparent 0%, rgba(239, 68, 68, 0.1) 100%)'
+                          : 'transparent',
+                        transition: isDragging ? 'none' : 'all 0.3s ease'
                       }}
                     >
-                      {offsetX > 0 ? (
-                        <FaHeart className="h-12 w-12 text-green-500" />
-                      ) : (
-                        <FaXmark className="h-12 w-12 text-red-500" />
-                      )}
+                      <div 
+                        className={`absolute top-1/2 -translate-y-1/2 ${offsetX > 0 ? 'right-8' : 'left-8'} transition-transform duration-200`}
+                        style={{
+                          opacity: Math.min(Math.abs(offsetX) / 75, 1),
+                          transform: `translate(${offsetX > 0 ? offsetX * 0.1 : offsetX * -0.1}px, -50%) scale(${1 + Math.min(Math.abs(offsetX) / 500, 0.2)})`,
+                        }}
+                      >
+                        {offsetX > 0 ? (
+                          <FaHeart className="h-12 w-12 text-green-500" />
+                        ) : (
+                          <FaXmark className="h-12 w-12 text-red-500" />
+                        )}
+                      </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="absolute inset-0 bg-white rounded-xl shadow-lg p-8 flex flex-col items-center justify-center text-center pointer-events-none">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <FaUtensils className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-primary mb-2">No More Meals Available</h3>
+                  <p className="text-gray-500">
+                    You've gone through all your meals. Add more meals to your deck!
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
-          <div className="mt-8 flex justify-center">
-            <button
-              onClick={() => shuffleAndSetMeals(meals)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              <FaDice className="h-4 w-4" />
-              Reshuffle Deck
-            </button>
-          </div>
+          {/* Remove the reshuffle button when showing the empty state */}
+          {currentMeals.length > 0 && (
+            <div className="mt-8 flex justify-center">
+              <button
+                onClick={() => shuffleAndSetMeals(meals)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <FaDice className="h-4 w-4" />
+                Reshuffle Deck
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -468,7 +765,7 @@ export default function RandomMealPage() {
               {likedMeals.length > 0 && (
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setLikedMeals([])}
+                    onClick={handleClearAll}
                     className="text-gray-500 hover:text-gray-700 flex items-center gap-2 px-3 py-1 rounded-full hover:bg-gray-100"
                   >
                     <FaTrash className="h-4 w-4" />
