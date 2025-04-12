@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import type { FavoriteFood } from '@/lib/supabase';
-import { FaUtensils, FaArrowLeft, FaHeart, FaXmark, FaDice, FaHandPointer } from 'react-icons/fa6';
+import { FaUtensils, FaArrowLeft, FaHeart, FaXmark, FaDice, FaHandPointer, FaCalendarPlus, FaTrash } from 'react-icons/fa6';
 
 export default function RandomMealPage() {
   const { user } = useAuth();
@@ -23,6 +23,8 @@ export default function RandomMealPage() {
   const [velocity, setVelocity] = useState(0);
   const [lastX, setLastX] = useState(0);
   const [lastTime, setLastTime] = useState(0);
+  const [likedMeals, setLikedMeals] = useState<FavoriteFood[]>([]);
+  const [showLikedPanel, setShowLikedPanel] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -135,16 +137,36 @@ export default function RandomMealPage() {
     if (currentMeals.length === 0) return;
 
     const meal = currentMeals[0];
-    setSelectedMeal(isRight ? meal : null);
+    
+    if (isRight) {
+      // Don't set selectedMeal immediately
+      setTimeout(() => {
+        setSelectedMeal(meal);
+        // Reset selected meal after a delay
+        setTimeout(() => {
+          setSelectedMeal(null);
+        }, 2000);
+      }, 300);
+
+      setLikedMeals(prev => {
+        // Don't add if already in liked meals
+        if (prev.some(m => m.id === meal.id)) return prev;
+        return [...prev, meal];
+      });
+    } else {
+      setSelectedMeal(null);
+    }
     
     // Remove the top card
-    setCurrentMeals(prev => prev.slice(1));
-    setOffsetX(0);
+    setTimeout(() => {
+      setCurrentMeals(prev => prev.slice(1));
+      setOffsetX(0);
 
-    // Refill the deck if running low
-    if (currentMeals.length <= 2) {
-      shuffleAndSetMeals(meals);
-    }
+      // Refill the deck if running low
+      if (currentMeals.length <= 2) {
+        shuffleAndSetMeals(meals);
+      }
+    }, 300);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -159,7 +181,7 @@ export default function RandomMealPage() {
     setOffsetX(currentX);
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     if (!isDragging) return;
     setIsDragging(false);
 
@@ -168,6 +190,51 @@ export default function RandomMealPage() {
       handleSwipe(isRight);
     } else {
       setOffsetX(0);
+    }
+  };
+
+  const removeLikedMeal = (mealId: string) => {
+    setLikedMeals(prev => prev.filter(meal => meal.id !== mealId));
+  };
+
+  const createMealPlan = async () => {
+    try {
+      // First create the meal plan
+      const { data: mealPlan, error: mealPlanError } = await supabase
+        .from('meal_plans')
+        .insert([
+          {
+            user_id: user?.id,
+            name: `Meal Plan ${new Date().toLocaleDateString()}`,
+            start_date: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single();
+
+      if (mealPlanError) throw mealPlanError;
+
+      // Then add all the meals to the plan
+      const meals = likedMeals.map((meal, index) => ({
+        meal_plan_id: mealPlan.id,
+        favorite_food_id: meal.id,
+        day_number: index + 1,
+      }));
+
+      const { error: mealsError } = await supabase
+        .from('meals')
+        .insert(meals);
+
+      if (mealsError) throw mealsError;
+
+      // Clear liked meals and hide panel
+      setLikedMeals([]);
+      setShowLikedPanel(false);
+
+      // Navigate to the meal plan
+      window.location.href = `/dashboard/meal-plans/${mealPlan.id}`;
+    } catch (err) {
+      console.error('Error creating meal plan:', err);
     }
   };
 
@@ -189,201 +256,272 @@ export default function RandomMealPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <Link
-          href="/dashboard"
-          className="text-text-secondary hover:text-primary transition-colors inline-flex items-center gap-2"
-        >
-          <FaArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Link>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8 pb-32">
+        <div className="mb-8">
+          <Link
+            href="/dashboard"
+            className="text-text-secondary hover:text-primary transition-colors inline-flex items-center gap-2"
+          >
+            <FaArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        </div>
 
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-primary mb-2">Random Meal Selector</h1>
-        <p className="text-text-secondary mb-4">
-          {isMobile 
-            ? "Swipe right to select a meal, left to skip!"
-            : "Swipe or use buttons to select your next meal!"}
-        </p>
-
-        {/* Meal Type Filters */}
-        {availableMealTypes.length > 0 && (
+        <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-primary mb-3">Filter by Meal Type</h2>
-            <div className="flex flex-wrap gap-2">
-              {availableMealTypes.map((type) => (
-                <button
-                  key={type}
-                  onClick={() => {
-                    setSelectedFilters(prev =>
-                      prev.includes(type)
-                        ? prev.filter(t => t !== type)
-                        : [...prev, type]
-                    );
-                    shuffleAndSetMeals(meals);
+            <h1 className="text-2xl font-bold text-primary mb-2">Random Meal Selector</h1>
+            <p className="text-text-secondary mb-4">
+              {isMobile 
+                ? "Swipe right to select a meal, left to skip!"
+                : "Swipe or use buttons to select your next meal!"}
+            </p>
+
+            {availableMealTypes.length > 0 && (
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-primary mb-3">Filter by Meal Type</h2>
+                <div className="flex flex-wrap gap-2">
+                  {availableMealTypes.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setSelectedFilters(prev =>
+                          prev.includes(type)
+                            ? prev.filter(t => t !== type)
+                            : [...prev, type]
+                        );
+                        shuffleAndSetMeals(meals);
+                      }}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        selectedFilters.includes(type)
+                          ? 'bg-accent text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+              {isMobile ? (
+                <div className="flex items-center gap-1">
+                  <FaHandPointer className="h-4 w-4" />
+                  <span>Swipe cards to make your choice</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1">
+                    <FaHandPointer className="h-4 w-4" />
+                    <span>Drag cards</span>
+                  </div>
+                  <span>or</span>
+                  <div className="flex items-center gap-2">
+                    <button className="w-6 h-6 flex items-center justify-center rounded-full bg-red-100 text-red-500">
+                      <FaXmark className="h-3 w-3" />
+                    </button>
+                    <span>/</span>
+                    <button className="w-6 h-6 flex items-center justify-center rounded-full bg-green-100 text-green-500">
+                      <FaHeart className="h-3 w-3" />
+                    </button>
+                    <span>Click buttons</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="relative mx-auto" style={{ height: '400px' }}>
+            <div className="absolute inset-0">
+              {currentMeals.map((meal, index) => (
+                <div
+                  key={meal.id}
+                  ref={index === 0 ? cardRef : null}
+                  className={`absolute inset-0 bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 select-none touch-none ${
+                    index === 0 ? 'z-10' : 'z-0'
+                  } ${isDragging ? 'cursor-grabbing' : index === 0 && !isMobile ? 'cursor-grab' : 'cursor-default'}`}
+                  style={{
+                    transform: index === 0 
+                      ? `translateX(${offsetX}px) rotate(${offsetX * 0.05}deg)`
+                      : `translateY(${index * 4}px) scale(${1 - index * 0.05})`,
+                    opacity: index === 0 ? 1 : 1 - index * 0.2,
+                    transition: isDragging ? 'none' : 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    touchAction: 'none'
                   }}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedFilters.includes(type)
-                      ? 'bg-accent text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                  onMouseDown={!isMobile ? handleMouseDown : undefined}
+                  onMouseMove={!isMobile ? handleMouseMove : undefined}
+                  onMouseUp={!isMobile ? handleMouseUp : undefined}
+                  onMouseLeave={!isMobile ? handleMouseUp : undefined}
+                  onTouchStart={isMobile ? handleTouchStart : undefined}
+                  onTouchMove={isMobile ? handleTouchMove : undefined}
+                  onTouchEnd={isMobile ? handleTouchEnd : undefined}
                 >
-                  {type}
-                </button>
+                  <div className="p-4 h-full flex flex-col select-none">
+                    <div className="flex-1 select-none">
+                      <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <FaUtensils className="h-6 w-6 text-accent" />
+                      </div>
+                      <h3 className="text-xl font-bold text-primary mb-2 text-center">{meal.name}</h3>
+                      {meal.meal_types && meal.meal_types.length > 0 && (
+                        <div className="flex justify-center gap-2 mb-2">
+                          {meal.meal_types.map((type, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 bg-accent/10 text-accent rounded-full text-sm"
+                            >
+                              {type}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {index === 0 && !isMobile && (
+                      <div className="flex justify-center gap-6 mt-2 select-none">
+                        <button
+                          onClick={() => handleSwipe(false)}
+                          className="w-10 h-10 flex items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors"
+                        >
+                          <FaXmark className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleSwipe(true)}
+                          className="w-10 h-10 flex items-center justify-center rounded-full bg-green-100 text-green-500 hover:bg-green-200 transition-colors"
+                        >
+                          <FaHeart className="h-5 w-5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div 
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      opacity: Math.min(Math.abs(offsetX) / 75, 1),
+                      background: offsetX > 0 
+                        ? 'linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.1) 100%)'
+                        : offsetX < 0
+                        ? 'linear-gradient(-90deg, transparent 0%, rgba(239, 68, 68, 0.1) 100%)'
+                        : 'transparent',
+                      transition: isDragging ? 'none' : 'all 0.3s ease'
+                    }}
+                  >
+                    <div 
+                      className={`absolute top-1/2 -translate-y-1/2 ${offsetX > 0 ? 'right-8' : 'left-8'} transition-transform duration-200`}
+                      style={{
+                        opacity: Math.min(Math.abs(offsetX) / 75, 1),
+                        transform: `translate(${offsetX > 0 ? offsetX * 0.1 : offsetX * -0.1}px, -50%) scale(${1 + Math.min(Math.abs(offsetX) / 500, 0.2)})`,
+                      }}
+                    >
+                      {offsetX > 0 ? (
+                        <FaHeart className="h-12 w-12 text-green-500" />
+                      ) : (
+                        <FaXmark className="h-12 w-12 text-red-500" />
+                      )}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-        )}
 
-        {/* Interaction Hint */}
-        <div className="flex items-center justify-center gap-2 mb-8 text-gray-500 text-sm">
-          {isMobile ? (
-            <div className="flex items-center gap-1">
-              <FaHandPointer className="h-4 w-4" />
-              <span>Swipe cards to make your choice</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                <FaHandPointer className="h-4 w-4" />
-                <span>Drag cards</span>
-              </div>
-              <span>or</span>
-              <div className="flex items-center gap-2">
-                <button className="w-6 h-6 flex items-center justify-center rounded-full bg-red-100 text-red-500">
-                  <FaXmark className="h-3 w-3" />
-                </button>
-                <span>/</span>
-                <button className="w-6 h-6 flex items-center justify-center rounded-full bg-green-100 text-green-500">
-                  <FaHeart className="h-3 w-3" />
-                </button>
-                <span>Click buttons</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Card Stack Area */}
-        <div className="relative h-[400px] mb-8 select-none">
-          {currentMeals.map((meal, index) => (
-            <div
-              key={meal.id}
-              ref={index === 0 ? cardRef : null}
-              className={`absolute inset-0 bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 select-none ${
-                index === 0 ? 'z-10' : 'z-0'
-              } ${isDragging ? 'cursor-grabbing' : index === 0 && !isMobile ? 'cursor-grab' : 'cursor-default'}`}
-              style={{
-                transform: index === 0 
-                  ? `translateX(${offsetX}px) rotate(${offsetX * 0.05}deg)`
-                  : `translateY(${index * 4}px) scale(${1 - index * 0.05})`,
-                opacity: index === 0 ? 1 : 1 - index * 0.2,
-                transition: isDragging ? 'none' : 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-              }}
-              onMouseDown={!isMobile ? handleMouseDown : undefined}
-              onMouseMove={!isMobile ? handleMouseMove : undefined}
-              onMouseUp={!isMobile ? handleMouseUp : undefined}
-              onMouseLeave={!isMobile ? handleMouseUp : undefined}
-              onTouchStart={isMobile ? handleTouchStart : undefined}
-              onTouchMove={isMobile ? handleTouchMove : undefined}
-              onTouchEnd={isMobile ? handleTouchEnd : undefined}
+          <div className="mt-8 flex justify-center">
+            <button
+              onClick={() => shuffleAndSetMeals(meals)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
             >
-              <div className="p-6 h-full flex flex-col select-none">
-                <div className="flex-1 select-none">
-                  <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FaUtensils className="h-8 w-8 text-accent" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-primary mb-3 text-center">{meal.name}</h3>
-                  {meal.meal_types && meal.meal_types.length > 0 && (
-                    <div className="flex justify-center gap-2 mb-4">
-                      {meal.meal_types.map((type, idx) => (
-                        <span
-                          key={idx}
-                          className="px-3 py-1 bg-accent/10 text-accent rounded-full text-sm"
-                        >
-                          {type}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {index === 0 && !isMobile && (
-                  <div className="flex justify-center gap-8 mt-4 select-none">
-                    <button
-                      onClick={() => handleSwipe(false)}
-                      className="w-12 h-12 flex items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors"
-                    >
-                      <FaXmark className="h-6 w-6" />
-                    </button>
-                    <button
-                      onClick={() => handleSwipe(true)}
-                      className="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-500 hover:bg-green-200 transition-colors"
-                    >
-                      <FaHeart className="h-6 w-6" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Swipe Indicators */}
-              <div 
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  opacity: Math.min(Math.abs(offsetX) / 75, 1), // Made more sensitive
-                  background: offsetX > 0 
-                    ? 'linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.1) 100%)'
-                    : offsetX < 0
-                    ? 'linear-gradient(-90deg, transparent 0%, rgba(239, 68, 68, 0.1) 100%)'
-                    : 'transparent',
-                  transition: isDragging ? 'none' : 'all 0.3s ease'
-                }}
-              >
-                <div 
-                  className={`absolute top-1/2 -translate-y-1/2 ${offsetX > 0 ? 'right-8' : 'left-8'} transition-transform duration-200`}
-                  style={{
-                    opacity: Math.min(Math.abs(offsetX) / 75, 1), // Made more sensitive
-                    transform: `translate(${offsetX > 0 ? offsetX * 0.1 : offsetX * -0.1}px, -50%) scale(${1 + Math.min(Math.abs(offsetX) / 500, 0.2)})`,
-                  }}
-                >
-                  {offsetX > 0 ? (
-                    <FaHeart className="h-12 w-12 text-green-500" />
-                  ) : (
-                    <FaXmark className="h-12 w-12 text-red-500" />
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Selected Meal Display */}
-        {selectedMeal && (
-          <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-            <h3 className="text-xl font-bold text-primary mb-4">You selected: {selectedMeal.name}!</h3>
-            <Link
-              href={`/dashboard/meals/${selectedMeal.id}`}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
-            >
-              View Recipe
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
+              <FaDice className="h-4 w-4" />
+              Reshuffle Deck
+            </button>
           </div>
-        )}
-
-        {/* Reshuffle Button */}
-        <div className="text-center mt-6">
-          <button
-            onClick={() => shuffleAndSetMeals(meals)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <FaDice className="h-4 w-4" />
-            Reshuffle Deck
-          </button>
         </div>
       </div>
+
+      {/* Selected Meal Toast */}
+      <div 
+        className={`fixed top-4 left-1/2 -translate-x-1/2 transition-all duration-300 ${
+          selectedMeal ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform -translate-y-4'
+        }`}
+        style={{ zIndex: 1002 }}
+      >
+        {selectedMeal && (
+          <div className="bg-white/90 backdrop-blur-sm shadow-lg rounded-full px-4 py-2 flex items-center gap-2">
+            <FaHeart className="text-accent h-4 w-4" />
+            <span className="text-sm font-medium">Added {selectedMeal.name} to liked meals!</span>
+          </div>
+        )}
+      </div>
+
+      {/* Liked Meals Panel */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200"
+        style={{ zIndex: 1000 }}
+      >
+        <div className="container mx-auto max-w-4xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FaHeart className="text-accent h-5 w-5" />
+              <h3 className="text-lg font-semibold">Liked Meals ({likedMeals.length})</h3>
+            </div>
+            <div className="flex items-center gap-4">
+              {likedMeals.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setLikedMeals([])}
+                    className="text-gray-500 hover:text-gray-700 flex items-center gap-2 px-3 py-1 rounded-full hover:bg-gray-100"
+                  >
+                    <FaTrash className="h-4 w-4" />
+                    Clear All
+                  </button>
+                  <button
+                    onClick={createMealPlan}
+                    className="bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors flex items-center gap-2"
+                  >
+                    <FaCalendarPlus className="h-4 w-4" />
+                    Create Meal Plan
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {likedMeals.length > 0 ? (
+            <div className="mt-4 overflow-x-auto pb-2 hide-scrollbar">
+              <div className="flex gap-2 min-w-min">
+                {likedMeals.map((meal) => (
+                  <div
+                    key={meal.id}
+                    className="flex-none flex items-center gap-2 bg-gray-100 rounded-full pl-3 pr-2 py-1 whitespace-nowrap"
+                  >
+                    <span className="text-sm font-medium">{meal.name}</span>
+                    <button
+                      onClick={() => removeLikedMeal(meal.id)}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <FaXmark className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center mt-2">
+              Swipe right or click the heart to add meals to your plan
+            </p>
+          )}
+        </div>
+      </div>
+
+      <style jsx global>{`
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 } 
