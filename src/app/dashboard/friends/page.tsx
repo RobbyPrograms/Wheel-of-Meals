@@ -41,12 +41,31 @@ export default function FriendsPage() {
   const [searchResult, setSearchResult] = useState<UserProfile | null>(null);
   const [addingFriend, setAddingFriend] = useState(false);
   const [updatingFriend, setUpdatingFriend] = useState<string | null>(null);
+  const [addedMeals, setAddedMeals] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) {
       fetchFriends();
+      fetchUserMeals();
     }
   }, [user]);
+
+  const fetchUserMeals = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: userMeals } = await supabase
+        .from('favorite_foods')
+        .select('name')
+        .eq('user_id', user.id);
+      
+      if (userMeals) {
+        setAddedMeals(new Set(userMeals.map(meal => meal.name)));
+      }
+    } catch (err) {
+      console.error('Error fetching user meals:', err);
+    }
+  };
 
   const fetchFriends = async () => {
     try {
@@ -160,23 +179,17 @@ export default function FriendsPage() {
     if (!user) return;
 
     try {
-      // Log the incoming food object
-      console.log('Original food object:', food);
-
       // Create the insert data
       const insertData = {
         user_id: user.id,
         name: food.name,
-        ingredients: food.ingredients,  // Keep as is since it's already a string in the DB
+        ingredients: food.ingredients,
         recipe: food.recipe || '',
         rating: 0,
-        meal_types: '{}',  // Empty PostgreSQL array
+        meal_types: '{}',
         visibility: 'private'
       };
 
-      console.log('Final insert data:', insertData);
-
-      // First try to insert without select
       const { error: addError } = await supabase
         .from('favorite_foods')
         .insert(insertData);
@@ -186,9 +199,9 @@ export default function FriendsPage() {
         throw addError;
       }
 
+      // Update local state to show the meal as added
+      setAddedMeals(prev => new Set([...Array.from(prev), food.name]));
       setError(null);
-      // Optionally refresh the friends list to show the updated data
-      await fetchFriends();
     } catch (err: any) {
       console.error('Full error object:', err);
       setError('Failed to add food to your favorites. Please try again.');
@@ -457,10 +470,22 @@ export default function FriendsPage() {
                               </div>
                               <button
                                 onClick={() => addToMyFoods(meal)}
-                                className="text-accent hover:text-accent/80 transition-colors"
-                                title="Add to My Meals"
+                                disabled={addedMeals.has(meal.name)}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
+                                  addedMeals.has(meal.name)
+                                    ? 'bg-green-100 text-green-600 cursor-default'
+                                    : 'text-accent hover:text-accent/80'
+                                }`}
+                                title={addedMeals.has(meal.name) ? 'Already in your meals' : 'Add to My Meals'}
                               >
-                                <FaPlus />
+                                {addedMeals.has(meal.name) ? (
+                                  <>
+                                    <FaCheck className="text-sm" />
+                                    <span className="text-sm">Added</span>
+                                  </>
+                                ) : (
+                                  <FaPlus />
+                                )}
                               </button>
                             </div>
                           </div>
