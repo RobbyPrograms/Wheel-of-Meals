@@ -184,9 +184,9 @@ export default function FriendsPage() {
         user_id: user.id,
         name: food.name,
         ingredients: food.ingredients,
-        recipe: food.recipe || '',
+        recipe: food.recipe,
         rating: 0,
-        meal_types: '{}',
+        meal_types: [],
         visibility: 'private'
       };
 
@@ -457,37 +457,101 @@ export default function FriendsPage() {
                         {friendMeals[friend.friend_id].map((meal) => (
                           <div
                             key={meal.id}
-                            className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                            className="p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                           >
-                            <div className="flex justify-between items-start">
+                            <div className="flex justify-between items-start mb-4">
                               <div>
-                                <h5 className="font-medium text-primary">{meal.name}</h5>
-                                <p className="text-sm text-text-secondary">
-                                  {Array.isArray(meal.ingredients) 
-                                    ? meal.ingredients.join(', ')
-                                    : 'No ingredients listed'}
-                                </p>
+                                <h5 className="font-medium text-primary text-lg">{meal.name}</h5>
                               </div>
                               <button
                                 onClick={() => addToMyFoods(meal)}
                                 disabled={addedMeals.has(meal.name)}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors ${
                                   addedMeals.has(meal.name)
                                     ? 'bg-green-100 text-green-600 cursor-default'
-                                    : 'text-accent hover:text-accent/80'
+                                    : 'text-accent hover:text-accent/80 hover:bg-accent/10'
                                 }`}
                                 title={addedMeals.has(meal.name) ? 'Already in your meals' : 'Add to My Meals'}
                               >
                                 {addedMeals.has(meal.name) ? (
                                   <>
                                     <FaCheck className="text-sm" />
-                                    <span className="text-sm">Added</span>
+                                    <span className="text-sm font-medium">Added</span>
                                   </>
                                 ) : (
-                                  <FaPlus />
+                                  <>
+                                    <FaPlus className="text-sm" />
+                                    <span className="text-sm font-medium">Add</span>
+                                  </>
                                 )}
                               </button>
                             </div>
+
+                            {/* Ingredients Section */}
+                            <div className="mb-4">
+                              <h6 className="text-sm font-semibold text-gray-700 mb-2">Ingredients:</h6>
+                              <div className="grid grid-cols-2 gap-2">
+                                {meal.ingredients.map((ingredient: string, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    className="bg-white rounded-lg px-3 py-2 text-sm text-gray-700 border border-gray-100"
+                                  >
+                                    {ingredient}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Recipe Instructions */}
+                            {meal.recipe && (
+                              <div>
+                                <h6 className="text-sm font-semibold text-gray-700 mb-2">Recipe Instructions:</h6>
+                                <div className="space-y-2">
+                                  {(() => {
+                                    try {
+                                      // First try to parse as JSON array
+                                      const steps = JSON.parse(meal.recipe);
+                                      if (Array.isArray(steps)) {
+                                        return steps.map((step: string, idx: number) => (
+                                          <div key={idx} className="flex gap-2 text-sm text-gray-600">
+                                            <span className="font-medium text-accent">{idx + 1}.</span>
+                                            <span>{step}</span>
+                                          </div>
+                                        ));
+                                      }
+                                    } catch (e) {
+                                      // If JSON parsing fails, try to split by quoted strings
+                                      const quotedSteps = meal.recipe
+                                        .match(/"([^"]*)"(?:,|$)/g)
+                                        ?.map(step => step.replace(/^"|"(?:,|$)/g, '').trim())
+                                        .filter(step => step.length > 0);
+
+                                      if (quotedSteps && quotedSteps.length > 0) {
+                                        return quotedSteps.map((step: string, idx: number) => (
+                                          <div key={idx} className="flex gap-2 text-sm text-gray-600">
+                                            <span className="font-medium text-accent">{idx + 1}.</span>
+                                            <span>{step}</span>
+                                          </div>
+                                        ));
+                                      }
+
+                                      // If no quoted steps found, try splitting by periods and numbers
+                                      const steps = meal.recipe
+                                        .split(/(?:(?<=\.)\s+(?=[A-Z])|(?<=\d\.)\s+)/)
+                                        .map(step => step.trim())
+                                        .filter(step => step.length > 0 && !step.match(/^\d+$/));
+
+                                      return steps.map((step: string, idx: number) => (
+                                        <div key={idx} className="flex gap-2 text-sm text-gray-600">
+                                          <span className="font-medium text-accent">{idx + 1}.</span>
+                                          <span>{step.replace(/^\d+\.\s*/, '')}</span>
+                                        </div>
+                                      ));
+                                    }
+                                  })()}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
