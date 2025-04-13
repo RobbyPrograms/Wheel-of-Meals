@@ -600,9 +600,9 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
       setError(null);
 
       // Create a deep copy of the current meal plan
-      const updatedPlan = JSON.parse(JSON.stringify(currentMealPlan));
+      const updatedPlan = JSON.parse(JSON.stringify(currentMealPlan)) as WeeklyPlan;
 
-      // Update the specific meal
+      // Initialize the date entry if it doesn't exist
       if (!updatedPlan[date]) {
         updatedPlan[date] = {
           breakfast: null,
@@ -610,16 +610,26 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
           dinner: null
         };
       }
+
+      // Update the specific meal
       updatedPlan[date][mealType] = meal;
 
-      // Update the meal plan in the database
-      await updateMealPlan(selectedPlan.id, updatedPlan);
+      // Update in database
+      const { error: updateError } = await supabase
+        .from('meal_plans')
+        .update({ plan: updatedPlan })
+        .eq('id', selectedPlan.id);
+
+      if (updateError) throw updateError;
 
       // Update local state
       setCurrentMealPlan(updatedPlan);
       toast.success('Meal updated successfully');
-    } catch (err) {
-      handleError(err);
+
+    } catch (err: any) {
+      console.error('Error updating meal:', err);
+      setError(`Failed to update meal: ${err.message}`);
+      toast.error('Failed to update meal');
     } finally {
       setIsSaving(false);
     }
