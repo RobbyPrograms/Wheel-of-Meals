@@ -7,12 +7,16 @@ import Link from 'next/link';
 import { FaUser, FaEnvelope, FaCalendarAlt, FaEdit, FaKey, FaSave, FaTimes } from 'react-icons/fa';
 import { supabase } from '@/lib/supabase';
 import AvatarUpload from '@/components/AvatarUpload';
+import { format as formatDate } from 'date-fns';
 
 type ProfileData = {
   name: string;
   email: string;
   username: string;
   avatar_url: string | null;
+  created_at: string;
+  experience_points: number;
+  current_level: number;
 };
 
 export default function ProfilePage() {
@@ -23,7 +27,10 @@ export default function ProfilePage() {
     name: '',
     email: '',
     username: '',
-    avatar_url: null
+    avatar_url: null,
+    created_at: '',
+    experience_points: 0,
+    current_level: 1
   });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -46,7 +53,10 @@ export default function ProfilePage() {
         name: user.user_metadata?.name || '',
         email: user.email || '',
         username: '',
-        avatar_url: user.user_metadata?.avatar_url || null
+        avatar_url: user.user_metadata?.avatar_url || null,
+        created_at: user.user_metadata?.created_at || '',
+        experience_points: user.user_metadata?.experience_points || 0,
+        current_level: user.user_metadata?.current_level || 1
       });
       fetchUserProfile();
     }
@@ -58,7 +68,7 @@ export default function ProfilePage() {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('username, avatar_url')
+        .select('username, avatar_url, created_at, experience_points, current_level')
         .eq('id', user.id)
         .single();
 
@@ -68,7 +78,10 @@ export default function ProfilePage() {
         setProfileData(prev => ({
           ...prev,
           username: data.username,
-          avatar_url: data.avatar_url
+          avatar_url: data.avatar_url,
+          created_at: data.created_at,
+          experience_points: data.experience_points || 0,
+          current_level: data.current_level || 1
         }));
       }
     } catch (err) {
@@ -260,26 +273,47 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-[#f8f9fa]">
       <Navbar />
 
-      {/* Header */}
-      <div className="relative bg-primary">
+      {/* Hero Section with Avatar */}
+      <div className="relative bg-primary pt-32 pb-32 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/food-pattern.png')] opacity-10"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-primary/95 to-primary"></div>
-        <div className="relative container mx-auto px-4 py-16 md:py-20">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">Your Profile</h1>
-            <p className="text-xl text-white/90 max-w-2xl">
-              Manage your account information and preferences
-            </p>
+        <div className="relative container mx-auto px-4">
+          <div className="flex flex-col items-center text-center">
+            <div className="relative mb-8">
+              <AvatarUpload
+                url={profileData.avatar_url}
+                onUpload={handleAvatarUpload}
+                size={160}
+              />
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-accent text-white px-4 py-1 rounded-full text-sm font-medium shadow-sm">
+                Level {profileData.current_level}
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-3">
+              {profileData.username}
+            </h1>
+            <p className="text-white/80 text-lg mb-8">@{profileData.username}</p>
+            <div className="flex items-center gap-6 justify-center">
+              <div className="bg-white/10 backdrop-blur-sm px-8 py-4 rounded-xl shadow-sm">
+                <p className="text-white/60 text-sm">Experience Points</p>
+                <p className="text-white font-semibold text-2xl">{profileData.experience_points}</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm px-8 py-4 rounded-xl shadow-sm">
+                <p className="text-white/60 text-sm">Member Since</p>
+                <p className="text-white font-semibold text-2xl">
+                  {profileData.created_at ? formatDate(new Date(profileData.created_at), 'MMM d, yyyy') : 'Loading...'}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-b from-primary to-transparent transform translate-y-24"></div>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto px-4 py-12 -mt-12 relative z-10">
+      <main className="container mx-auto px-4 -mt-20 relative z-10 pb-12">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Notification */}
           {notification && (
@@ -294,196 +328,58 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Account Information Card */}
-          <div className="bg-white/95 backdrop-blur-xl shadow-xl rounded-2xl overflow-hidden border border-gray-100">
-            <div className="p-8">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-primary mb-2">Account Information</h2>
-                  <p className="text-text-secondary text-sm">Update your personal information</p>
-                </div>
-                <button 
-                  onClick={handleEditToggle}
-                  className={`flex items-center px-4 py-2 rounded-xl transition-all ${
-                    isEditing
-                      ? 'text-gray-600 hover:text-primary bg-gray-100 hover:bg-gray-200'
-                      : 'text-accent hover:text-white hover:bg-accent'
-                  }`}
-                >
-                  {isEditing ? (
-                    <>
-                      <FaTimes className="mr-2" />
-                      Cancel
-                    </>
-                  ) : (
-                    <>
-                      <FaEdit className="mr-2" />
-                      Edit Profile
-                    </>
-                  )}
-                </button>
+          {/* Profile Information */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 flex justify-between items-center border-b border-gray-100">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Profile Information</h2>
+                <p className="text-gray-500 text-sm mt-1">Your account details</p>
               </div>
+            </div>
 
-              <div className="flex flex-col md:flex-row gap-8">
-                <div className="flex-shrink-0">
-                  <AvatarUpload
-                    url={profileData.avatar_url}
-                    onUpload={handleAvatarUpload}
-                    size={150}
-                  />
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">Username</div>
+                  <div className="text-lg text-gray-900">{profileData.username}</div>
                 </div>
 
-                <div className="flex-grow">
-                  {isEditing ? (
-                    <form onSubmit={handleProfileSubmit} className="space-y-6">
-                      <div>
-                        <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                          Username
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <FaUser className="text-accent" />
-                          </div>
-                          <input
-                            type="text"
-                            id="username"
-                            name="username"
-                            value={profileData.username || ''}
-                            onChange={handleProfileChange}
-                            className="pl-11 w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
-                            placeholder="Your username"
-                          />
-                        </div>
-                      </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">Email Address</div>
+                  <div className="text-lg text-gray-900">{profileData.email}</div>
+                </div>
 
-                      <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                          Name
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <FaUser className="text-accent" />
-                          </div>
-                          <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            value={profileData.name}
-                            onChange={handleProfileChange}
-                            className="pl-11 w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
-                            placeholder="Your name"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                          Email
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <FaEnvelope className="text-accent" />
-                          </div>
-                          <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            value={profileData.email}
-                            onChange={handleProfileChange}
-                            className="pl-11 w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
-                            placeholder="Your email"
-                            disabled
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end">
-                        <button
-                          type="submit"
-                          className="btn-primary px-6"
-                        >
-                          <FaSave className="mr-2" />
-                          Save Changes
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="space-y-8">
-                      <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                        <FaUser className="text-accent text-xl mr-4" />
-                        <div>
-                          <div className="text-sm font-medium text-gray-500 mb-1">Username</div>
-                          <div className="text-lg font-medium text-gray-900">
-                            {profileData.username || 'Not set'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                        <FaUser className="text-accent text-xl mr-4" />
-                        <div>
-                          <div className="text-sm font-medium text-gray-500 mb-1">Name</div>
-                          <div className="text-lg font-medium text-gray-900">
-                            {profileData.name || 'Not set'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                        <FaEnvelope className="text-accent text-xl mr-4" />
-                        <div>
-                          <div className="text-sm font-medium text-gray-500 mb-1">Email</div>
-                          <div className="text-lg font-medium text-gray-900">
-                            {profileData.email}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                        <FaCalendarAlt className="text-accent text-xl mr-4" />
-                        <div>
-                          <div className="text-sm font-medium text-gray-500 mb-1">Account Created</div>
-                          <div className="text-lg font-medium text-gray-900">
-                            {new Date().toLocaleDateString()}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                <div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">Member Since</div>
+                  <div className="text-lg text-gray-900">
+                    {profileData.created_at ? formatDate(new Date(profileData.created_at), 'MMMM d, yyyy') : 'Loading...'}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Security Card */}
-          <div className="bg-white/95 backdrop-blur-xl shadow-xl rounded-2xl overflow-hidden border border-gray-100">
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-primary mb-2">Security</h2>
-                  <p className="text-text-secondary text-sm">Manage your password and security settings</p>
-                </div>
+          {/* Security Section */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 flex justify-between items-center border-b border-gray-100">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Security Settings</h2>
+                <p className="text-gray-500 text-sm mt-1">Manage your password and security preferences</p>
+              </div>
+              {!isChangingPassword && (
                 <button
                   onClick={handlePasswordToggle}
-                  className={`flex items-center px-4 py-2 rounded-xl transition-all ${
-                    isChangingPassword
-                      ? 'text-gray-600 hover:text-primary bg-gray-100 hover:bg-gray-200'
-                      : 'text-accent hover:text-white hover:bg-accent'
-                  }`}
+                  className="text-accent hover:bg-accent hover:text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2"
                 >
-                  {isChangingPassword ? (
-                    <>
-                      <FaTimes className="mr-2" />
-                      Cancel
-                    </>
-                  ) : (
-                    <>
-                      <FaKey className="mr-2" />
-                      Change Password
-                    </>
-                  )}
+                  <FaKey />
+                  Change Password
                 </button>
-              </div>
+              )}
+            </div>
 
+            <div className="p-6">
               {isChangingPassword ? (
-                <form onSubmit={handlePasswordSubmit} className="space-y-6">
+                <form onSubmit={handlePasswordSubmit} className="space-y-6 max-w-md">
                   <div>
                     <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-2">
                       Current Password
@@ -526,24 +422,32 @@ export default function ProfilePage() {
                     />
                   </div>
 
-                  <div className="flex justify-end pt-4">
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={handlePasswordToggle}
+                      className="px-6 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                    >
+                      <FaTimes />
+                      Cancel
+                    </button>
                     <button
                       type="submit"
-                      className="btn-primary px-6"
+                      className="bg-accent hover:bg-accent/90 text-white px-6 py-2 rounded-xl flex items-center gap-2 transition-colors"
                     >
-                      <FaSave className="mr-2" />
+                      <FaSave />
                       Update Password
                     </button>
                   </div>
                 </form>
               ) : (
-                <div className="p-4 bg-gray-50 rounded-xl">
+                <div className="p-4 bg-gray-50 rounded-xl max-w-md">
                   <div className="flex items-center">
                     <FaKey className="text-accent text-xl mr-4" />
                     <div>
                       <div className="text-sm font-medium text-gray-500 mb-1">Password Status</div>
-                      <div className="text-lg font-medium text-gray-900">
-                        Last changed on {new Date().toLocaleDateString()}
+                      <div className="text-lg text-gray-900">
+                        Your password is secure
                       </div>
                     </div>
                   </div>
@@ -555,21 +459,21 @@ export default function ProfilePage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-primary mt-auto">
-        <div className="container mx-auto px-4 py-12">
+      <footer className="bg-primary mt-auto py-8">
+        <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-8 md:mb-0">
-              <h3 className="text-2xl font-display font-bold text-white">SAVORYCIRCLE</h3>
-              <p className="text-white/70">© {new Date().getFullYear()} All rights reserved</p>
+            <div className="mb-4 md:mb-0">
+              <h3 className="text-xl font-bold text-white">SAVORYCIRCLE</h3>
+              <p className="text-white/70 text-sm">© {new Date().getFullYear()} All rights reserved</p>
             </div>
-            <div className="flex gap-8">
-              <Link href="/" className="text-white/90 hover:text-white transition-colors">
+            <div className="flex gap-6">
+              <Link href="/" className="text-white/90 hover:text-white transition-colors text-sm">
                 Home
               </Link>
-              <Link href="/dashboard" className="text-white/90 hover:text-white transition-colors">
+              <Link href="/dashboard" className="text-white/90 hover:text-white transition-colors text-sm">
                 Dashboard
               </Link>
-              <Link href="/about" className="text-white/90 hover:text-white transition-colors">
+              <Link href="/about" className="text-white/90 hover:text-white transition-colors text-sm">
                 About
               </Link>
             </div>
