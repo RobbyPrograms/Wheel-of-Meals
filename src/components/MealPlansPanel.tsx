@@ -10,38 +10,11 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { User } from '@supabase/supabase-js';
 import { toast } from 'react-hot-toast';
-
-interface FavoriteFood {
-  id: string;
-  name: string;
-  ingredients: string;
-  meal_types: string[];
-}
-
-interface DayMeal {
-  breakfast: { name: string } | null;
-  lunch: { name: string } | null;
-  dinner: { name: string } | null;
-}
-
-interface WeeklyPlan {
-  [date: string]: DayMeal;
-}
-
-interface MealPlan {
-  id: string;
-  user_id: string;
-  name: string;
-  created_at: string;
-  start_date: string;
-  end_date: string;
-  plan: WeeklyPlan;
-  no_repeat: boolean;
-}
+import { DayMeal, WeeklyPlan, MealPlan, Meal, FavoriteFood } from '@/lib/types';
 
 type SelectingMeal = {
   day: string;
-  type: 'breakfast' | 'lunch' | 'dinner';
+  type: keyof DayMeal;
 } | null;
 
 interface MealPlansPanelProps {
@@ -50,6 +23,36 @@ interface MealPlansPanelProps {
   onMealPlanAdded?: () => void;
   user: User | null;
 }
+
+interface MealDisplayProps {
+  meal: Meal | null;
+  onSelect: () => void;
+  onRemove?: () => void;
+}
+
+const MealDisplay: React.FC<MealDisplayProps> = ({ meal, onSelect, onRemove }) => (
+  <div className="flex items-center justify-between hover:bg-gray-50 transition-colors">
+    <div className="flex-1">
+      <span className="text-gray-900">{meal?.name || 'No meal selected'}</span>
+    </div>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={onSelect}
+        className="text-sm text-[#2B5C40] hover:text-[#224931] font-medium"
+      >
+        {meal ? 'Change' : 'Add'}
+      </button>
+      {meal && onRemove && (
+        <button
+          onClick={onRemove}
+          className="text-sm text-red-500 hover:text-red-700 font-medium"
+        >
+          Remove
+        </button>
+      )}
+    </div>
+  </div>
+);
 
 export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user }: MealPlansPanelProps) {
   const { user: authUser } = useAuth();
@@ -125,14 +128,14 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
     loadData();
   }, [loadData]);
 
-  const getRandomFood = (foods: FavoriteFood[], mealType: keyof DayMeal): { name: string } | null => {
+  const getRandomFood = (foods: FavoriteFood[], mealType: keyof DayMeal): Meal | null => {
     const availableFoods = foods.filter(food => 
       Array.isArray(food.meal_types) && food.meal_types.includes(mealType)
     );
     
     if (availableFoods.length === 0) return null;
-    const randomIndex = Math.floor(Math.random() * availableFoods.length);
-    return { name: availableFoods[randomIndex].name };
+    const randomFood = availableFoods[Math.floor(Math.random() * availableFoods.length)];
+    return { id: randomFood.id, name: randomFood.name };
   };
 
   const generateMealPlan = () => {
@@ -332,6 +335,19 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
     }
   };
 
+  const formatDate = (dateStr: string | undefined): string => {
+    if (!dateStr) return 'Not set';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
   const renderSelectedPlan = () => {
     if (!selectedPlan) return null;
 
@@ -340,95 +356,33 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
 
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <button
-                onClick={() => setSelectedPlan(null)}
-                className="text-[#2B5C40] hover:text-[#224931] flex items-center text-sm"
-              >
-                <FaChevronLeft className="mr-1" />
-                Back to Meal Plans
-              </button>
-            </div>
-            <h2 className="text-xl font-semibold">{displayName}</h2>
-            <div className="text-sm text-gray-600 mt-1">
-              {new Date(selectedPlan.start_date).toLocaleDateString()} - {new Date(selectedPlan.end_date).toLocaleDateString()} • {selectedPlan.no_repeat ? 'No Repeats' : 'Repeats Allowed'}
-            </div>
-            <div className="text-sm text-gray-500">
-              Created: {new Date(selectedPlan.created_at).toLocaleDateString()}
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleSaveChanges}
-              disabled={isSaving}
-              className="px-4 py-2 bg-[#2B593F] text-white rounded-md hover:bg-[#1F4530] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              <FaSave className="text-sm" />
-              Save Changes
-            </button>
-            <button
-              onClick={() => exportMealPlan(selectedPlan)}
-              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors flex items-center gap-2 text-gray-700"
-            >
-              <FaRandom className="text-sm" />
-              Export CSV
-            </button>
-            <button
-              onClick={() => {
-                if (window.confirm('Are you sure you want to delete this meal plan?')) {
-                  deleteMealPlan(selectedPlan.id);
-                }
-              }}
-              className="px-4 py-2 text-red-600 hover:text-red-700 transition-colors flex items-center gap-2"
-            >
-              <FaTrash className="text-sm" />
-              Delete
-            </button>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">{displayName}</h2>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500">
+              {formatDate(selectedPlan.start_date)} - {formatDate(selectedPlan.end_date)}
+            </span>
+            <span className="text-sm text-gray-500">
+              {selectedPlan.no_repeat ? 'No repeats' : 'Repeats allowed'}
+            </span>
           </div>
         </div>
-
         <div className="space-y-4">
           {dates.map(date => (
             <div key={date} className="rounded-lg bg-white shadow-sm border border-gray-200">
               <div className="px-4 py-3 border-b bg-gray-50">
-                <h3 className="font-medium text-gray-900">{new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
+                <h3 className="font-medium text-gray-900">
+                  {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </h3>
               </div>
               <div className="divide-y">
-                {Object.entries(selectedPlan.plan[date]).map(([slot, meal]) => (
-                  <div key={slot} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                    <div className="flex-1">
-                      <span className="text-gray-600 font-medium capitalize">{slot}:</span>
-                      <span className="ml-2">{meal?.name || 'No meal selected'}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setSelectingMeal({ day: date, type: slot as keyof DayMeal })}
-                        className="bg-[#2B5C40] hover:bg-[#224931] text-white px-3 py-1.5 rounded-md text-sm transition-colors duration-200 flex items-center gap-2 min-w-[120px] justify-center"
-                      >
-                        {meal ? (
-                          <>
-                            <FaRandom className="text-xs" />
-                            Change Meal
-                          </>
-                        ) : (
-                          <>
-                            <FaPlus className="text-xs" />
-                            Add Meal
-                          </>
-                        )}
-                      </button>
-                      {meal && (
-                        <button
-                          onClick={() => handleRemoveMeal(date, slot as keyof DayMeal)}
-                          className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded-md transition-colors"
-                          title="Remove meal"
-                        >
-                          <FaTimes className="text-sm" />
-                        </button>
-                      )}
-                    </div>
+                {Object.entries(selectedPlan.plan[date]).map(([mealType, meal]) => (
+                  <div key={mealType} className="px-4 py-3">
+                    <MealDisplay
+                      meal={meal}
+                      onSelect={() => setSelectingMeal({ day: date, type: mealType as keyof DayMeal })}
+                      onRemove={() => handleMealChange(date, mealType as keyof DayMeal, null)}
+                    />
                   </div>
                 ))}
               </div>
@@ -509,7 +463,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
     setError(message);
   };
 
-  const handleMealChange = async (date: string, mealType: keyof DayMeal, meal: { name: string } | null) => {
+  const handleMealChange = async (date: string, mealType: keyof DayMeal, food: FavoriteFood | Meal | null) => {
     if (!selectedPlan || !currentMealPlan) return;
 
     try {
@@ -527,6 +481,9 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
           dinner: null
         };
       }
+
+      // Convert to Meal type
+      const meal: Meal | null = food ? { id: food.id, name: food.name } : null;
 
       // Update the specific meal
       updatedPlan[date][mealType] = meal;
@@ -1072,115 +1029,43 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
             onClose={() => setSelectingMeal(null)}
             className="fixed inset-0 z-[60] overflow-y-auto"
           >
-            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-              <Dialog.Overlay 
-                className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
-                aria-hidden="true"
-              />
-
-              <div className="relative inline-block w-full max-w-lg p-6 my-8 text-left align-middle transition-all transform bg-white shadow-xl rounded-xl border border-gray-100">
-                <div className="absolute top-0 right-0 pt-4 pr-4">
-                  <button
-                    type="button"
-                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
-                    onClick={() => setSelectingMeal(null)}
-                  >
-                    <span className="sr-only">Close</span>
-                    <FaTimes className="h-5 w-5" aria-hidden="true" />
-                  </button>
-                </div>
-
-                <div className="mb-6">
-                  <Dialog.Title as="h3" className="text-xl font-semibold text-[#2B5C40]">
-                    {selectingMeal.type === 'breakfast' ? 'Select Breakfast' :
-                     selectingMeal.type === 'lunch' ? 'Select Lunch' :
-                     'Select Dinner'} for {new Date(selectingMeal.day).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            <div className="flex items-center justify-center min-h-screen">
+              <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
+              <div className="relative bg-white rounded-lg max-w-lg w-full mx-4 p-6">
+                <div className="mb-4">
+                  <Dialog.Title className="text-lg font-medium text-gray-900">
+                    Select {selectingMeal.type} for {formatDate(selectingMeal.day)}
                   </Dialog.Title>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Choose from your favorite meals or search for a specific one.
-                  </p>
-                </div>
-
-                <div className="mb-6">
-                  <div className="relative">
+                  <div className="mt-2">
                     <input
                       type="text"
                       placeholder="Search meals..."
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2B5C40]/20 focus:border-[#2B5C40] transition-colors"
+                      value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2B5C40] focus:border-transparent"
                     />
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                      </svg>
-                    </div>
                   </div>
                 </div>
-
-                <div className="max-h-[400px] overflow-y-auto pr-2 -mr-2">
-                  <div className="space-y-1">
-                    {favoriteFoods
-                      .filter(food => 
-                        food.name.toLowerCase().includes(searchTerm.toLowerCase())
-                      )
-                      .map(food => (
-                        <button
-                          key={food.id}
-                          onClick={() => {
-                            handleMealChange(selectingMeal.day, selectingMeal.type, { name: food.name });
-                            setSelectingMeal(null);
-                          }}
-                          className="w-full text-left px-4 py-3 rounded-lg hover:bg-[#2B5C40]/5 focus:bg-[#2B5C40]/10 transition-colors duration-150 group"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="font-medium text-gray-900 group-hover:text-[#2B5C40]">
-                                {food.name}
-                              </span>
-                              {Array.isArray(food.meal_types) && food.meal_types.length > 0 && (
-                                <div className="mt-1 flex gap-2">
-                                  {food.meal_types.map(type => (
-                                    <span
-                                      key={type}
-                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#2B5C40]/10 text-[#2B5C40]"
-                                    >
-                                      {type}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              <FaChevronRight className="h-4 w-4 text-[#2B5C40]" aria-hidden="true" />
-                            </div>
+                <div className="max-h-[400px] overflow-y-auto">
+                  {favoriteFoods
+                    .filter(food => food.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                    .map(food => (
+                      <button
+                        key={food.id}
+                        onClick={() => {
+                          handleMealChange(selectingMeal.day, selectingMeal.type, food);
+                          setSelectingMeal(null);
+                        }}
+                        className="w-full text-left p-3 hover:bg-gray-50 rounded-lg"
+                      >
+                        <span className="font-medium">{food.name}</span>
+                        {food.meal_types && (
+                          <div className="text-sm text-gray-500 mt-1">
+                            {food.meal_types.join(', ')}
                           </div>
-                        </button>
-                      ))}
-                  </div>
-
-                  {favoriteFoods.length === 0 && (
-                    <div className="text-center py-8">
-                      <div className="mx-auto h-12 w-12 text-[#2B5C40]">
-                        <FaUtensils className="h-12 w-12 opacity-20" />
-                      </div>
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">No meals available</h3>
-                      <p className="mt-1 text-sm text-gray-500">
-                        Get started by adding some meals to your favorites.
-                      </p>
-                      <div className="mt-6">
-                        <button
-                          onClick={() => {
-                            setSelectingMeal(null);
-                            // Add navigation to My Foods section here if needed
-                          }}
-                          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#2B5C40] hover:bg-[#224931] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2B5C40]"
-                        >
-                          <FaPlus className="-ml-1 mr-2 h-4 w-4" aria-hidden="true" />
-                          Add New Meal
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                        )}
+                      </button>
+                    ))}
                 </div>
               </div>
             </div>

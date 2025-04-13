@@ -1,29 +1,33 @@
 // Shared type definitions for the application
 
-export type FavoriteFood = {
+export type Meal = {
   id: string;
   name: string;
-  ingredients: string[];
+};
+
+export type FavoriteFood = Meal & {
+  ingredients: string;
   meal_types: string[];
   severity: number;
 };
 
 export type DayMeal = {
-  breakfast: { name: string } | null;
-  lunch: { name: string } | null;
-  dinner: { name: string } | null;
+  breakfast: Meal | null;
+  lunch: Meal | null;
+  dinner: Meal | null;
 };
 
 export type WeeklyPlan = {
-  [key: string]: DayMeal;
+  [date: string]: DayMeal;
 };
 
 export type MealPlan = {
   id: string;
   name: string;
-  created_at: string;
+  user_id: string;
   start_date: string;
   end_date: string;
   plan: WeeklyPlan;
+  created_at: string;
   no_repeat: boolean;
 }; 
