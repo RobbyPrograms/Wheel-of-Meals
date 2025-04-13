@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { FaSpinner, FaPlus, FaCheck, FaFilter, FaUserPlus } from 'react-icons/fa';
+import { FaSpinner, FaPlus, FaCheck, FaFilter, FaUserPlus, FaArrowLeft } from 'react-icons/fa';
 import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
 
@@ -45,7 +45,7 @@ export default function UserProfilePage() {
     if (username) {
       fetchProfile();
     }
-  }, [username]);
+  }, [username, user]);
 
   const fetchProfile = async () => {
     try {
@@ -62,21 +62,24 @@ export default function UserProfilePage() {
       if (profileError) throw profileError;
       if (!profileData) throw new Error('Profile not found');
 
-      // If logged in, get friend status
+      // Get friend statuses exactly like explore page
       if (user && user.id !== profileData.id) {
-        const { data: friendData, error: friendError } = await supabase
+        const { data: friendsData, error: friendsError } = await supabase
           .from('friends')
           .select('*')
-          .or(`and(user_id.eq.${user.id},friend_id.eq.${profileData.id}),and(user_id.eq.${profileData.id},friend_id.eq.${user.id})`)
-          .single();
+          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
 
-        if (friendError && !friendError.message.includes('No rows found')) {
-          throw friendError;
-        }
+        if (friendsError) {
+          console.error('Error fetching friend statuses:', friendsError);
+        } else {
+          // Find friend status for this profile
+          const friendRelation = friendsData?.find(f => 
+            (f.user_id === user.id && f.friend_id === profileData.id) ||
+            (f.friend_id === user.id && f.user_id === profileData.id)
+          );
 
-        if (friendData) {
-          profileData.friend_status = friendData.status;
-          profileData.is_friend_request_sender = friendData.user_id === user.id;
+          profileData.friend_status = friendRelation?.status || null;
+          profileData.is_friend_request_sender = friendRelation ? friendRelation.user_id === user.id : false;
         }
       }
 
@@ -86,7 +89,8 @@ export default function UserProfilePage() {
       const { data: foodsData, error: foodsError } = await supabase
         .from('favorite_foods')
         .select('*')
-        .eq('user_id', profileData.id);
+        .eq('user_id', profileData.id)
+        .eq('visibility', 'public');
 
       if (foodsError) throw foodsError;
       setFavoriteFoods(foodsData || []);
@@ -162,6 +166,7 @@ export default function UserProfilePage() {
         .insert([{
           user_id: user.id,
           friend_id: profile.id,
+          status: 'pending'
         }]);
 
       if (addError) throw addError;
@@ -178,7 +183,7 @@ export default function UserProfilePage() {
 
     } catch (err) {
       console.error('Error sending friend request:', err);
-      setError(`Failed to send friend request to ${profile.username}. Please try again.`);
+      setError('Failed to send friend request. Please try again.');
     } finally {
       setSendingFriendRequest(false);
     }
@@ -209,7 +214,7 @@ export default function UserProfilePage() {
 
     } catch (err) {
       console.error('Error accepting friend request:', err);
-      setError(`Failed to accept friend request from ${profile.username}. Please try again.`);
+      setError('Failed to accept friend request. Please try again.');
     } finally {
       setSendingFriendRequest(false);
     }
@@ -239,8 +244,12 @@ export default function UserProfilePage() {
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <p className="text-red-500 mb-4">{error || 'Profile not found'}</p>
-            <Link href="/dashboard" className="text-accent hover:underline">
-              Back to Dashboard
+            <Link 
+              href="/dashboard/explore" 
+              className="text-[#319141] hover:text-[#0F1E0F] transition-colors flex items-center gap-2"
+            >
+              <FaArrowLeft />
+              Back to Explore
             </Link>
           </div>
         </div>
@@ -253,44 +262,33 @@ export default function UserProfilePage() {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <Link
-              href="/dashboard"
-              className="text-text-secondary hover:text-primary transition-colors inline-flex items-center gap-2"
+            <Link 
+              href="/dashboard/explore" 
+              className="text-[#319141] hover:text-[#0F1E0F] transition-colors flex items-center gap-2"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Back to Dashboard
+              <FaArrowLeft />
+              Back to Explore
             </Link>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
+          <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                 {profile.avatar_url ? (
                   <img
                     src={profile.avatar_url}
                     alt={profile.username}
-                    className="w-20 h-20 rounded-full"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center">
-                    <span className="text-2xl text-accent">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-accent/10 rounded-full flex-shrink-0 flex items-center justify-center">
+                    <span className="text-xl sm:text-2xl text-accent">
                       {profile.display_name?.[0] || profile.username[0].toUpperCase()}
                     </span>
                   </div>
                 )}
-                <div>
-                  <h1 className="text-2xl font-bold text-primary">
+                <div className="text-center sm:text-left">
+                  <h1 className="text-xl sm:text-2xl font-bold text-primary">
                     {profile.display_name || profile.username}
                   </h1>
                   <p className="text-text-secondary">@{profile.username}</p>
@@ -299,19 +297,19 @@ export default function UserProfilePage() {
 
               {/* Friend Status/Actions */}
               {user && user.id !== profile.id && (
-                <div className="flex items-center gap-2">
+                <div className="flex justify-center sm:justify-start items-center gap-2">
                   {profile.friend_status === 'accepted' ? (
-                    <span className="text-sm text-accent flex items-center gap-1">
+                    <span className="text-sm text-accent flex items-center gap-1 bg-accent/10 px-3 py-1.5 rounded-full">
                       <FaCheck className="text-xs" /> Friends
                     </span>
                   ) : profile.friend_status === 'pending' ? (
                     profile.is_friend_request_sender ? (
-                      <span className="text-sm text-text-secondary">Request sent</span>
+                      <span className="text-sm text-text-secondary bg-gray-100 px-3 py-1.5 rounded-full">Request sent</span>
                     ) : (
                       <button
                         onClick={handleAcceptFriend}
                         disabled={sendingFriendRequest}
-                        className="text-sm bg-accent text-white px-3 py-1 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-1"
+                        className="text-sm bg-accent text-white px-4 py-1.5 rounded-full hover:bg-accent/90 transition-colors flex items-center gap-1 w-full sm:w-auto justify-center"
                       >
                         {sendingFriendRequest ? (
                           <FaSpinner className="animate-spin" />
@@ -326,7 +324,7 @@ export default function UserProfilePage() {
                     <button
                       onClick={handleFriendRequest}
                       disabled={sendingFriendRequest}
-                      className="text-sm bg-accent/10 text-accent px-3 py-1 rounded-md hover:bg-accent/20 transition-colors flex items-center gap-1"
+                      className="text-sm bg-accent/10 text-accent px-4 py-1.5 rounded-full hover:bg-accent/20 transition-colors flex items-center gap-1 w-full sm:w-auto justify-center"
                     >
                       {sendingFriendRequest ? (
                         <FaSpinner className="animate-spin" />
@@ -342,52 +340,46 @@ export default function UserProfilePage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-primary">Favorite Meals</h2>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <button
-                    className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent rounded-lg hover:bg-accent/20 transition-colors"
-                  >
-                    <FaFilter className="text-sm" />
-                    <span>Filter</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Meal Type Filters */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              {mealTypeOptions.map(type => (
-                <button
-                  key={type}
-                  onClick={() => {
-                    if (selectedMealTypes.includes(type)) {
-                      setSelectedMealTypes(prev => prev.filter(t => t !== type));
-                    } else {
-                      setSelectedMealTypes(prev => [...prev, type]);
-                    }
-                  }}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedMealTypes.includes(type)
-                      ? 'bg-accent text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </button>
-              ))}
-              {selectedMealTypes.length > 0 && (
+          {/* Filter Section */}
+          <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <h2 className="text-lg font-semibold text-primary">Favorite Meals</h2>
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => setSelectedMealTypes([])}
-                  className="px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:text-accent transition-colors"
+                  className={`text-sm px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 ${
+                    selectedMealTypes.length === 0
+                      ? 'bg-accent text-white'
+                      : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                  }`}
                 >
-                  Clear All
+                  <FaFilter className="text-xs" /> All
                 </button>
-              )}
+                {mealTypeOptions.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      if (selectedMealTypes.includes(type)) {
+                        setSelectedMealTypes(prev => prev.filter(t => t !== type));
+                      } else {
+                        setSelectedMealTypes(prev => [...prev, type]);
+                      }
+                    }}
+                    className={`text-sm px-3 py-1.5 rounded-full transition-colors capitalize ${
+                      selectedMealTypes.includes(type)
+                        ? 'bg-accent text-white'
+                        : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
             </div>
+          </div>
 
+          {/* Meals Grid */}
+          <div className="bg-white rounded-xl shadow-md p-4 sm:p-6">
             {filteredFoods.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-text-secondary">
@@ -397,13 +389,13 @@ export default function UserProfilePage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {filteredFoods.map((food) => (
                   <div 
                     key={food.id} 
                     className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                   >
-                    <div className="p-6">
+                    <div className="p-4 sm:p-6">
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <h3 className="text-lg font-semibold text-primary mb-2">{food.name}</h3>
@@ -411,30 +403,25 @@ export default function UserProfilePage() {
                             {food.meal_types.map(type => (
                               <span
                                 key={type}
-                                className="px-2 py-1 bg-accent/10 text-accent rounded-md text-xs font-medium"
+                                className="px-2 py-1 bg-accent/10 text-accent rounded-full text-xs font-medium"
                               >
                                 {type.charAt(0).toUpperCase() + type.slice(1)}
                               </span>
                             ))}
                           </div>
                         </div>
-                        {user && user.id !== profile.id && (
+                        {user && user.id !== profile.id && !addedFoods.has(food.name) && (
                           <button
                             onClick={() => addToMyFoods(food)}
-                            disabled={addingFood === food.id || addedFoods.has(food.name)}
-                            className={`p-2 rounded-full transition-colors ${
-                              addedFoods.has(food.name)
-                                ? 'text-green-500 bg-green-50'
-                                : 'text-accent hover:bg-accent/10'
-                            }`}
-                            title={addedFoods.has(food.name) ? "Added to your meals" : "Add to your meals"}
+                            disabled={addingFood === food.id}
+                            className="flex-shrink-0 text-sm bg-accent/10 text-accent px-3 py-1.5 rounded-full hover:bg-accent/20 transition-colors flex items-center gap-1"
                           >
                             {addingFood === food.id ? (
                               <FaSpinner className="animate-spin" />
-                            ) : addedFoods.has(food.name) ? (
-                              <FaCheck />
                             ) : (
-                              <FaPlus />
+                              <>
+                                <FaPlus className="text-xs" /> Add
+                              </>
                             )}
                           </button>
                         )}
@@ -447,7 +434,7 @@ export default function UserProfilePage() {
                             {food.ingredients.map((ingredient, idx) => (
                               <span
                                 key={idx}
-                                className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-sm"
+                                className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
                               >
                                 {ingredient}
                               </span>
@@ -457,7 +444,61 @@ export default function UserProfilePage() {
 
                         <div>
                           <h4 className="font-medium text-gray-700 mb-2">Recipe</h4>
-                          <p className="text-gray-600 text-sm whitespace-pre-wrap">{food.recipe}</p>
+                          <div className="space-y-2">
+                            {(() => {
+                              try {
+                                let steps: string[] = [];
+                                
+                                if (Array.isArray(food.recipe)) {
+                                  steps = food.recipe;
+                                } else if (typeof food.recipe === 'string') {
+                                  // Try to parse if it's a JSON string
+                                  if (food.recipe.startsWith('[') && food.recipe.endsWith(']')) {
+                                    steps = JSON.parse(food.recipe);
+                                  } else {
+                                    // Split by newlines or periods
+                                    steps = food.recipe
+                                      .split(/(?:\r?\n|\.(?=\s|$))/)
+                                      .map(step => step.trim())
+                                      .filter(step => step.length > 0);
+                                  }
+                                }
+
+                                return steps.map((step, idx) => {
+                                  // Clean the step text
+                                  let cleanedStep = step;
+                                  if (typeof cleanedStep === 'string') {
+                                    // Remove quotes if present
+                                    if (cleanedStep.startsWith('"') && cleanedStep.endsWith('"')) {
+                                      cleanedStep = cleanedStep.substring(1, cleanedStep.length - 1);
+                                    }
+                                    // Remove brackets if present
+                                    cleanedStep = cleanedStep.replace(/^\[|\]$/g, '');
+                                    // Remove any leading quotes or special characters
+                                    cleanedStep = cleanedStep.replace(/^["'`]|["'`]$/g, '');
+                                    // Remove backslashes
+                                    cleanedStep = cleanedStep.replace(/\\/g, '');
+                                    // Remove any "Step X:" prefixes
+                                    cleanedStep = cleanedStep.replace(/^(Step\s*\d+:?\s*)/i, '');
+                                    // Trim whitespace
+                                    cleanedStep = cleanedStep.trim();
+                                  }
+                                  
+                                  return (
+                                    <div key={idx} className="flex items-start gap-3">
+                                      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm font-medium">
+                                        {idx + 1}
+                                      </div>
+                                      <p className="text-gray-600 text-sm flex-1 pt-1">{cleanedStep}</p>
+                                    </div>
+                                  );
+                                });
+                              } catch (error) {
+                                console.error('Error parsing recipe:', error);
+                                return <p className="text-text-secondary text-sm">Recipe format not supported</p>;
+                              }
+                            })()}
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -76,18 +76,6 @@ export default function DashboardSidebar() {
           ))}
         </ul>
       </nav>
-      
-      <div className="mt-8 pt-6 border-t border-border">
-        <div className="bg-accent bg-opacity-5 p-4">
-          <div className="text-xs uppercase tracking-wider text-text-secondary mb-2">
-            SAVED MEALS
-          </div>
-          <div className="flex justify-between items-center">
-            <div className="text-2xl font-medium text-accent">12</div>
-            <div className="badge bg-accent bg-opacity-10 text-accent px-2 py-0.5">+3 this week</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 } 

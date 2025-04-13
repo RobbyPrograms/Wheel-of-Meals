@@ -5,8 +5,10 @@ import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { FaUtensils, FaDharmachakra, FaCalendarAlt, FaLightbulb, FaHeart, FaUsers, FaRocket, FaShare, FaComments, FaStar, FaBookOpen, FaCheckCircle, FaArrowRight, FaUser } from 'react-icons/fa';
+import { useAuth } from '@/lib/auth-context';
 
 export default function AboutPage() {
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const { scrollY } = useScroll();
   
@@ -157,10 +159,10 @@ export default function AboutPage() {
             transition={{ duration: 0.8, delay: 0.4 }}
           >
             <Link 
-              href="/auth"
+              href={user ? "/dashboard" : "/signup"}
               className="inline-flex items-center px-8 py-4 bg-[#319141] text-white rounded-full text-lg font-semibold hover:bg-[#1B3523] transition-colors duration-300"
             >
-              Get Started Free <FaArrowRight className="ml-2" />
+              {user ? "Go to Dashboard" : "Get Started Free"} <FaArrowRight className="ml-2" />
             </Link>
           </motion.div>
         </motion.div>
@@ -346,10 +348,10 @@ export default function AboutPage() {
             transition={{ delay: 0.4 }}
           >
             <Link 
-              href="/auth"
+              href={user ? "/dashboard" : "/signup"}
               className="inline-flex items-center px-8 py-4 bg-white text-[#319141] rounded-full text-lg font-semibold hover:bg-gray-100 transition-colors duration-300"
             >
-              Get Started Free <FaArrowRight className="ml-2" />
+              {user ? "Go to Dashboard" : "Get Started Free"} <FaArrowRight className="ml-2" />
             </Link>
           </motion.div>
         </div>
