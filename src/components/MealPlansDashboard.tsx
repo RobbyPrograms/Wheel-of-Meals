@@ -7,26 +7,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import MealPlansSlideover from './MealPlansSlideover';
 import MealPlanForm from './MealPlanForm';
 import MealPlanEditor from './MealPlanEditor';
+import { MealPlan, DayMeal, WeeklyPlan } from '@/lib/types';
 
-type DayMeal = {
-  breakfast: { name: string } | null;
-  lunch: { name: string } | null;
-  dinner: { name: string } | null;
-};
-
-type WeeklyPlan = {
-  [key: string]: DayMeal;
-};
-
-type MealPlan = {
-  id: string;
-  name: string;
-  created_at: string;
-  start_date: string;
-  end_date: string;
-  plan: WeeklyPlan;
-  no_repeat: boolean;
-};
+interface MealPlansDashboardProps {
+  mealPlans: MealPlan[];
+  onMealPlanChange?: (mealPlan: MealPlan) => void;
+  onMealPlanDelete?: (mealPlan: MealPlan) => void;
+}
 
 export default function MealPlansDashboard() {
   const { user } = useAuth();
