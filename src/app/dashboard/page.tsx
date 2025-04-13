@@ -668,9 +668,10 @@ export default function Dashboard() {
               />
               
               <MealPlansPanel 
-                isOpen={isMealPlansPanelOpen} 
-                onClose={handleMealPlansPanelClose} 
+                isOpen={isMealPlansPanelOpen}
+                onClose={handleMealPlansPanelClose}
                 onMealPlanAdded={handleDataUpdated}
+                user={user}
               />
 
               {/* AI Suggestions Modal */}
