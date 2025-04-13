@@ -584,96 +584,104 @@ export default function ExplorePage() {
 
               {/* Post Header */}
               <div className="p-4 border-b border-gray-100">
-                <div className="flex items-center justify-between">
-                  <Link 
-                    href={`/profile/${post.username}`}
-                    className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                      {post.avatar_url ? (
-                        <img
-                          src={post.avatar_url}
-                          alt={post.username}
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      ) : (
-                        <FaUser className="text-accent" />
+                <div className="flex flex-col gap-3">
+                  {/* User Info Row */}
+                  <div className="flex items-start justify-between gap-3">
+                    <Link 
+                      href={`/profile/${post.username}`}
+                      className="flex items-start gap-3 hover:opacity-80 transition-opacity min-w-0"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-accent/10 flex-shrink-0 flex items-center justify-center">
+                        {post.avatar_url ? (
+                          <img
+                            src={post.avatar_url}
+                            alt={post.username}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <FaUser className="text-accent" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-primary hover:text-[#2B5C40] transition-colors truncate">
+                          {post.display_name || post.username}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                          <span className="text-text-secondary truncate">@{post.username}</span>
+                          {post.friend_status === 'accepted' && (
+                            <span className="text-accent flex items-center gap-1 whitespace-nowrap">
+                              <FaCheck className="text-xs" /> Friends
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                    <div className="flex items-start gap-2 flex-shrink-0">
+                      {user && post.user_id === user.id && (
+                        <div className="relative">
+                          <button
+                            onClick={() => setDeleteConfirm(deleteConfirm === post.id ? null : post.id)}
+                            className="text-text-secondary hover:text-primary transition-colors p-1"
+                          >
+                            <FaEllipsisV />
+                          </button>
+                          {deleteConfirm === post.id && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
+                              <button
+                                onClick={() => handleDeletePost(post.id)}
+                                className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
+                              >
+                                <FaTrash className="text-xs" />
+                                Delete Post
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
+                      <div className="text-sm text-text-secondary whitespace-nowrap">
+                        {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-primary hover:text-[#2B5C40] transition-colors">
-                        {post.display_name || post.username}
-                      </p>
-                      <p className="text-sm text-text-secondary">@{post.username}</p>
-                    </div>
-                  </Link>
-                  <div className="flex items-center gap-4">
-                    {user && post.user_id !== user.id && (
-                      <div className="flex items-center gap-2">
-                        {post.friend_status === 'accepted' ? (
-                          <span className="text-sm text-accent flex items-center gap-1">
-                            <FaCheck className="text-xs" /> Friends
-                          </span>
-                        ) : post.friend_status === 'pending' ? (
-                          post.is_friend_request_sender ? (
-                            <span className="text-sm text-text-secondary">Request sent</span>
-                          ) : (
-                            <button
-                              onClick={() => handleAcceptFriend(post.user_id, post.username)}
-                              disabled={sendingFriendRequest === post.user_id}
-                              className="text-sm bg-accent text-white px-3 py-1 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-1"
-                            >
-                              {sendingFriendRequest === post.user_id ? (
-                                <FaSpinner className="animate-spin" />
-                              ) : (
-                                <>
-                                  <FaCheck className="text-xs" /> Accept
-                                </>
-                              )}
-                            </button>
-                          )
+                  </div>
+                  
+                  {/* Friend Request Button Row */}
+                  {user && post.user_id !== user.id && post.friend_status !== 'accepted' && (
+                    <div className="flex items-center gap-2">
+                      {post.friend_status === 'pending' ? (
+                        post.is_friend_request_sender ? (
+                          <span className="text-sm text-text-secondary">Request sent</span>
                         ) : (
                           <button
-                            onClick={() => handleFriendRequest(post.user_id, post.username)}
+                            onClick={() => handleAcceptFriend(post.user_id, post.username)}
                             disabled={sendingFriendRequest === post.user_id}
-                            className="text-sm bg-accent/10 text-accent px-3 py-1 rounded-md hover:bg-accent/20 transition-colors flex items-center gap-1"
+                            className="text-sm bg-accent text-white px-3 py-1 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-1"
                           >
                             {sendingFriendRequest === post.user_id ? (
                               <FaSpinner className="animate-spin" />
                             ) : (
                               <>
-                                <FaUserPlus className="text-xs" /> Add Friend
+                                <FaCheck className="text-xs" /> Accept
                               </>
                             )}
                           </button>
-                        )}
-                      </div>
-                    )}
-                    {user && post.user_id === user.id && (
-                      <div className="relative">
+                        )
+                      ) : (
                         <button
-                          onClick={() => setDeleteConfirm(deleteConfirm === post.id ? null : post.id)}
-                          className="text-text-secondary hover:text-primary transition-colors p-1"
+                          onClick={() => handleFriendRequest(post.user_id, post.username)}
+                          disabled={sendingFriendRequest === post.user_id}
+                          className="text-sm bg-accent/10 text-accent px-3 py-1 rounded-md hover:bg-accent/20 transition-colors flex items-center gap-1"
                         >
-                          <FaEllipsisV />
+                          {sendingFriendRequest === post.user_id ? (
+                            <FaSpinner className="animate-spin" />
+                          ) : (
+                            <>
+                              <FaUserPlus className="text-xs" /> Add Friend
+                            </>
+                          )}
                         </button>
-                        {deleteConfirm === post.id && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
-                            <button
-                              onClick={() => handleDeletePost(post.id)}
-                              className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
-                            >
-                              <FaTrash className="text-xs" />
-                              Delete Post
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="text-sm text-text-secondary">
-                      {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                      )}
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
