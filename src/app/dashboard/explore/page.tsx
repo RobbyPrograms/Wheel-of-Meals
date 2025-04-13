@@ -649,6 +649,27 @@ export default function ExplorePage() {
                         )}
                       </div>
                     )}
+                    {user && post.user_id === user.id && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setDeleteConfirm(deleteConfirm === post.id ? null : post.id)}
+                          className="text-text-secondary hover:text-primary transition-colors p-1"
+                        >
+                          <FaEllipsisV />
+                        </button>
+                        {deleteConfirm === post.id && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
+                            <button
+                              onClick={() => handleDeletePost(post.id)}
+                              className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
+                            >
+                              <FaTrash className="text-xs" />
+                              Delete Post
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="text-sm text-text-secondary">
                       {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                     </div>
