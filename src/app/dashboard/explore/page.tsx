@@ -194,11 +194,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                         <FaUtensils />
                         {food.meal_types?.[0] || 'Any meal'}
                       </span>
-                      {food.visibility === 'private' && (
-                        <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                          Private
-                        </span>
-                      )}
                     </div>
                   </button>
                 ))}
@@ -696,11 +691,6 @@ export default function ExplorePage() {
                         ? post.food_meal_types[0]
                         : 'Any meal'}
                     </span>
-                    {post.food_visibility === 'private' && (
-                      <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                        Private
-                      </span>
-                    )}
                   </div>
                 </div>
 

@@ -87,7 +87,7 @@ export default function HomePage() {
                 </p>
                 <p className="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed">
                   Discover your next favorite meal with our intelligent food selection and 
-                  meal planning platform. No more decision fatigue when it comes to what to eat.
+                  meal planning platform, connect with friends, and share recipes. No more decision fatigue when it comes to what to eat.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row justify-center gap-6 transform transition-transform duration-500 mb-12"
