@@ -9,6 +9,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { User } from '@supabase/supabase-js';
+import { toast } from 'react-hot-toast';
 
 interface FavoriteFood {
   id: string;
@@ -591,47 +592,36 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
     setError(message);
   };
 
-  const handleMealChange = async (date: string, mealType: 'breakfast' | 'lunch' | 'dinner', meal: FavoriteFood) => {
-    if (!selectedPlan) return;
+  const handleMealChange = async (date: string, mealType: keyof DayMeal, meal: FavoriteFood | null) => {
+    if (!selectedPlan || !currentMealPlan) return;
 
     try {
-      setLoading(true);
-      const updatedPlan = { ...selectedPlan };
-      if (!updatedPlan.plan[date]) {
-        updatedPlan.plan[date] = {
+      setIsSaving(true);
+      setError(null);
+
+      // Create a deep copy of the current meal plan
+      const updatedPlan = JSON.parse(JSON.stringify(currentMealPlan));
+
+      // Update the specific meal
+      if (!updatedPlan[date]) {
+        updatedPlan[date] = {
           breakfast: null,
           lunch: null,
           dinner: null
         };
       }
-      updatedPlan.plan[date][mealType] = meal;
+      updatedPlan[date][mealType] = meal;
 
       // Update the meal plan in the database
-      const { error: updateError } = await supabase
-        .from('meal_plans')
-        .update({ 
-          plan: updatedPlan.plan,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedPlan.id);
-
-      if (updateError) throw updateError;
+      await updateMealPlan(selectedPlan.id, updatedPlan);
 
       // Update local state
-      setSelectedPlan(updatedPlan);
-      setMealPlans(prevPlans => 
-        prevPlans.map(plan => 
-          plan.id === updatedPlan.id ? updatedPlan : plan
-        )
-      );
-      setSuccess('Meal updated successfully');
-      
-      // Refresh the data
-      await loadData();
+      setCurrentMealPlan(updatedPlan);
+      toast.success('Meal updated successfully');
     } catch (err) {
       handleError(err);
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
