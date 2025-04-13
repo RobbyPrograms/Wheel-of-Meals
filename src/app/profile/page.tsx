@@ -6,11 +6,13 @@ import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import { FaUser, FaEnvelope, FaCalendarAlt, FaEdit, FaKey, FaSave, FaTimes } from 'react-icons/fa';
 import { supabase } from '@/lib/supabase';
+import AvatarUpload from '@/components/AvatarUpload';
 
 type ProfileData = {
   name: string;
   email: string;
   username: string;
+  avatar_url: string | null;
 };
 
 export default function ProfilePage() {
@@ -20,7 +22,8 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState<ProfileData>({
     name: '',
     email: '',
-    username: ''
+    username: '',
+    avatar_url: null
   });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -42,7 +45,8 @@ export default function ProfilePage() {
       setProfileData({
         name: user.user_metadata?.name || '',
         email: user.email || '',
-        username: ''
+        username: '',
+        avatar_url: user.user_metadata?.avatar_url || null
       });
       fetchUserProfile();
     }
@@ -54,7 +58,7 @@ export default function ProfilePage() {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('username')
+        .select('username, avatar_url')
         .eq('id', user.id)
         .single();
 
@@ -63,7 +67,8 @@ export default function ProfilePage() {
       if (data) {
         setProfileData(prev => ({
           ...prev,
-          username: data.username
+          username: data.username,
+          avatar_url: data.avatar_url
         }));
       }
     } catch (err) {
@@ -104,6 +109,8 @@ export default function ProfilePage() {
         .from('user_profiles')
         .update({
           username: profileData.username,
+          name: profileData.name,
+          avatar_url: profileData.avatar_url,
           updated_at: new Date().toISOString()
         })
         .eq('id', user?.id);
@@ -181,6 +188,49 @@ export default function ProfilePage() {
     }
   };
 
+  const handleAvatarUpload = async (url: string) => {
+    if (!user) return;
+    
+    try {
+      // Update user_profiles table with new avatar_url
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({
+          avatar_url: url,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+      
+      setProfileData(prev => ({
+        ...prev,
+        avatar_url: url
+      }));
+      
+      setNotification({
+        type: 'success',
+        message: 'Profile picture updated successfully!'
+      });
+      
+      // Clear notification after 3 seconds
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to update profile picture. Please try again.'
+      });
+      
+      // Clear notification after 3 seconds
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+    }
+  };
+
   if (!mounted || loading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -247,7 +297,7 @@ export default function ProfilePage() {
           {/* Account Information Card */}
           <div className="bg-white/95 backdrop-blur-xl shadow-xl rounded-2xl overflow-hidden border border-gray-100">
             <div className="p-8">
-              <div className="flex justify-between items-center mb-8">
+              <div className="flex justify-between items-start mb-8">
                 <div>
                   <h2 className="text-2xl font-bold text-primary mb-2">Account Information</h2>
                   <p className="text-text-secondary text-sm">Update your personal information</p>
@@ -274,119 +324,131 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              {isEditing ? (
-                <form onSubmit={handleProfileSubmit} className="space-y-6">
-                  <div>
-                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                      Username
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <FaUser className="text-accent" />
-                      </div>
-                      <input
-                        type="text"
-                        id="username"
-                        name="username"
-                        value={profileData.username || ''}
-                        onChange={handleProfileChange}
-                        className="pl-11 w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
-                        placeholder="Your username"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                      Name
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <FaUser className="text-accent" />
-                      </div>
-                      <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={profileData.name}
-                        onChange={handleProfileChange}
-                        className="pl-11 w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
-                        placeholder="Your name"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                      Email
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <FaEnvelope className="text-accent" />
-                      </div>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={profileData.email}
-                        onChange={handleProfileChange}
-                        className="pl-11 w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
-                        placeholder="Your email"
-                        disabled
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end pt-4">
-                    <button
-                      type="submit"
-                      className="btn-primary px-6"
-                    >
-                      <FaSave className="mr-2" />
-                      Save Changes
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="space-y-8">
-                  <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                    <FaUser className="text-accent text-xl mr-4" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-500 mb-1">Username</div>
-                      <div className="text-lg font-medium text-gray-900">
-                        {profileData.username || 'Not set'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                    <FaUser className="text-accent text-xl mr-4" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-500 mb-1">Name</div>
-                      <div className="text-lg font-medium text-gray-900">
-                        {profileData.name || 'Not set'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                    <FaEnvelope className="text-accent text-xl mr-4" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-500 mb-1">Email</div>
-                      <div className="text-lg font-medium text-gray-900">
-                        {profileData.email}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-                    <FaCalendarAlt className="text-accent text-xl mr-4" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-500 mb-1">Account Created</div>
-                      <div className="text-lg font-medium text-gray-900">
-                        {new Date().toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
+              <div className="flex flex-col md:flex-row gap-8">
+                <div className="flex-shrink-0">
+                  <AvatarUpload
+                    url={profileData.avatar_url}
+                    onUpload={handleAvatarUpload}
+                    size={150}
+                  />
                 </div>
-              )}
+
+                <div className="flex-grow">
+                  {isEditing ? (
+                    <form onSubmit={handleProfileSubmit} className="space-y-6">
+                      <div>
+                        <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                          Username
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <FaUser className="text-accent" />
+                          </div>
+                          <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            value={profileData.username || ''}
+                            onChange={handleProfileChange}
+                            className="pl-11 w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
+                            placeholder="Your username"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                          Name
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <FaUser className="text-accent" />
+                          </div>
+                          <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            value={profileData.name}
+                            onChange={handleProfileChange}
+                            className="pl-11 w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
+                            placeholder="Your name"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                          Email
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <FaEnvelope className="text-accent" />
+                          </div>
+                          <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value={profileData.email}
+                            onChange={handleProfileChange}
+                            className="pl-11 w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all"
+                            placeholder="Your email"
+                            disabled
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          type="submit"
+                          className="btn-primary px-6"
+                        >
+                          <FaSave className="mr-2" />
+                          Save Changes
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="space-y-8">
+                      <div className="flex items-center p-4 bg-gray-50 rounded-xl">
+                        <FaUser className="text-accent text-xl mr-4" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-500 mb-1">Username</div>
+                          <div className="text-lg font-medium text-gray-900">
+                            {profileData.username || 'Not set'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center p-4 bg-gray-50 rounded-xl">
+                        <FaUser className="text-accent text-xl mr-4" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-500 mb-1">Name</div>
+                          <div className="text-lg font-medium text-gray-900">
+                            {profileData.name || 'Not set'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center p-4 bg-gray-50 rounded-xl">
+                        <FaEnvelope className="text-accent text-xl mr-4" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-500 mb-1">Email</div>
+                          <div className="text-lg font-medium text-gray-900">
+                            {profileData.email}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center p-4 bg-gray-50 rounded-xl">
+                        <FaCalendarAlt className="text-accent text-xl mr-4" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-500 mb-1">Account Created</div>
+                          <div className="text-lg font-medium text-gray-900">
+                            {new Date().toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
