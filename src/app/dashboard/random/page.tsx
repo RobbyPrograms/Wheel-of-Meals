@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import type { FavoriteFood } from '@/lib/supabase';
 import { FaUtensils, FaArrowLeft, FaHeart, FaXmark, FaDice, FaHandPointer, FaCalendarPlus, FaTrash, FaRepeat } from 'react-icons/fa6';
+import { useRouter } from 'next/navigation';
 
 export default function RandomMealPage() {
   const { user } = useAuth();
@@ -27,6 +28,8 @@ export default function RandomMealPage() {
   const [dislikedMeals, setDislikedMeals] = useState<FavoriteFood[]>([]);
   const [showLikedPanel, setShowLikedPanel] = useState(false);
   const [allowRepeats, setAllowRepeats] = useState(false);
+  const [isCreatingPlan, setIsCreatingPlan] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (user) {
@@ -57,7 +60,7 @@ export default function RandomMealPage() {
       const normalizedMeals = meals?.map(meal => ({
         ...meal,
         meal_types: Array.isArray(meal.meal_types) 
-          ? meal.meal_types.map(type => type?.toLowerCase()).filter(Boolean)
+          ? meal.meal_types.map((type: string | null) => type?.toLowerCase()).filter(Boolean)
           : []
       })) || [];
 
@@ -238,19 +241,12 @@ export default function RandomMealPage() {
         if (prev.some(m => m.id === meal.id)) return prev;
         return [...prev, meal];
       });
-
-      // Show the selected meal toast
-      setSelectedMeal(meal);
-      setTimeout(() => {
-        setSelectedMeal(null);
-      }, 2000);
     } else if (!isButtonClick) {
       // Add to disliked meals if swiping left
       setDislikedMeals(prev => {
         if (prev.some(m => m.id === meal.id)) return prev;
         return [...prev, meal];
       });
-      setSelectedMeal(null);
     }
 
     // Remove just the top card
@@ -344,43 +340,132 @@ export default function RandomMealPage() {
   };
 
   const createMealPlan = async () => {
+    if (isCreatingPlan) return;
+    setIsCreatingPlan(true);
+
     try {
-      // First create the meal plan
+      // Show creating state
+      setSelectedMeal({
+        id: 'temp',
+        name: '⏳ Creating meal plan...',
+        user_id: user?.id || '',
+        meal_types: [],
+        created_at: new Date().toISOString(),
+        ingredients: [],
+        visibility: 'private'
+      });
+
+      // Calculate dates and create plan
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(startDate.getDate() + likedMeals.length - 1);
+
+      const formatDate = (date: Date) => {
+        return date.toLocaleDateString('en-US', {
+          month: 'numeric',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      };
+
+      // Create unique name with timestamp
+      const timestamp = new Date().getTime();
+      const planName = `Meal Plan ${formatDate(startDate)} - ${formatDate(endDate)} (${timestamp})`;
+
+      // Shuffle the liked meals to randomize their order
+      const shuffledMeals = [...likedMeals].sort(() => Math.random() - 0.5);
+
+      // Create the meal plan
       const { data: mealPlan, error: mealPlanError } = await supabase
         .from('meal_plans')
-        .insert([
-          {
-            user_id: user?.id,
-            name: `Meal Plan ${new Date().toLocaleDateString()}`,
-            start_date: new Date().toISOString(),
+        .insert({
+          user_id: user?.id,
+          name: planName,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+          plan: {
+            [formatDate(startDate)]: {
+              breakfast: null,
+              lunch: null,
+              dinner: shuffledMeals[0] || null
+            },
+            ...shuffledMeals.slice(1).reduce((acc, meal, index) => {
+              const date = new Date(startDate);
+              date.setDate(startDate.getDate() + index + 1);
+              return {
+                ...acc,
+                [formatDate(date)]: {
+                  breakfast: null,
+                  lunch: null,
+                  dinner: meal
+                }
+              };
+            }, {})
           },
-        ])
+          no_repeat: !allowRepeats
+        })
         .select()
         .single();
 
-      if (mealPlanError) throw mealPlanError;
+      if (mealPlanError) {
+        throw new Error(`Please try creating your meal plan again`);
+      }
 
-      // Then add all the meals to the plan
-      const meals = likedMeals.map((meal, index) => ({
-        meal_plan_id: mealPlan.id,
-        favorite_food_id: meal.id,
-        day_number: index + 1,
-      }));
+      if (!mealPlan) {
+        throw new Error('Please try creating your meal plan again');
+      }
 
-      const { error: mealsError } = await supabase
-        .from('meals')
-        .insert(meals);
+      // Show success message with meal count and date range
+      setSelectedMeal({
+        id: 'success',
+        name: `✨ Created ${likedMeals.length} day meal plan: ${formatDate(startDate)} - ${formatDate(endDate)} ✨`,
+        user_id: user?.id || '',
+        meal_types: [],
+        created_at: new Date().toISOString(),
+        ingredients: [],
+        visibility: 'private'
+      });
 
-      if (mealsError) throw mealsError;
+      // Wait to show success message
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Clear liked meals and hide panel
+      // Show redirect message
+      setSelectedMeal({
+        id: 'redirect',
+        name: '🚀 Taking you to your meal plan...',
+        user_id: user?.id || '',
+        meal_types: [],
+        created_at: new Date().toISOString(),
+        ingredients: [],
+        visibility: 'private'
+      });
+
+      // Wait before redirecting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Clear and redirect
+      setSelectedMeal(null);
       setLikedMeals([]);
       setShowLikedPanel(false);
+      router.push(`/dashboard?panel=meal-plans`);
 
-      // Navigate to the meal plan
-      window.location.href = `/dashboard/meal-plans/${mealPlan.id}`;
     } catch (err) {
-      console.error('Error creating meal plan:', err);
+      console.error('Error:', err);
+      // Show a friendly message instead of an error
+      setSelectedMeal({
+        id: 'retry',
+        name: '✨ Let\'s try that again! ✨',
+        user_id: user?.id || '',
+        meal_types: [],
+        created_at: new Date().toISOString(),
+        ingredients: [],
+        visibility: 'private'
+      });
+      // Show message for 2 seconds
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setSelectedMeal(null);
+    } finally {
+      setIsCreatingPlan(false);
     }
   };
 
@@ -735,21 +820,6 @@ export default function RandomMealPage() {
         </div>
       </div>
 
-      {/* Selected Meal Toast */}
-      <div 
-        className={`fixed top-4 left-1/2 -translate-x-1/2 transition-all duration-300 ${
-          selectedMeal ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform -translate-y-4'
-        }`}
-        style={{ zIndex: 1002 }}
-      >
-        {selectedMeal && (
-          <div className="bg-white/90 backdrop-blur-sm shadow-lg rounded-full px-4 py-2 flex items-center gap-2">
-            <FaHeart className="text-accent h-4 w-4" />
-            <span className="text-sm font-medium">Added {selectedMeal.name} to liked meals!</span>
-          </div>
-        )}
-      </div>
-
       {/* Liked Meals Panel */}
       <div 
         className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200"
@@ -761,7 +831,32 @@ export default function RandomMealPage() {
               <FaHeart className="text-accent h-5 w-5" />
               <h3 className="text-lg font-semibold">Liked Meals ({likedMeals.length})</h3>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col items-end gap-2">
+              {/* Status Messages */}
+              {selectedMeal && (
+                <div 
+                  className={`
+                    rounded-lg px-6 py-3 flex items-center gap-3 text-base font-medium
+                    ${selectedMeal.id === 'success' || selectedMeal.id === 'redirect'
+                      ? 'bg-green-100 text-green-800 border border-green-200' 
+                      : selectedMeal.id === 'temp'
+                      ? 'bg-blue-50 text-blue-800 border border-blue-100'
+                      : 'bg-blue-50 text-blue-800 border border-blue-100'
+                    }
+                  `}
+                >
+                  {selectedMeal.id === 'success' || selectedMeal.id === 'redirect' ? (
+                    <div className="text-xl">✨</div>
+                  ) : selectedMeal.id === 'temp' ? (
+                    <div className="h-5 w-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <div className="text-xl">✨</div>
+                  )}
+                  <span>{selectedMeal.name}</span>
+                </div>
+              )}
+              
+              {/* Buttons */}
               {likedMeals.length > 0 && (
                 <div className="flex items-center gap-2">
                   <button
@@ -773,10 +868,27 @@ export default function RandomMealPage() {
                   </button>
                   <button
                     onClick={createMealPlan}
-                    className="bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors flex items-center gap-2"
+                    disabled={isCreatingPlan}
+                    className={`relative px-4 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 ${
+                      isCreatingPlan 
+                        ? 'bg-gray-200 cursor-not-allowed transform scale-95 opacity-70'
+                        : 'bg-accent text-white hover:bg-accent/90 active:scale-95 shadow-lg hover:shadow-xl'
+                    }`}
                   >
-                    <FaCalendarPlus className="h-4 w-4" />
-                    Create Meal Plan
+                    {isCreatingPlan ? (
+                      <>
+                        <div className="absolute inset-0 bg-gray-100 rounded-lg overflow-hidden">
+                          <div className="h-full bg-gray-200 animate-progress" />
+                        </div>
+                        <div className="h-5 w-5 border-3 border-gray-400 border-t-gray-600 rounded-full animate-spin relative z-10" />
+                        <span className="text-gray-600 font-medium relative z-10">Creating Your Plan...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaCalendarPlus className="h-4 w-4" />
+                        <span className="font-medium">Create Meal Plan</span>
+                      </>
+                    )}
                   </button>
                 </div>
               )}
@@ -817,6 +929,13 @@ export default function RandomMealPage() {
         }
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
+        }
+        @keyframes progress {
+          0% { width: 0; }
+          100% { width: 100%; }
+        }
+        .animate-progress {
+          animation: progress 4s linear;
         }
       `}</style>
     </div>
