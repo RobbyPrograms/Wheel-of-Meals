@@ -703,14 +703,55 @@ export default function ExplorePage() {
                   <div>
                     <h3 className="font-medium text-primary mb-2">Recipe</h3>
                     <div className="space-y-2">
-                      {post.food_recipe.split('\n').map((step, idx) => (
-                          <div key={idx} className="flex gap-2">
-                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm">
-                              {idx + 1}
-                            </span>
-                            <p className="text-text-secondary text-sm">{step}</p>
-                          </div>
-                        ))}
+                      {(() => {
+                        try {
+                          // First try to parse as JSON array
+                          let steps: string[] = [];
+                          
+                          if (Array.isArray(post.food_recipe)) {
+                            steps = post.food_recipe;
+                          } else if (typeof post.food_recipe === 'string') {
+                            if (post.food_recipe.startsWith('[') && post.food_recipe.endsWith(']')) {
+                              steps = JSON.parse(post.food_recipe);
+                            } else {
+                              // Split by newlines or periods
+                              steps = post.food_recipe
+                                .split(/(?:\r?\n|\.(?=\s|$))/)
+                                .map(step => step.trim())
+                                .filter(step => step.length > 0);
+                            }
+                          }
+
+                          return steps.map((step, idx) => {
+                            // Clean the step text
+                            let cleanedStep = step;
+                            if (typeof cleanedStep === 'string') {
+                              // Remove quotes if present
+                              if (cleanedStep.startsWith('"') && cleanedStep.endsWith('"')) {
+                                cleanedStep = cleanedStep.substring(1, cleanedStep.length - 1);
+                              }
+                              // Remove brackets if present
+                              cleanedStep = cleanedStep.replace(/^\[|\]$/g, '');
+                              // Remove backslashes
+                              cleanedStep = cleanedStep.replace(/\\/g, '');
+                              // Trim whitespace
+                              cleanedStep = cleanedStep.trim();
+                            }
+                            
+                            return (
+                              <div key={idx} className="flex gap-2">
+                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm">
+                                  {idx + 1}
+                                </span>
+                                <p className="text-text-secondary text-sm">{cleanedStep}</p>
+                              </div>
+                            );
+                          });
+                        } catch (error) {
+                          console.error('Error parsing recipe:', error);
+                          return <p className="text-text-secondary text-sm">Recipe format not supported</p>;
+                        }
+                      })()}
                     </div>
                   </div>
                 )}
