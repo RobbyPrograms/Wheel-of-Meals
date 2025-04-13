@@ -273,24 +273,24 @@ export default function UserProfilePage() {
             </Link>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
+          <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                 {profile.avatar_url ? (
                   <img
                     src={profile.avatar_url}
                     alt={profile.username}
-                    className="w-20 h-20 rounded-full"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center">
-                    <span className="text-2xl text-accent">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-accent/10 rounded-full flex-shrink-0 flex items-center justify-center">
+                    <span className="text-xl sm:text-2xl text-accent">
                       {profile.display_name?.[0] || profile.username[0].toUpperCase()}
                     </span>
                   </div>
                 )}
-                <div>
-                  <h1 className="text-2xl font-bold text-primary">
+                <div className="text-center sm:text-left">
+                  <h1 className="text-xl sm:text-2xl font-bold text-primary">
                     {profile.display_name || profile.username}
                   </h1>
                   <p className="text-text-secondary">@{profile.username}</p>
@@ -299,19 +299,19 @@ export default function UserProfilePage() {
 
               {/* Friend Status/Actions */}
               {user && user.id !== profile.id && (
-                <div className="flex items-center gap-2">
+                <div className="flex justify-center sm:justify-start items-center gap-2">
                   {profile.friend_status === 'accepted' ? (
-                    <span className="text-sm text-accent flex items-center gap-1">
+                    <span className="text-sm text-accent flex items-center gap-1 bg-accent/10 px-3 py-1.5 rounded-full">
                       <FaCheck className="text-xs" /> Friends
                     </span>
                   ) : profile.friend_status === 'pending' ? (
                     profile.is_friend_request_sender ? (
-                      <span className="text-sm text-text-secondary">Request sent</span>
+                      <span className="text-sm text-text-secondary bg-gray-100 px-3 py-1.5 rounded-full">Request sent</span>
                     ) : (
                       <button
                         onClick={handleAcceptFriend}
                         disabled={sendingFriendRequest}
-                        className="text-sm bg-accent text-white px-3 py-1 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-1"
+                        className="text-sm bg-accent text-white px-4 py-1.5 rounded-full hover:bg-accent/90 transition-colors flex items-center gap-1 w-full sm:w-auto justify-center"
                       >
                         {sendingFriendRequest ? (
                           <FaSpinner className="animate-spin" />
@@ -326,7 +326,7 @@ export default function UserProfilePage() {
                     <button
                       onClick={handleFriendRequest}
                       disabled={sendingFriendRequest}
-                      className="text-sm bg-accent/10 text-accent px-3 py-1 rounded-md hover:bg-accent/20 transition-colors flex items-center gap-1"
+                      className="text-sm bg-accent/10 text-accent px-4 py-1.5 rounded-full hover:bg-accent/20 transition-colors flex items-center gap-1 w-full sm:w-auto justify-center"
                     >
                       {sendingFriendRequest ? (
                         <FaSpinner className="animate-spin" />
@@ -342,52 +342,46 @@ export default function UserProfilePage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-primary">Favorite Meals</h2>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <button
-                    className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent rounded-lg hover:bg-accent/20 transition-colors"
-                  >
-                    <FaFilter className="text-sm" />
-                    <span>Filter</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Meal Type Filters */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              {mealTypeOptions.map(type => (
-                <button
-                  key={type}
-                  onClick={() => {
-                    if (selectedMealTypes.includes(type)) {
-                      setSelectedMealTypes(prev => prev.filter(t => t !== type));
-                    } else {
-                      setSelectedMealTypes(prev => [...prev, type]);
-                    }
-                  }}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedMealTypes.includes(type)
-                      ? 'bg-accent text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </button>
-              ))}
-              {selectedMealTypes.length > 0 && (
+          {/* Filter Section */}
+          <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <h2 className="text-lg font-semibold text-primary">Favorite Meals</h2>
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => setSelectedMealTypes([])}
-                  className="px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:text-accent transition-colors"
+                  className={`text-sm px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 ${
+                    selectedMealTypes.length === 0
+                      ? 'bg-accent text-white'
+                      : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                  }`}
                 >
-                  Clear All
+                  <FaFilter className="text-xs" /> All
                 </button>
-              )}
+                {mealTypeOptions.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      if (selectedMealTypes.includes(type)) {
+                        setSelectedMealTypes(prev => prev.filter(t => t !== type));
+                      } else {
+                        setSelectedMealTypes(prev => [...prev, type]);
+                      }
+                    }}
+                    className={`text-sm px-3 py-1.5 rounded-full transition-colors capitalize ${
+                      selectedMealTypes.includes(type)
+                        ? 'bg-accent text-white'
+                        : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
             </div>
+          </div>
 
+          {/* Meals Grid */}
+          <div className="bg-white rounded-xl shadow-md p-4 sm:p-6">
             {filteredFoods.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-text-secondary">
@@ -397,13 +391,13 @@ export default function UserProfilePage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {filteredFoods.map((food) => (
                   <div 
                     key={food.id} 
                     className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                   >
-                    <div className="p-6">
+                    <div className="p-4 sm:p-6">
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <h3 className="text-lg font-semibold text-primary mb-2">{food.name}</h3>
@@ -411,30 +405,25 @@ export default function UserProfilePage() {
                             {food.meal_types.map(type => (
                               <span
                                 key={type}
-                                className="px-2 py-1 bg-accent/10 text-accent rounded-md text-xs font-medium"
+                                className="px-2 py-1 bg-accent/10 text-accent rounded-full text-xs font-medium"
                               >
                                 {type.charAt(0).toUpperCase() + type.slice(1)}
                               </span>
                             ))}
                           </div>
                         </div>
-                        {user && user.id !== profile.id && (
+                        {user && user.id !== profile.id && !addedFoods.has(food.name) && (
                           <button
                             onClick={() => addToMyFoods(food)}
-                            disabled={addingFood === food.id || addedFoods.has(food.name)}
-                            className={`p-2 rounded-full transition-colors ${
-                              addedFoods.has(food.name)
-                                ? 'text-green-500 bg-green-50'
-                                : 'text-accent hover:bg-accent/10'
-                            }`}
-                            title={addedFoods.has(food.name) ? "Added to your meals" : "Add to your meals"}
+                            disabled={addingFood === food.id}
+                            className="flex-shrink-0 text-sm bg-accent/10 text-accent px-3 py-1.5 rounded-full hover:bg-accent/20 transition-colors flex items-center gap-1"
                           >
                             {addingFood === food.id ? (
                               <FaSpinner className="animate-spin" />
-                            ) : addedFoods.has(food.name) ? (
-                              <FaCheck />
                             ) : (
-                              <FaPlus />
+                              <>
+                                <FaPlus className="text-xs" /> Add
+                              </>
                             )}
                           </button>
                         )}
@@ -447,7 +436,7 @@ export default function UserProfilePage() {
                             {food.ingredients.map((ingredient, idx) => (
                               <span
                                 key={idx}
-                                className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-sm"
+                                className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
                               >
                                 {ingredient}
                               </span>
@@ -457,7 +446,29 @@ export default function UserProfilePage() {
 
                         <div>
                           <h4 className="font-medium text-gray-700 mb-2">Recipe</h4>
-                          <p className="text-gray-600 text-sm whitespace-pre-wrap">{food.recipe}</p>
+                          <div className="space-y-2">
+                            {Array.isArray(food.recipe) ? (
+                              food.recipe.map((step, idx) => (
+                                <div key={idx} className="flex items-start gap-3">
+                                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm font-medium">
+                                    {idx + 1}
+                                  </div>
+                                  <p className="text-gray-600 text-sm flex-1 pt-1">{step}</p>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="space-y-2">
+                                {food.recipe.split(/\n|\./).filter(step => step.trim()).map((step, idx) => (
+                                  <div key={idx} className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm font-medium">
+                                      {idx + 1}
+                                    </div>
+                                    <p className="text-gray-600 text-sm flex-1 pt-1">{step.trim()}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
