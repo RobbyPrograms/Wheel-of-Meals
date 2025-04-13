@@ -19,9 +19,9 @@ interface FavoriteFood {
 }
 
 interface DayMeal {
-  breakfast: FavoriteFood | null;
-  lunch: FavoriteFood | null;
-  dinner: FavoriteFood | null;
+  breakfast: { name: string } | null;
+  lunch: { name: string } | null;
+  dinner: { name: string } | null;
 }
 
 interface WeeklyPlan {
@@ -125,7 +125,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
     loadData();
   }, [loadData]);
 
-  const getRandomFood = (foods: FavoriteFood[], mealType: 'breakfast' | 'lunch' | 'dinner'): FavoriteFood | null => {
+  const getRandomFood = (foods: FavoriteFood[], mealType: 'breakfast' | 'lunch' | 'dinner'): { name: string } | null => {
     // Filter foods that have the specified meal type
     const availableFoods = foods.filter(food => 
       Array.isArray(food.meal_types) && food.meal_types.includes(mealType)
@@ -133,7 +133,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
     
     if (availableFoods.length === 0) return null;
     const randomIndex = Math.floor(Math.random() * availableFoods.length);
-    return availableFoods[randomIndex];
+    return { name: availableFoods[randomIndex].name };
   };
 
   const generateMealPlan = () => {
@@ -487,7 +487,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
                     </div>
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => setSelectingMeal({ day: date, type: slot as 'breakfast' | 'lunch' | 'dinner' })}
+                        onClick={() => setSelectingMeal({ day: date, type: slot as keyof DayMeal })}
                         className="bg-[#2B5C40] hover:bg-[#224931] text-white px-3 py-1.5 rounded-md text-sm transition-colors duration-200 flex items-center gap-2 min-w-[120px] justify-center"
                       >
                         {meal ? (
@@ -592,7 +592,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
     setError(message);
   };
 
-  const handleMealChange = async (date: string, mealType: keyof DayMeal, meal: FavoriteFood | null) => {
+  const handleMealChange = async (date: string, mealType: keyof DayMeal, meal: { name: string } | null) => {
     if (!selectedPlan || !currentMealPlan) return;
 
     try {
@@ -1210,7 +1210,8 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
                         <button
                           key={food.id}
                           onClick={() => {
-                            handleMealChange(selectingMeal.day, selectingMeal.type, food);
+                            // Convert FavoriteFood to simplified meal format
+                            handleMealChange(selectingMeal.day, selectingMeal.type, { name: food.name });
                             setSelectingMeal(null);
                           }}
                           className="w-full text-left px-4 py-3 rounded-lg hover:bg-[#2B5C40]/5 focus:bg-[#2B5C40]/10 transition-colors duration-150 group"
