@@ -2,8 +2,12 @@ export type FavoriteFood = {
   id: string;
   user_id: string;
   name: string;
-  ingredients: string;
+  ingredients: string[];
+  recipe: string;
+  rating?: number;
+  meal_types: string[];
   created_at: string;
+  visibility?: 'public' | 'private';
 };
 
 export type MealPlan = {

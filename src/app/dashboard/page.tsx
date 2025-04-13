@@ -13,7 +13,6 @@ import MealPlansDashboard from '@/components/MealPlansDashboard';
 import { AISuggestions } from '@/components/AISuggestions';
 import LevelCard from '@/components/LevelCard';
 import FoodDetailsModal from '@/components/FoodDetailsModal';
-import RecipeOfTheDay from '@/components/RecipeOfTheDay';
 
 interface LevelInfo {
   current_level: number;
@@ -434,35 +433,26 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left column - Recipe of the Day */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-8">
-              <h2 className="text-2xl font-bold text-primary mb-6">Recipe of the Day</h2>
-              <RecipeOfTheDay />
-            </div>
-          </div>
-
-          {/* Middle and right columns - Existing content */}
-          <div className="lg:col-span-2">
-            {/* Email confirmation success message */}
-            {showEmailConfirmed && (
-              <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-lg animate-fade-in">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm leading-5 font-medium text-green-800">
-                      Email confirmed successfully! Your account is now fully activated.
-                    </p>
-                  </div>
+        <div className="grid grid-cols-1 gap-8">
+          {/* Email confirmation success message */}
+          {showEmailConfirmed && (
+            <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-lg animate-fade-in">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm leading-5 font-medium text-green-800">
+                    Email confirmed successfully! Your account is now fully activated.
+                  </p>
                 </div>
               </div>
-            )}
-            
+            </div>
+          )}
+          
+          <div className="lg:col-span-2">
             <div className="flex flex-col items-center w-full max-w-7xl mx-auto">
               {/* Main Content Area */}
               <div className="w-full">
@@ -678,9 +668,10 @@ export default function Dashboard() {
               />
               
               <MealPlansPanel 
-                isOpen={isMealPlansPanelOpen} 
-                onClose={handleMealPlansPanelClose} 
+                isOpen={isMealPlansPanelOpen}
+                onClose={handleMealPlansPanelClose}
                 onMealPlanAdded={handleDataUpdated}
+                user={user}
               />
 
               {/* AI Suggestions Modal */}

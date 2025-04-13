@@ -10,9 +10,18 @@ interface MealPlansSlideover {
   onClose: () => void;
   onMealPlanAdded?: () => void;
   children: React.ReactNode;
+  mode?: 'create' | 'edit';
+  mealPlan?: any;  // Add proper type later
 }
 
-export default function MealPlansSlideover({ isOpen, onClose, onMealPlanAdded, children }: MealPlansSlideover) {
+export default function MealPlansSlideover({ 
+  isOpen, 
+  onClose, 
+  onMealPlanAdded, 
+  children,
+  mode = 'create',
+  mealPlan
+}: MealPlansSlideover) {
   const router = useRouter();
 
   const handleClose = useCallback(async () => {
@@ -73,7 +82,7 @@ export default function MealPlansSlideover({ isOpen, onClose, onMealPlanAdded, c
                     <div className="px-6 pt-6 pb-4 border-b border-gray-200">
                       <div className="flex items-start justify-between">
                         <Dialog.Title className="text-xl font-medium text-gray-900">
-                          Meal Plans
+                          {mode === 'create' ? 'Create Meal Plan' : 'Edit Meal Plan'}
                         </Dialog.Title>
                         <div className="ml-3 flex h-7 items-center">
                           <button

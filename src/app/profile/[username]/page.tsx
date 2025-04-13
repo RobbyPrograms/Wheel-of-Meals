@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { FaSpinner, FaPlus, FaCheck, FaFilter } from 'react-icons/fa';
+import { FaSpinner, FaPlus, FaCheck, FaFilter, FaUserPlus } from 'react-icons/fa';
 import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
 
@@ -14,6 +14,8 @@ interface UserProfile {
   email: string;
   display_name: string | null;
   avatar_url: string | null;
+  friend_status?: 'pending' | 'accepted' | null;
+  is_friend_request_sender?: boolean;
 }
 
 interface FavoriteFood {
@@ -36,6 +38,7 @@ export default function UserProfilePage() {
   const [addedFoods, setAddedFoods] = useState<Set<string>>(new Set());
   const [addingFood, setAddingFood] = useState<string | null>(null);
   const [selectedMealTypes, setSelectedMealTypes] = useState<string[]>([]);
+  const [sendingFriendRequest, setSendingFriendRequest] = useState(false);
   const mealTypeOptions = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert'];
 
   useEffect(() => {
@@ -58,6 +61,24 @@ export default function UserProfilePage() {
 
       if (profileError) throw profileError;
       if (!profileData) throw new Error('Profile not found');
+
+      // If logged in, get friend status
+      if (user && user.id !== profileData.id) {
+        const { data: friendData, error: friendError } = await supabase
+          .from('friends')
+          .select('*')
+          .or(`and(user_id.eq.${user.id},friend_id.eq.${profileData.id}),and(user_id.eq.${profileData.id},friend_id.eq.${user.id})`)
+          .single();
+
+        if (friendError && !friendError.message.includes('No rows found')) {
+          throw friendError;
+        }
+
+        if (friendData) {
+          profileData.friend_status = friendData.status;
+          profileData.is_friend_request_sender = friendData.user_id === user.id;
+        }
+      }
 
       setProfile(profileData);
 
@@ -113,6 +134,84 @@ export default function UserProfilePage() {
       setError('Failed to add food to your favorites. Please try again.');
     } finally {
       setAddingFood(null);
+    }
+  };
+
+  const handleFriendRequest = async () => {
+    if (!user || !profile) return;
+    
+    try {
+      setSendingFriendRequest(true);
+      setError(null);
+
+      // Check if friend request already exists
+      const { data: existingRequest, error: checkError } = await supabase
+        .from('friends')
+        .select('*')
+        .or(`and(user_id.eq.${user.id},friend_id.eq.${profile.id}),and(user_id.eq.${profile.id},friend_id.eq.${user.id})`);
+
+      if (checkError) throw checkError;
+
+      if (existingRequest && existingRequest.length > 0) {
+        setError('Friend request already exists.');
+        return;
+      }
+
+      const { error: addError } = await supabase
+        .from('friends')
+        .insert([{
+          user_id: user.id,
+          friend_id: profile.id,
+        }]);
+
+      if (addError) throw addError;
+
+      // Update the profile's friend status in the UI
+      setProfile(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          friend_status: 'pending',
+          is_friend_request_sender: true
+        };
+      });
+
+    } catch (err) {
+      console.error('Error sending friend request:', err);
+      setError(`Failed to send friend request to ${profile.username}. Please try again.`);
+    } finally {
+      setSendingFriendRequest(false);
+    }
+  };
+
+  const handleAcceptFriend = async () => {
+    if (!user || !profile) return;
+    
+    try {
+      setSendingFriendRequest(true);
+      setError(null);
+
+      const { error: updateError } = await supabase
+        .from('friends')
+        .update({ status: 'accepted' })
+        .match({ friend_id: user.id, user_id: profile.id });
+
+      if (updateError) throw updateError;
+
+      // Update the profile's friend status in the UI
+      setProfile(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          friend_status: 'accepted'
+        };
+      });
+
+    } catch (err) {
+      console.error('Error accepting friend request:', err);
+      setError(`Failed to accept friend request from ${profile.username}. Please try again.`);
+    } finally {
+      setSendingFriendRequest(false);
     }
   };
 
@@ -175,26 +274,71 @@ export default function UserProfilePage() {
           </div>
 
           <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-            <div className="flex items-center gap-4 mb-6">
-              {profile.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt={profile.username}
-                  className="w-20 h-20 rounded-full"
-                />
-              ) : (
-                <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center">
-                  <span className="text-2xl text-accent">
-                    {profile.display_name?.[0] || profile.username[0].toUpperCase()}
-                  </span>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                {profile.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt={profile.username}
+                    className="w-20 h-20 rounded-full"
+                  />
+                ) : (
+                  <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center">
+                    <span className="text-2xl text-accent">
+                      {profile.display_name?.[0] || profile.username[0].toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <h1 className="text-2xl font-bold text-primary">
+                    {profile.display_name || profile.username}
+                  </h1>
+                  <p className="text-text-secondary">@{profile.username}</p>
+                </div>
+              </div>
+
+              {/* Friend Status/Actions */}
+              {user && user.id !== profile.id && (
+                <div className="flex items-center gap-2">
+                  {profile.friend_status === 'accepted' ? (
+                    <span className="text-sm text-accent flex items-center gap-1">
+                      <FaCheck className="text-xs" /> Friends
+                    </span>
+                  ) : profile.friend_status === 'pending' ? (
+                    profile.is_friend_request_sender ? (
+                      <span className="text-sm text-text-secondary">Request sent</span>
+                    ) : (
+                      <button
+                        onClick={handleAcceptFriend}
+                        disabled={sendingFriendRequest}
+                        className="text-sm bg-accent text-white px-3 py-1 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-1"
+                      >
+                        {sendingFriendRequest ? (
+                          <FaSpinner className="animate-spin" />
+                        ) : (
+                          <>
+                            <FaCheck className="text-xs" /> Accept
+                          </>
+                        )}
+                      </button>
+                    )
+                  ) : (
+                    <button
+                      onClick={handleFriendRequest}
+                      disabled={sendingFriendRequest}
+                      className="text-sm bg-accent/10 text-accent px-3 py-1 rounded-md hover:bg-accent/20 transition-colors flex items-center gap-1"
+                    >
+                      {sendingFriendRequest ? (
+                        <FaSpinner className="animate-spin" />
+                      ) : (
+                        <>
+                          <FaUserPlus className="text-xs" /> Add Friend
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               )}
-              <div>
-                <h1 className="text-2xl font-bold text-primary">
-                  {profile.display_name || profile.username}
-                </h1>
-                <p className="text-text-secondary">@{profile.username}</p>
-              </div>
             </div>
           </div>
 

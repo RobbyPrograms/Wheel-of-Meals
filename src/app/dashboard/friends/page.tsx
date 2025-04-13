@@ -41,12 +41,32 @@ export default function FriendsPage() {
   const [searchResult, setSearchResult] = useState<UserProfile | null>(null);
   const [addingFriend, setAddingFriend] = useState(false);
   const [updatingFriend, setUpdatingFriend] = useState<string | null>(null);
+  const [addedMeals, setAddedMeals] = useState<Set<string>>(new Set());
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchFriends();
+      fetchUserMeals();
     }
   }, [user]);
+
+  const fetchUserMeals = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: userMeals } = await supabase
+        .from('favorite_foods')
+        .select('name')
+        .eq('user_id', user.id);
+      
+      if (userMeals) {
+        setAddedMeals(new Set(userMeals.map(meal => meal.name)));
+      }
+    } catch (err) {
+      console.error('Error fetching user meals:', err);
+    }
+  };
 
   const fetchFriends = async () => {
     try {
@@ -160,23 +180,17 @@ export default function FriendsPage() {
     if (!user) return;
 
     try {
-      // Log the incoming food object
-      console.log('Original food object:', food);
-
       // Create the insert data
       const insertData = {
         user_id: user.id,
         name: food.name,
-        ingredients: food.ingredients,  // Keep as is since it's already a string in the DB
-        recipe: food.recipe || '',
+        ingredients: food.ingredients,
+        recipe: food.recipe,
         rating: 0,
-        meal_types: '{}',  // Empty PostgreSQL array
+        meal_types: [],
         visibility: 'private'
       };
 
-      console.log('Final insert data:', insertData);
-
-      // First try to insert without select
       const { error: addError } = await supabase
         .from('favorite_foods')
         .insert(insertData);
@@ -186,9 +200,9 @@ export default function FriendsPage() {
         throw addError;
       }
 
+      // Update local state to show the meal as added
+      setAddedMeals(prev => new Set([...Array.from(prev), food.name]));
       setError(null);
-      // Optionally refresh the friends list to show the updated data
-      await fetchFriends();
     } catch (err: any) {
       console.error('Full error object:', err);
       setError('Failed to add food to your favorites. Please try again.');
@@ -438,34 +452,172 @@ export default function FriendsPage() {
 
                   {/* Friend's Meals */}
                   <div>
-                    <h4 className="font-medium text-primary mb-2">Favorite Meals</h4>
+                    <h4 className="font-medium text-primary mb-4">Favorite Meals</h4>
+                    
                     {friendMeals[friend.friend_id]?.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {friendMeals[friend.friend_id].map((meal) => (
-                          <div
-                            key={meal.id}
-                            className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h5 className="font-medium text-primary">{meal.name}</h5>
-                                <p className="text-sm text-text-secondary">
-                                  {Array.isArray(meal.ingredients) 
-                                    ? meal.ingredients.join(', ')
-                                    : 'No ingredients listed'}
-                                </p>
+                      <>
+                        {/* Filters */}
+                        <div className="mb-6 flex flex-wrap gap-2">
+                          {Array.from(new Set(friendMeals[friend.friend_id].flatMap(meal => meal.meal_types || []))).map((type) => (
+                            <button
+                              key={type}
+                              onClick={() => {
+                                const newFilters = selectedFilters.includes(type)
+                                  ? selectedFilters.filter(f => f !== type)
+                                  : [...selectedFilters, type];
+                                setSelectedFilters(newFilters);
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                                selectedFilters.includes(type)
+                                  ? 'bg-accent text-white'
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {friendMeals[friend.friend_id]
+                            .filter(meal => 
+                              selectedFilters.length === 0 || 
+                              meal.meal_types?.some(type => selectedFilters.includes(type))
+                            )
+                            .map((meal) => (
+                            <div
+                              key={meal.id}
+                              className="p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <div className="flex justify-between items-start mb-4">
+                                <div>
+                                  <h5 className="font-medium text-primary text-lg">{meal.name}</h5>
+                                  {/* Meal Types Tags */}
+                                  {meal.meal_types && meal.meal_types.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {meal.meal_types.map((type, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="px-2 py-0.5 bg-accent/10 text-accent rounded-full text-xs"
+                                        >
+                                          {type}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {/* Rating Stars */}
+                                  {meal.rating !== undefined && meal.rating > 0 && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      {[...Array(5)].map((_, idx) => (
+                                        <svg
+                                          key={idx}
+                                          className={`w-4 h-4 ${
+                                            idx < meal.rating! 
+                                              ? 'text-yellow-400' 
+                                              : 'text-gray-300'
+                                          }`}
+                                          fill="currentColor"
+                                          viewBox="0 0 20 20"
+                                        >
+                                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        </svg>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => addToMyFoods(meal)}
+                                  disabled={addedMeals.has(meal.name)}
+                                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors ${
+                                    addedMeals.has(meal.name)
+                                      ? 'bg-green-100 text-green-600 cursor-default'
+                                      : 'text-accent hover:text-accent/80 hover:bg-accent/10'
+                                  }`}
+                                  title={addedMeals.has(meal.name) ? 'Already in your meals' : 'Add to My Meals'}
+                                >
+                                  {addedMeals.has(meal.name) ? (
+                                    <>
+                                      <FaCheck className="text-sm" />
+                                      <span className="text-sm font-medium">Added</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaPlus className="text-sm" />
+                                      <span className="text-sm font-medium">Add</span>
+                                    </>
+                                  )}
+                                </button>
                               </div>
-                              <button
-                                onClick={() => addToMyFoods(meal)}
-                                className="text-accent hover:text-accent/80 transition-colors"
-                                title="Add to My Meals"
-                              >
-                                <FaPlus />
-                              </button>
+
+                              {/* Ingredients Section */}
+                              <div className="mb-4">
+                                <h6 className="text-sm font-semibold text-gray-700 mb-2">Ingredients:</h6>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {meal.ingredients.map((ingredient: string, idx: number) => (
+                                    <div
+                                      key={idx}
+                                      className="bg-white rounded-lg px-3 py-2 text-sm text-gray-700 border border-gray-100"
+                                    >
+                                      {ingredient}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Recipe Instructions */}
+                              {meal.recipe && (
+                                <div>
+                                  <h6 className="text-sm font-semibold text-gray-700 mb-2">Recipe Instructions:</h6>
+                                  <div className="space-y-2">
+                                    {(() => {
+                                      try {
+                                        // First try to parse as JSON array
+                                        const steps = JSON.parse(meal.recipe);
+                                        if (Array.isArray(steps)) {
+                                          return steps.map((step: string, idx: number) => (
+                                            <div key={idx} className="flex gap-2 text-sm text-gray-600">
+                                              <span className="font-medium text-accent">{idx + 1}.</span>
+                                              <span>{step}</span>
+                                            </div>
+                                          ));
+                                        }
+                                      } catch (e) {
+                                        // If JSON parsing fails, try to split by quoted strings
+                                        const quotedSteps = meal.recipe
+                                          .match(/"([^"]*)"(?:,|$)/g)
+                                          ?.map(step => step.replace(/^"|"(?:,|$)/g, '').trim())
+                                          .filter(step => step.length > 0);
+
+                                        if (quotedSteps && quotedSteps.length > 0) {
+                                          return quotedSteps.map((step: string, idx: number) => (
+                                            <div key={idx} className="flex gap-2 text-sm text-gray-600">
+                                              <span className="font-medium text-accent">{idx + 1}.</span>
+                                              <span>{step}</span>
+                                            </div>
+                                          ));
+                                        }
+
+                                        // If no quoted steps found, try splitting by periods and numbers
+                                        const steps = meal.recipe
+                                          .split(/(?:(?<=\.)\s+(?=[A-Z])|(?<=\d\.)\s+)/)
+                                          .map(step => step.trim())
+                                          .filter(step => step.length > 0 && !step.match(/^\d+$/));
+
+                                        return steps.map((step: string, idx: number) => (
+                                          <div key={idx} className="flex gap-2 text-sm text-gray-600">
+                                            <span className="font-medium text-accent">{idx + 1}.</span>
+                                            <span>{step.replace(/^\d+\.\s*/, '')}</span>
+                                          </div>
+                                        ));
+                                      }
+                                    })()}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      </>
                     ) : (
                       <p className="text-text-secondary">No favorite meals yet.</p>
                     )}

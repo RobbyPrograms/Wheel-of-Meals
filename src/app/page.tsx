@@ -70,11 +70,6 @@ export default function HomePage() {
                    style={{ 
                      transform: `translateZ(${scrollY * 0.15}px) scale(${1 - Math.min(scrollY * 0.001, 0.3)})`,
                    }}>
-                <img 
-                  src="/logo.svg" 
-                  alt="SavoryCircle Logo" 
-                  className="w-40 h-40 mx-auto animate-float" 
-                />
               </div>
               <h1 className="text-7xl md:text-9xl font-bold tracking-tight mb-12 transform transition-transform duration-500"
                   style={{ 
@@ -140,7 +135,7 @@ export default function HomePage() {
                  }}>
               <h2 className="text-3xl md:text-4xl font-bold mb-6"> ABOUT </h2>
               <p className="text-lg md:text-xl mb-8 leading-relaxed">
-                SavoryCircle, founded in 2025, specializes in helping you decide what to eat. 
+                SavoryCircle, started in 2025, specializes in helping you decide what to eat. 
                 As a meal planning tool, it offers premium food selection and organization features 
                 for those seeking an authentic and mindful eating experience.
               </p>

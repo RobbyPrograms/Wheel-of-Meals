@@ -3,53 +3,59 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { FaPlus, FaTrash, FaCalendarAlt, FaTimes, FaEdit, FaSave, FaChevronLeft, FaRandom, FaUtensils, FaExclamationTriangle } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaCalendarAlt, FaTimes, FaEdit, FaSave, FaChevronLeft, FaRandom, FaUtensils, FaExclamationTriangle, FaChevronRight } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, Transition } from '@headlessui/react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-
-type FavoriteFood = {
-  id: string;
-  name: string;
-  ingredients: string;
-  meal_types: string[];
-};
-
-type DayMeal = {
-  breakfast: FavoriteFood | null;
-  lunch: FavoriteFood | null;
-  dinner: FavoriteFood | null;
-};
-
-type WeeklyPlan = {
-  [key: string]: DayMeal;
-};
-
-type MealPlan = {
-  id: string;
-  user_id: string;
-  name: string;
-  created_at: string;
-  start_date: string;
-  end_date: string;
-  plan: WeeklyPlan;
-  no_repeat: boolean;
-};
+import { User } from '@supabase/supabase-js';
+import { toast } from 'react-hot-toast';
+import { DayMeal, WeeklyPlan, MealPlan, Meal, FavoriteFood } from '@/lib/types';
 
 type SelectingMeal = {
   day: string;
-  type: 'breakfast' | 'lunch' | 'dinner';
+  type: keyof DayMeal;
 } | null;
 
 interface MealPlansPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onMealPlanAdded?: () => void;
+  user: User | null;
 }
 
-export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: MealPlansPanelProps) {
-  const { user } = useAuth();
+interface MealDisplayProps {
+  meal: Meal | null;
+  onSelect: () => void;
+  onRemove?: () => void;
+}
+
+const MealDisplay: React.FC<MealDisplayProps> = ({ meal, onSelect, onRemove }) => (
+  <div className="flex items-center justify-between hover:bg-gray-50 transition-colors">
+    <div className="flex-1">
+      <span className="text-gray-900">{meal?.name || 'No meal selected'}</span>
+    </div>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={onSelect}
+        className="text-sm text-[#2B5C40] hover:text-[#224931] font-medium"
+      >
+        {meal ? 'Change' : 'Add'}
+      </button>
+      {meal && onRemove && (
+        <button
+          onClick={onRemove}
+          className="text-sm text-red-500 hover:text-red-700 font-medium"
+        >
+          Remove
+        </button>
+      )}
+    </div>
+  </div>
+);
+
+export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user }: MealPlansPanelProps) {
+  const { user: authUser } = useAuth();
   const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
   const [favoriteFoods, setFavoriteFoods] = useState<FavoriteFood[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,74 +83,59 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
     'Monday (Week 2)', 'Tuesday (Week 2)', 'Wednesday (Week 2)', 'Thursday (Week 2)', 'Friday (Week 2)', 'Saturday (Week 2)', 'Sunday (Week 2)'
   ];
 
-  useEffect(() => {
-    if (isOpen && user) {
-      fetchMealPlans();
-      fetchFavoriteFoods();
+  const loadData = useCallback(async () => {
+    if (!isOpen) return;
+    
+    const currentUser = user || authUser;
+    if (!currentUser) {
+      setError('Please log in to view your meal plans');
+      setLoading(false);
+      return;
     }
-  }, [isOpen, user]);
 
-  const fetchMealPlans = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      if (!user) {
-        setError('You must be logged in to view your meal plans');
-        setLoading(false);
-        return;
-      }
-      
-      const { data, error } = await supabase
+
+      // Fetch meal plans
+      const { data: mealPlansData, error: mealPlansError } = await supabase
         .from('meal_plans')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', currentUser.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching meal plans:', error);
-        setError(`Failed to load meal plans: ${error.message}`);
-        return;
-      }
+      if (mealPlansError) throw mealPlansError;
+      setMealPlans(mealPlansData || []);
 
-      setMealPlans(data || []);
+      // Fetch favorite foods
+      const { data: foodsData, error: foodsError } = await supabase
+        .from('favorite_foods')
+        .select('*')
+        .eq('user_id', currentUser.id);
+
+      if (foodsError) throw foodsError;
+      setFavoriteFoods(foodsData || []);
+
     } catch (err: any) {
-      console.error('Unexpected error fetching meal plans:', err);
-      setError(`An unexpected error occurred: ${err.message}`);
+      console.error('Error loading data:', err);
+      setError(`Failed to load data: ${err.message}`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [isOpen, user, authUser, setMealPlans, setFavoriteFoods, setError, setLoading]);
 
-  const fetchFavoriteFoods = async () => {
-    try {
-      if (!user) return;
-      
-      const { data, error } = await supabase
-        .from('favorite_foods')
-        .select('*')
-        .eq('user_id', user.id);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-      if (error) {
-        console.error('Error fetching favorite foods:', error);
-        return;
-      }
-
-      setFavoriteFoods(data || []);
-    } catch (err: any) {
-      console.error('Unexpected error fetching favorite foods:', err);
-    }
-  };
-
-  const getRandomFood = (foods: FavoriteFood[], mealType: 'breakfast' | 'lunch' | 'dinner'): FavoriteFood | null => {
-    // Filter foods that have the specified meal type
+  const getRandomFood = (foods: FavoriteFood[], mealType: keyof DayMeal): Meal | null => {
     const availableFoods = foods.filter(food => 
       Array.isArray(food.meal_types) && food.meal_types.includes(mealType)
     );
     
     if (availableFoods.length === 0) return null;
-    const randomIndex = Math.floor(Math.random() * availableFoods.length);
-    return availableFoods[randomIndex];
+    const randomFood = availableFoods[Math.floor(Math.random() * availableFoods.length)];
+    return { id: randomFood.id, name: randomFood.name };
   };
 
   const generateMealPlan = () => {
@@ -158,59 +149,8 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
     // Calculate number of days between start and end dates
     const daysToGenerate = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     
-    // Calculate total meals needed based on selected meal types
-    const mealsPerDay = Object.values(selectedMealTypes).filter(Boolean).length;
-    const totalMealsNeeded = daysToGenerate * mealsPerDay;
-    
-    // Check if we have enough foods when no-repeat is enabled
-    if (noRepeat) {
-      let hasEnoughFoods = true;
-      if (selectedMealTypes.breakfast) {
-        const breakfastFoods = favoriteFoods.filter(food => 
-          Array.isArray(food.meal_types) && food.meal_types.includes('breakfast')
-        ).length;
-        if (breakfastFoods < daysToGenerate) hasEnoughFoods = false;
-      }
-      if (selectedMealTypes.lunch) {
-        const lunchFoods = favoriteFoods.filter(food => 
-          Array.isArray(food.meal_types) && food.meal_types.includes('lunch')
-        ).length;
-        if (lunchFoods < daysToGenerate) hasEnoughFoods = false;
-      }
-      if (selectedMealTypes.dinner) {
-        const dinnerFoods = favoriteFoods.filter(food => 
-          Array.isArray(food.meal_types) && food.meal_types.includes('dinner')
-        ).length;
-        if (dinnerFoods < daysToGenerate) hasEnoughFoods = false;
-      }
-      
-      if (!hasEnoughFoods) {
-        setError(`Not enough foods for a no-repeat plan. You need at least ${daysToGenerate} different foods for each selected meal type.`);
-        setIsGenerating(false);
-        return;
-      }
-    }
-
-    // Check if at least one meal type is selected
-    if (mealsPerDay === 0) {
-      setError('Please select at least one meal type (breakfast, lunch, or dinner).');
-      setIsGenerating(false);
-      return;
-    }
-    
     // Generate a random meal plan
     const plan: WeeklyPlan = {};
-    
-    // If no-repeat is enabled, create copies of foods array for each meal type
-    let availableBreakfastFoods = favoriteFoods.filter(food => 
-      Array.isArray(food.meal_types) && food.meal_types.includes('breakfast')
-    );
-    let availableLunchFoods = favoriteFoods.filter(food => 
-      Array.isArray(food.meal_types) && food.meal_types.includes('lunch')
-    );
-    let availableDinnerFoods = favoriteFoods.filter(food => 
-      Array.isArray(food.meal_types) && food.meal_types.includes('dinner')
-    );
     
     // Generate meals for each day in the date range
     let currentDate = new Date(start);
@@ -223,41 +163,10 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
       
       // Initialize meals for this day
       const dayMeals: DayMeal = {
-        breakfast: null,
-        lunch: null,
-        dinner: null
+        breakfast: selectedMealTypes.breakfast ? getRandomFood(favoriteFoods, 'breakfast') : null,
+        lunch: selectedMealTypes.lunch ? getRandomFood(favoriteFoods, 'lunch') : null,
+        dinner: selectedMealTypes.dinner ? getRandomFood(favoriteFoods, 'dinner') : null
       };
-      
-      // Generate meals only for selected types
-      if (selectedMealTypes.breakfast) {
-        if (noRepeat) {
-          const randomIndex = Math.floor(Math.random() * availableBreakfastFoods.length);
-          dayMeals.breakfast = availableBreakfastFoods[randomIndex];
-          availableBreakfastFoods = availableBreakfastFoods.filter((_, i) => i !== randomIndex);
-        } else {
-          dayMeals.breakfast = getRandomFood(favoriteFoods, 'breakfast');
-        }
-      }
-      
-      if (selectedMealTypes.lunch) {
-        if (noRepeat) {
-          const randomIndex = Math.floor(Math.random() * availableLunchFoods.length);
-          dayMeals.lunch = availableLunchFoods[randomIndex];
-          availableLunchFoods = availableLunchFoods.filter((_, i) => i !== randomIndex);
-        } else {
-          dayMeals.lunch = getRandomFood(favoriteFoods, 'lunch');
-        }
-      }
-      
-      if (selectedMealTypes.dinner) {
-        if (noRepeat) {
-          const randomIndex = Math.floor(Math.random() * availableDinnerFoods.length);
-          dayMeals.dinner = availableDinnerFoods[randomIndex];
-          availableDinnerFoods = availableDinnerFoods.filter((_, i) => i !== randomIndex);
-        } else {
-          dayMeals.dinner = getRandomFood(favoriteFoods, 'dinner');
-        }
-      }
       
       plan[day] = dayMeals;
       
@@ -349,7 +258,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
       }
       
       // Fetch fresh data
-      await fetchMealPlans();
+      await loadData();
     } catch (err: any) {
       console.error('Unexpected error saving meal plan:', err);
       console.error('Error stack:', err.stack);
@@ -359,43 +268,25 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
     }
   };
 
-  const deleteMealPlan = async (id: string) => {
+  const deleteMealPlan = async (planId: string) => {
+    if (!user) return;
+
     try {
-      setLoading(true);
-      setError(null);
-      setSuccess(null);
-      
       const { error } = await supabase
         .from('meal_plans')
         .delete()
-        .eq('id', id)
-        .eq('user_id', user?.id);
+        .eq('id', planId)
+        .eq('user_id', user.id);
 
-      if (error) {
-        console.error('Error deleting meal plan:', error);
-        setError(`Failed to delete meal plan: ${error.message}`);
-        return;
-      }
-
-      // Update local state immediately
-      setMealPlans(prevPlans => prevPlans.filter(plan => plan.id !== id));
+      if (error) throw error;
       
-      // Close the selected plan view if we just deleted it
-      if (selectedPlan?.id === id) {
-        setSelectedPlan(null);
-      }
-      
+      setSelectedPlan(null);
+      await loadData();
       setSuccess('Meal plan deleted successfully!');
-      
-      // Notify parent component immediately
-      if (onMealPlanAdded) {
-        await onMealPlanAdded();
-      }
-    } catch (err: any) {
-      console.error('Unexpected error deleting meal plan:', err);
-      setError(`An unexpected error occurred: ${err.message}`);
-    } finally {
-      setLoading(false);
+      setTimeout(() => setSuccess(null), 2000);
+    } catch (err) {
+      console.error('Error deleting meal plan:', err);
+      setError('Failed to delete meal plan. Please try again.');
     }
   };
 
@@ -407,124 +298,144 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
     setSelectedPlan(plan);
   };
 
-  const closeSelectedPlan = () => {
-    setSelectedPlan(null);
-  };
-
-  // Add a new function for exporting existing meal plans
-  const exportMealPlan = async (plan: MealPlan) => {
-    try {
-      let csvContent = 'Date,Day,Breakfast,Lunch,Dinner\n';
-      
-      // Generate meals for each day in the date range
-      let currentDate = new Date(plan.start_date);
-      const endDate = new Date(plan.end_date);
-      
-      while (currentDate <= endDate) {
-        const dayKey = currentDate.toLocaleDateString('en-US', { 
-          weekday: 'long',
-          month: 'short',
-          day: 'numeric'
-        });
-        
-        const meals = plan.plan[dayKey];
-        const formattedDate = currentDate.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric'
-        });
-        
-        const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
-        
-        // Escape any commas in meal names
-        const breakfast = meals?.breakfast?.name ? `"${meals.breakfast.name}"` : '';
-        const lunch = meals?.lunch?.name ? `"${meals.lunch.name}"` : '';
-        const dinner = meals?.dinner?.name ? `"${meals.dinner.name}"` : '';
-        
-        csvContent += `${formattedDate},${dayOfWeek},${breakfast},${lunch},${dinner}\n`;
-        
-        // Move to next day
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-
-      // Create blob and download link
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', `${plan.name}_meal_plan.csv`);
-      link.style.visibility = 'hidden';
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      setSuccess('Meal plan exported successfully!');
-    } catch (err: any) {
-      console.error('Unexpected error exporting meal plan:', err);
-      setError(`An unexpected error occurred: ${err.message}`);
-    }
-  };
-
-  // Add a new function to handle meal changes
-  const handleMealChange = (day: string, mealType: 'breakfast' | 'lunch' | 'dinner', currentPlan: WeeklyPlan) => {
-    if (!currentPlan || !favoriteFoods.length) return;
-
-    // Get a random food different from the current one
-    const currentFood = currentPlan[day][mealType];
-    let availableFoods = [...favoriteFoods].filter(food => 
-      Array.isArray(food.meal_types) && food.meal_types.includes(mealType)
-    );
-    if (currentFood) {
-      availableFoods = availableFoods.filter(food => food.id !== currentFood.id);
-    }
+  const handleRemoveMeal = async (date: string, slot: keyof DayMeal) => {
+    if (!selectedPlan) return;
     
-    if (availableFoods.length === 0) {
-      setError('No other foods available to swap with');
-      return;
-    }
-
-    const newFood = getRandomFood(availableFoods, mealType);
-    const updatedPlan = { ...currentPlan };
-    updatedPlan[day] = {
-      ...updatedPlan[day],
-      [mealType]: newFood
+    const updatedPlan = { ...selectedPlan.plan };
+    updatedPlan[date] = {
+      ...updatedPlan[date],
+      [slot]: null
     };
 
-    if (selectedPlan) {
-      // If we're editing an existing plan, just update the local state
-      setSelectedPlan(prev => prev ? { ...prev, plan: updatedPlan } : null);
-    } else {
-      // If we're creating a new plan, just update the current plan
-      setCurrentMealPlan(updatedPlan);
+    try {
+      await updateMealPlan(selectedPlan.id, updatedPlan);
+      setSelectedPlan({
+        ...selectedPlan,
+        plan: updatedPlan
+      });
+    } catch (err) {
+      console.error('Error removing meal:', err);
+      setError('Failed to remove meal. Please try again.');
     }
   };
 
-  // Add function to update meal plan in database
+  const handleSaveChanges = async () => {
+    if (!selectedPlan) return;
+    
+    try {
+      setIsSaving(true);
+      await updateMealPlan(selectedPlan.id, selectedPlan.plan);
+      setSuccess('Changes saved successfully!');
+      setTimeout(() => setSuccess(null), 2000);
+    } catch (err) {
+      console.error('Error saving changes:', err);
+      setError('Failed to save changes. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const formatDate = (dateStr: string | undefined): string => {
+    if (!dateStr) return 'Not set';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const renderSelectedPlan = () => {
+    if (!selectedPlan) return null;
+
+    const displayName = selectedPlan.name.replace(/\s*\(\d+\)$/, '');
+    const dates = Object.keys(selectedPlan.plan).sort();
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">{displayName}</h2>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500">
+              {formatDate(selectedPlan.start_date)} - {formatDate(selectedPlan.end_date)}
+            </span>
+            <span className="text-sm text-gray-500">
+              {selectedPlan.no_repeat ? 'No repeats' : 'Repeats allowed'}
+            </span>
+          </div>
+        </div>
+        <div className="space-y-4">
+          {dates.map(date => (
+            <div key={date} className="rounded-lg bg-white shadow-sm border border-gray-200">
+              <div className="px-4 py-3 border-b bg-gray-50">
+                <h3 className="font-medium text-gray-900">
+                  {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </h3>
+              </div>
+              <div className="divide-y">
+                {Object.entries(selectedPlan.plan[date]).map(([mealType, meal]) => (
+                  <div key={mealType} className="px-4 py-3">
+                    <MealDisplay
+                      meal={meal}
+                      onSelect={() => setSelectingMeal({ day: date, type: mealType as keyof DayMeal })}
+                      onRemove={() => handleMealChange(date, mealType as keyof DayMeal, null)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const exportMealPlan = async (plan: MealPlan) => {
+    const rows = [['Date', 'Breakfast', 'Lunch', 'Dinner']];
+    
+    Object.entries(plan.plan)
+      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+      .forEach(([date, meals]) => {
+        rows.push([
+          new Date(date).toLocaleDateString(),
+          meals.breakfast?.name || '',
+          meals.lunch?.name || '',
+          meals.dinner?.name || ''
+        ]);
+      });
+    
+    const csvContent = rows.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${plan.name.replace(/\s*\(\d+\)$/, '')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const updateMealPlan = async (planId: string, updatedPlan: WeeklyPlan) => {
+    if (!user) return;
+
     try {
       const { error } = await supabase
         .from('meal_plans')
         .update({ plan: updatedPlan })
         .eq('id', planId)
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
-      if (error) {
-        console.error('Error updating meal plan:', error);
-        setError(`Failed to update meal plan: ${error.message}`);
-        return;
-      }
-
-      // Update the selected plan in state without closing the view
-      setSelectedPlan(prev => prev ? { ...prev, plan: updatedPlan } : null);
-      setSuccess('Meal plan saved successfully!');
-
-      // Refresh the meal plans list in the background
-      fetchMealPlans();
-    } catch (err: any) {
-      console.error('Unexpected error updating meal plan:', err);
-      setError(`An unexpected error occurred: ${err.message}`);
+      if (error) throw error;
+      
+      await loadData();
+      setSuccess('Meal plan updated successfully!');
+      setTimeout(() => setSuccess(null), 2000);
+    } catch (err) {
+      console.error('Error updating meal plan:', err);
+      setError('Failed to update meal plan. Please try again.');
     }
   };
 
@@ -544,6 +455,59 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
     // Close the panel
     onClose();
   }, [onClose, onMealPlanAdded]);
+
+  const handleError = (err: Error | { message: string } | unknown) => {
+    const message = err instanceof Error ? err.message : 
+      typeof err === 'object' && err && 'message' in err ? (err as { message: string }).message : 
+      'An unexpected error occurred';
+    setError(message);
+  };
+
+  const handleMealChange = async (date: string, mealType: keyof DayMeal, food: FavoriteFood | Meal | null) => {
+    if (!selectedPlan || !currentMealPlan) return;
+
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      // Create a deep copy of the current meal plan
+      const updatedPlan = JSON.parse(JSON.stringify(currentMealPlan)) as WeeklyPlan;
+
+      // Initialize the date entry if it doesn't exist
+      if (!updatedPlan[date]) {
+        updatedPlan[date] = {
+          breakfast: null,
+          lunch: null,
+          dinner: null
+        };
+      }
+
+      // Convert to Meal type
+      const meal: Meal | null = food ? { id: food.id, name: food.name } : null;
+
+      // Update the specific meal
+      updatedPlan[date][mealType] = meal;
+
+      // Update in database
+      const { error: updateError } = await supabase
+        .from('meal_plans')
+        .update({ plan: updatedPlan })
+        .eq('id', selectedPlan.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setCurrentMealPlan(updatedPlan);
+      toast.success('Meal updated successfully');
+
+    } catch (err: any) {
+      console.error('Error updating meal:', err);
+      setError(`Failed to update meal: ${err.message}`);
+      toast.error('Failed to update meal');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <Transition show={isOpen} as={Fragment}>
@@ -624,100 +588,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
                       </AnimatePresence>
 
                       {selectedPlan ? (
-                        /* Meal Plan Detail View */
-                        <div>
-                          <div className="flex items-center justify-between mb-4">
-                            <div>
-                              <p className="text-sm text-text-secondary">
-                                {new Date(selectedPlan.start_date).toLocaleDateString()} - {new Date(selectedPlan.end_date).toLocaleDateString()}
-                                {selectedPlan.no_repeat && ' • No Repeats'}
-                              </p>
-                              <p className="text-sm text-text-secondary">
-                                Created: {new Date(selectedPlan.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => updateMealPlan(selectedPlan.id, selectedPlan.plan)}
-                                className="bg-[#2B5C40] hover:bg-[#224931] text-white px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
-                              >
-                                <FaSave className="mr-1" />
-                                Save Changes
-                              </button>
-                              <button
-                                onClick={() => exportMealPlan(selectedPlan)}
-                                className="border border-[#2B5C40] text-[#2B5C40] hover:bg-[#2B5C40] hover:text-white px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
-                              >
-                                <FaRandom className="mr-1" />
-                                Export CSV
-                              </button>
-                              <button
-                                onClick={() => deleteMealPlan(selectedPlan.id)}
-                                className="bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded-md flex items-center text-sm transition-colors duration-200"
-                              >
-                                <FaTrash className="mr-1" />
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="space-y-6 mt-6">
-                            {Object.entries(selectedPlan.plan)
-                              .sort((a, b) => {
-                                const dateA = new Date(a[0].replace(/\([^)]*\)/g, '').trim());
-                                const dateB = new Date(b[0].replace(/\([^)]*\)/g, '').trim());
-                                return dateA.getTime() - dateB.getTime();
-                              })
-                              .map(([day, meals]) => (
-                                <div key={day} className="border border-border rounded-lg overflow-hidden mb-4">
-                                  <div className="bg-gray-50 px-4 py-3 border-b border-border">
-                                    <h3 className="font-medium text-primary">{day}</h3>
-                                  </div>
-                                  <div className="p-4 space-y-4">
-                                    {(meals.breakfast || selectedPlan.plan[day].breakfast) && (
-                                      <div className="flex items-center">
-                                        <div className="w-24 text-sm font-medium text-text-secondary">Breakfast:</div>
-                                        <div className="flex-1 text-primary">{meals.breakfast?.name || 'None'}</div>
-                                        <button
-                                          onClick={() => handleMealChange(day, 'breakfast', selectedPlan.plan)}
-                                          className="ml-2 text-[#2B5C40] hover:text-[#224931]"
-                                          title="Change breakfast"
-                                        >
-                                          <FaRandom className="text-sm" />
-                                        </button>
-                                      </div>
-                                    )}
-                                    {(meals.lunch || selectedPlan.plan[day].lunch) && (
-                                      <div className="flex items-center">
-                                        <div className="w-24 text-sm font-medium text-text-secondary">Lunch:</div>
-                                        <div className="flex-1 text-primary">{meals.lunch?.name || 'None'}</div>
-                                        <button
-                                          onClick={() => handleMealChange(day, 'lunch', selectedPlan.plan)}
-                                          className="ml-2 text-[#2B5C40] hover:text-[#224931]"
-                                          title="Change lunch"
-                                        >
-                                          <FaRandom className="text-sm" />
-                                        </button>
-                                      </div>
-                                    )}
-                                    {(meals.dinner || selectedPlan.plan[day].dinner) && (
-                                      <div className="flex items-center">
-                                        <div className="w-24 text-sm font-medium text-text-secondary">Dinner:</div>
-                                        <div className="flex-1 text-primary">{meals.dinner?.name || 'None'}</div>
-                                        <button
-                                          onClick={() => handleMealChange(day, 'dinner', selectedPlan.plan)}
-                                          className="ml-2 text-[#2B5C40] hover:text-[#224931]"
-                                          title="Change lunch"
-                                        >
-                                          <FaRandom className="text-sm" />
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
+                        renderSelectedPlan()
                       ) : isCreatingPlan ? (
                         /* Create New Plan View */
                         <div>
@@ -901,7 +772,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
                                             </div>
                                             <div className="flex items-center gap-2">
                                               <button
-                                                onClick={() => handleMealChange(day, 'breakfast', currentMealPlan)}
+                                                onClick={() => handleMealChange(day, 'breakfast', meals.breakfast!)}
                                                 className="text-[#2B5C40] hover:text-[#224931]"
                                                 title="Random breakfast"
                                               >
@@ -928,7 +799,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
                                             </div>
                                             <div className="flex items-center gap-2">
                                               <button
-                                                onClick={() => handleMealChange(day, 'lunch', currentMealPlan)}
+                                                onClick={() => handleMealChange(day, 'lunch', meals.lunch!)}
                                                 className="text-[#2B5C40] hover:text-[#224931]"
                                                 title="Random lunch"
                                               >
@@ -955,7 +826,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
                                             </div>
                                             <div className="flex items-center gap-2">
                                               <button
-                                                onClick={() => handleMealChange(day, 'dinner', currentMealPlan)}
+                                                onClick={() => handleMealChange(day, 'dinner', meals.dinner!)}
                                                 className="text-[#2B5C40] hover:text-[#224931]"
                                                 title="Random dinner"
                                               >
@@ -1159,70 +1030,43 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded }: Mea
             className="fixed inset-0 z-[60] overflow-y-auto"
           >
             <div className="flex items-center justify-center min-h-screen">
-              <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
-              
-              <div className="relative bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                <div className="flex justify-between items-center mb-4">
-                  <Dialog.Title className="text-lg font-medium text-[#2B5C40]">
-                    Select {selectingMeal.type}
+              <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
+              <div className="relative bg-white rounded-lg max-w-lg w-full mx-4 p-6">
+                <div className="mb-4">
+                  <Dialog.Title className="text-lg font-medium text-gray-900">
+                    Select {selectingMeal.type} for {formatDate(selectingMeal.day)}
                   </Dialog.Title>
-                  <button
-                    onClick={() => setSelectingMeal(null)}
-                    className="text-[#2B5C40] hover:text-[#224931] transition-colors duration-200"
-                  >
-                    <FaTimes />
-                  </button>
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      placeholder="Search meals..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2B5C40] focus:border-transparent"
+                    />
+                  </div>
                 </div>
-                
-                <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                <div className="max-h-[400px] overflow-y-auto">
                   {favoriteFoods
-                    .filter(food => 
-                      Array.isArray(food.meal_types) && 
-                      food.meal_types.includes(selectingMeal.type)
-                    )
+                    .filter(food => food.name.toLowerCase().includes(searchTerm.toLowerCase()))
                     .map(food => (
                       <button
                         key={food.id}
                         onClick={() => {
-                          if (selectedPlan) {
-                            // If editing an existing plan, just update local state
-                            const updatedPlan = { ...selectedPlan.plan };
-                            updatedPlan[selectingMeal.day] = {
-                              ...updatedPlan[selectingMeal.day],
-                              [selectingMeal.type]: food
-                            };
-                            setSelectedPlan(prev => ({
-                              ...prev!,
-                              plan: updatedPlan
-                            }));
-                          } else {
-                            // If creating a new plan
-                            const updatedPlan = { ...currentMealPlan };
-                            updatedPlan[selectingMeal.day] = {
-                              ...updatedPlan[selectingMeal.day],
-                              [selectingMeal.type]: food
-                            };
-                            setCurrentMealPlan(updatedPlan);
-                          }
+                          handleMealChange(selectingMeal.day, selectingMeal.type, food);
                           setSelectingMeal(null);
                         }}
-                        className="w-full text-left px-4 py-2 rounded hover:bg-[#2B5C40] hover:text-white transition-colors duration-200"
+                        className="w-full text-left p-3 hover:bg-gray-50 rounded-lg"
                       >
-                        {food.name}
+                        <span className="font-medium">{food.name}</span>
+                        {food.meal_types && (
+                          <div className="text-sm text-gray-500 mt-1">
+                            {food.meal_types.join(', ')}
+                          </div>
+                        )}
                       </button>
                     ))}
                 </div>
-                
-                {favoriteFoods.filter(food => 
-                  Array.isArray(food.meal_types) && 
-                  food.meal_types.includes(selectingMeal.type)
-                ).length === 0 && (
-                  <div className="text-center py-4">
-                    <p className="text-[#2B5C40] text-sm">
-                      No {selectingMeal.type} options available. Add some {selectingMeal.type} meals in "My Foods" first.
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </Dialog>

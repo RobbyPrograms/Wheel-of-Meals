@@ -7,7 +7,7 @@ import { FavoriteFood } from '@/lib/supabase';
 import { 
   FaSpinner, FaUtensils, FaTimes, FaPlus, FaUser, FaClock,
   FaGlobe, FaUserCircle, FaTrash, FaEllipsisV,
-  FaHeart, FaRegHeart, FaRetweet, FaChartLine
+  FaHeart, FaRegHeart, FaRetweet, FaChartLine, FaCheck, FaUserPlus
 } from 'react-icons/fa';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
@@ -35,6 +35,8 @@ type Post = {
   reposted_by_username: string | null;
   reposted_by_display_name: string | null;
   repost_created_at: string | null;
+  friend_status?: 'pending' | 'accepted' | null;
+  is_friend_request_sender?: boolean;
 };
 
 interface CreatePostModalProps {
@@ -118,7 +120,9 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
           : [],
         food_meal_types: Array.isArray(postData[0].food_meal_types)
           ? postData[0].food_meal_types
-          : []
+          : [],
+        friend_status: null,
+        is_friend_request_sender: false
       };
 
       onPostCreated(transformedPost);
@@ -244,6 +248,7 @@ export default function ExplorePage() {
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'explore' | 'trending' | 'my-posts'>('explore');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [sendingFriendRequest, setSendingFriendRequest] = useState<string | null>(null);
   const pathname = usePathname();
 
   const fetchPosts = async () => {
@@ -267,20 +272,14 @@ export default function ExplorePage() {
       console.log('Fetching posts with function:', functionName);
       console.log('Current user:', user.id);
       
-      // Only pass parameters for get_user_posts
-      const { data, error: rpcError } = await supabase.rpc(
+      // Get posts
+      const { data: postsData, error: rpcError } = await supabase.rpc(
         functionName, 
         functionName === 'get_user_posts' ? { p_user_id: user.id } : {}
       );
       
       if (rpcError) {
-        console.error('Supabase RPC error details:', {
-          message: rpcError.message,
-          details: rpcError.details,
-          hint: rpcError.hint,
-          code: rpcError.code
-        });
-        // Check if it's a permissions error
+        console.error('Supabase RPC error details:', rpcError);
         if (rpcError.message.includes('permission denied')) {
           setError('Permission denied. Please check your access rights.');
         } else if (rpcError.message.includes('Not authenticated')) {
@@ -291,94 +290,31 @@ export default function ExplorePage() {
         return;
       }
 
-      if (!data || !Array.isArray(data)) {
-        console.log('No data returned from posts query or data is not an array');
-        setPosts([]);
-        return;
+      // Get friend statuses
+      const { data: friendsData, error: friendsError } = await supabase
+        .from('friends')
+        .select('*')
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+
+      if (friendsError) {
+        console.error('Error fetching friend statuses:', friendsError);
       }
 
-      // Log raw data for debugging
-      console.log('Raw data from database:', data);
-
       // Transform the data to ensure proper types
-      const transformedPosts = data.map((post: any) => {
-        // Helper function to safely convert to number
-        const safeNumber = (value: any) => {
-          if (typeof value === 'bigint') return Number(value);
-          if (typeof value === 'string') return parseInt(value, 10) || 0;
-          if (typeof value === 'number') return value;
-          return 0;
-        };
+      const transformedPosts = postsData.map((post: any) => {
+        // Find friend status for this post's user
+        const friendRelation = friendsData?.find(f => 
+          (f.user_id === user.id && f.friend_id === post.user_id) ||
+          (f.friend_id === user.id && f.user_id === post.user_id)
+        );
 
-        // Helper function to safely parse JSON string or return default
-        const safeJsonParse = (value: any, defaultValue: any[] = []) => {
-          if (Array.isArray(value)) return value;
-          if (typeof value === 'string') {
-            try {
-              const parsed = JSON.parse(value);
-              return Array.isArray(parsed) ? parsed : defaultValue;
-            } catch {
-              return defaultValue;
-            }
-          }
-          return defaultValue;
-        };
-
-        // Helper function to format recipe string
-        const formatRecipe = (recipe: any): string => {
-          if (!recipe) return '';
-          if (typeof recipe === 'string') {
-            try {
-              // If it's a JSON string array, parse and join with newlines
-              const parsed = JSON.parse(recipe);
-              if (Array.isArray(parsed)) {
-                return parsed.join('\n');
-              }
-            } catch {
-              // If it's not JSON, return as is
-              return recipe;
-            }
-          }
-          if (Array.isArray(recipe)) {
-            return recipe.join('\n');
-          }
-          return String(recipe || '');
-        };
-
-        // Log individual post data for debugging
-        console.log('Processing post:', post);
-        
         return {
-          id: String(post.id || ''),
-          user_id: String(post.user_id || ''),
-          food_id: String(post.food_id || ''),
-          caption: post.caption || null,
-          created_at: post.created_at ? new Date(post.created_at).toISOString() : new Date().toISOString(),
-          is_explore: Boolean(post.is_explore),
-          food_name: String(post.food_name || ''),
-          food_ingredients: safeJsonParse(post.food_ingredients),
-          food_recipe: formatRecipe(post.food_recipe),
-          food_meal_types: safeJsonParse(post.food_meal_types),
-          food_visibility: String(post.food_visibility || 'public'),
-          username: String(post.username || ''),
-          display_name: post.display_name || null,
-          avatar_url: post.avatar_url || null,
-          likes_count: safeNumber(post.likes_count),
-          reposts_count: safeNumber(post.reposts_count),
-          is_liked: Boolean(post.is_liked),
-          is_reposted: Boolean(post.is_reposted),
-          reposted_by_username: post.reposted_by_username || null,
-          reposted_by_display_name: post.reposted_by_display_name || null,
-          repost_created_at: post.repost_created_at 
-            ? new Date(post.repost_created_at).toISOString() 
-            : null
+          ...post,
+          friend_status: friendRelation?.status || null,
+          is_friend_request_sender: friendRelation ? friendRelation.user_id === user.id : false
         };
       });
 
-      console.log('Transformed posts:', transformedPosts.length, 'posts');
-      if (transformedPosts.length > 0) {
-        console.log('Sample transformed post:', transformedPosts[0]);
-      }
       setPosts(transformedPosts);
     } catch (err) {
       console.error('Error fetching posts:', err);
@@ -463,6 +399,88 @@ export default function ExplorePage() {
     } catch (err) {
       console.error('Error toggling repost:', err);
       setError('Failed to update repost. Please try again.');
+    }
+  };
+
+  const handleFriendRequest = async (postUserId: string, username: string) => {
+    if (!user) return;
+    
+    try {
+      setSendingFriendRequest(postUserId);
+      setError(null);
+
+      // Check if friend request already exists
+      const { data: existingRequest, error: checkError } = await supabase
+        .from('friends')
+        .select('*')
+        .or(`and(user_id.eq.${user.id},friend_id.eq.${postUserId}),and(user_id.eq.${postUserId},friend_id.eq.${user.id})`);
+
+      if (checkError) throw checkError;
+
+      if (existingRequest && existingRequest.length > 0) {
+        setError('Friend request already exists.');
+        return;
+      }
+
+      const { error: addError } = await supabase
+        .from('friends')
+        .insert([{
+          user_id: user.id,
+          friend_id: postUserId,
+        }]);
+
+      if (addError) throw addError;
+
+      // Update the post's friend status in the UI
+      setPosts(prev => prev.map(post => {
+        if (post.user_id === postUserId) {
+          return {
+            ...post,
+            friend_status: 'pending',
+            is_friend_request_sender: true
+          };
+        }
+        return post;
+      }));
+
+    } catch (err) {
+      console.error('Error sending friend request:', err);
+      setError(`Failed to send friend request to ${username}. Please try again.`);
+    } finally {
+      setSendingFriendRequest(null);
+    }
+  };
+
+  const handleAcceptFriend = async (postUserId: string, username: string) => {
+    if (!user) return;
+    
+    try {
+      setSendingFriendRequest(postUserId);
+      setError(null);
+
+      const { error: updateError } = await supabase
+        .from('friends')
+        .update({ status: 'accepted' })
+        .match({ friend_id: user.id, user_id: postUserId });
+
+      if (updateError) throw updateError;
+
+      // Update the post's friend status in the UI
+      setPosts(prev => prev.map(post => {
+        if (post.user_id === postUserId) {
+          return {
+            ...post,
+            friend_status: 'accepted'
+          };
+        }
+        return post;
+      }));
+
+    } catch (err) {
+      console.error('Error accepting friend request:', err);
+      setError(`Failed to accept friend request from ${username}. Please try again.`);
+    } finally {
+      setSendingFriendRequest(null);
     }
   };
 
@@ -567,7 +585,10 @@ export default function ExplorePage() {
               {/* Post Header */}
               <div className="p-4 border-b border-gray-100">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                  <Link 
+                    href={`/profile/${post.username}`}
+                    className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                  >
                     <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
                       {post.avatar_url ? (
                         <img
@@ -580,37 +601,57 @@ export default function ExplorePage() {
                       )}
                     </div>
                     <div>
-                      <p className="font-medium text-primary">
+                      <p className="font-medium text-primary hover:text-[#2B5C40] transition-colors">
                         {post.display_name || post.username}
                       </p>
                       <p className="text-sm text-text-secondary">@{post.username}</p>
                     </div>
-                  </div>
+                  </Link>
                   <div className="flex items-center gap-4">
-                    <div className="text-sm text-text-secondary">
-                      <FaClock className="inline mr-1 text-accent" />
-                      {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-                    </div>
-                    {post.user_id === user?.id && (
-                      <div className="relative">
-                        <button
-                          onClick={() => setDeleteConfirm(deleteConfirm === post.id ? null : post.id)}
-                          className="p-2 text-text-secondary hover:text-primary transition-colors rounded-full hover:bg-gray-100"
-                        >
-                          <FaEllipsisV />
-                        </button>
-                        {deleteConfirm === post.id && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
+                    {user && post.user_id !== user.id && (
+                      <div className="flex items-center gap-2">
+                        {post.friend_status === 'accepted' ? (
+                          <span className="text-sm text-accent flex items-center gap-1">
+                            <FaCheck className="text-xs" /> Friends
+                          </span>
+                        ) : post.friend_status === 'pending' ? (
+                          post.is_friend_request_sender ? (
+                            <span className="text-sm text-text-secondary">Request sent</span>
+                          ) : (
                             <button
-                              onClick={() => handleDeletePost(post.id)}
-                              className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors"
+                              onClick={() => handleAcceptFriend(post.user_id, post.username)}
+                              disabled={sendingFriendRequest === post.user_id}
+                              className="text-sm bg-accent text-white px-3 py-1 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-1"
                             >
-                              Delete Post
+                              {sendingFriendRequest === post.user_id ? (
+                                <FaSpinner className="animate-spin" />
+                              ) : (
+                                <>
+                                  <FaCheck className="text-xs" /> Accept
+                                </>
+                              )}
                             </button>
-                          </div>
+                          )
+                        ) : (
+                          <button
+                            onClick={() => handleFriendRequest(post.user_id, post.username)}
+                            disabled={sendingFriendRequest === post.user_id}
+                            className="text-sm bg-accent/10 text-accent px-3 py-1 rounded-md hover:bg-accent/20 transition-colors flex items-center gap-1"
+                          >
+                            {sendingFriendRequest === post.user_id ? (
+                              <FaSpinner className="animate-spin" />
+                            ) : (
+                              <>
+                                <FaUserPlus className="text-xs" /> Add Friend
+                              </>
+                            )}
+                          </button>
                         )}
                       </div>
                     )}
+                    <div className="text-sm text-text-secondary">
+                      {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                    </div>
                   </div>
                 </div>
               </div>
