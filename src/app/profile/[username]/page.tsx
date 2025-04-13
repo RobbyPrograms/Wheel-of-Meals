@@ -45,7 +45,7 @@ export default function UserProfilePage() {
     if (username) {
       fetchProfile();
     }
-  }, [username]);
+  }, [username, user]);
 
   const fetchProfile = async () => {
     try {
@@ -62,21 +62,24 @@ export default function UserProfilePage() {
       if (profileError) throw profileError;
       if (!profileData) throw new Error('Profile not found');
 
-      // If logged in, get friend status
+      // Get friend statuses exactly like explore page
       if (user && user.id !== profileData.id) {
-        const { data: friendData, error: friendError } = await supabase
+        const { data: friendsData, error: friendsError } = await supabase
           .from('friends')
           .select('*')
-          .or(`and(user_id.eq.${user.id},friend_id.eq.${profileData.id}),and(user_id.eq.${profileData.id},friend_id.eq.${user.id})`)
-          .single();
+          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
 
-        if (friendError && !friendError.message.includes('No rows found')) {
-          throw friendError;
-        }
+        if (friendsError) {
+          console.error('Error fetching friend statuses:', friendsError);
+        } else {
+          // Find friend status for this profile
+          const friendRelation = friendsData?.find(f => 
+            (f.user_id === user.id && f.friend_id === profileData.id) ||
+            (f.friend_id === user.id && f.user_id === profileData.id)
+          );
 
-        if (friendData) {
-          profileData.friend_status = friendData.status;
-          profileData.is_friend_request_sender = friendData.user_id === user.id;
+          profileData.friend_status = friendRelation?.status || null;
+          profileData.is_friend_request_sender = friendRelation ? friendRelation.user_id === user.id : false;
         }
       }
 
@@ -86,7 +89,8 @@ export default function UserProfilePage() {
       const { data: foodsData, error: foodsError } = await supabase
         .from('favorite_foods')
         .select('*')
-        .eq('user_id', profileData.id);
+        .eq('user_id', profileData.id)
+        .eq('visibility', 'public');
 
       if (foodsError) throw foodsError;
       setFavoriteFoods(foodsData || []);
@@ -162,6 +166,7 @@ export default function UserProfilePage() {
         .insert([{
           user_id: user.id,
           friend_id: profile.id,
+          status: 'pending'
         }]);
 
       if (addError) throw addError;
@@ -178,7 +183,7 @@ export default function UserProfilePage() {
 
     } catch (err) {
       console.error('Error sending friend request:', err);
-      setError(`Failed to send friend request to ${profile.username}. Please try again.`);
+      setError('Failed to send friend request. Please try again.');
     } finally {
       setSendingFriendRequest(false);
     }
@@ -209,7 +214,7 @@ export default function UserProfilePage() {
 
     } catch (err) {
       console.error('Error accepting friend request:', err);
-      setError(`Failed to accept friend request from ${profile.username}. Please try again.`);
+      setError('Failed to accept friend request. Please try again.');
     } finally {
       setSendingFriendRequest(false);
     }
