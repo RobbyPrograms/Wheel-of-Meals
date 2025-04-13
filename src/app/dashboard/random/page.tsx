@@ -375,46 +375,6 @@ export default function RandomMealPage() {
       // Shuffle the liked meals to randomize their order
       const shuffledMeals = [...likedMeals].sort(() => Math.random() - 0.5);
 
-      // Create the meal plan
-      const { data: mealPlan, error: mealPlanError } = await supabase
-        .from('meal_plans')
-        .insert({
-          user_id: user?.id,
-          name: planName,
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
-          plan: {
-            [formatDate(startDate)]: {
-              breakfast: null,
-              lunch: null,
-              dinner: shuffledMeals[0] || null
-            },
-            ...shuffledMeals.slice(1).reduce((acc, meal, index) => {
-              const date = new Date(startDate);
-              date.setDate(startDate.getDate() + index + 1);
-              return {
-                ...acc,
-                [formatDate(date)]: {
-                  breakfast: null,
-                  lunch: null,
-                  dinner: meal
-                }
-              };
-            }, {})
-          },
-          no_repeat: !allowRepeats
-        })
-        .select()
-        .single();
-
-      if (mealPlanError) {
-        throw new Error(`Please try creating your meal plan again`);
-      }
-
-      if (!mealPlan) {
-        throw new Error('Please try creating your meal plan again');
-      }
-
       // Show success message with meal count and date range
       setSelectedMeal({
         id: 'success',
@@ -442,6 +402,48 @@ export default function RandomMealPage() {
 
       // Wait before redirecting
       await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Create the meal plan
+      const { data: mealPlan, error: mealPlanError } = await supabase
+        .from('meal_plans')
+        .insert({
+          user_id: user?.id,
+          name: planName,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+          plan: shuffledMeals.reduce((acc: Record<string, any>, meal, index) => {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + index);
+            const dateKey = formatDate(date);
+            
+            acc[dateKey] = {
+              breakfast: null,
+              lunch: null,
+              dinner: {
+                id: meal.id,
+                name: meal.name,
+                meal_types: Array.isArray(meal.meal_types) ? meal.meal_types : [],
+                ingredients: Array.isArray(meal.ingredients) ? meal.ingredients : [],
+                created_at: meal.created_at || new Date().toISOString(),
+                user_id: meal.user_id,
+                visibility: meal.visibility || 'private'
+              }
+            };
+            return acc;
+          }, {}),
+          no_repeat: !allowRepeats
+        })
+        .select('*')
+        .single();
+
+      if (mealPlanError) {
+        console.error('Meal Plan Error:', mealPlanError);
+        throw new Error(`Please try creating your meal plan again`);
+      }
+
+      if (!mealPlan) {
+        throw new Error('Please try creating your meal plan again');
+      }
 
       // Clear and redirect
       setSelectedMeal(null);
