@@ -125,8 +125,7 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
     loadData();
   }, [loadData]);
 
-  const getRandomFood = (foods: FavoriteFood[], mealType: 'breakfast' | 'lunch' | 'dinner'): { name: string } | null => {
-    // Filter foods that have the specified meal type
+  const getRandomFood = (foods: FavoriteFood[], mealType: keyof DayMeal): { name: string } | null => {
     const availableFoods = foods.filter(food => 
       Array.isArray(food.meal_types) && food.meal_types.includes(mealType)
     );
@@ -147,59 +146,8 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
     // Calculate number of days between start and end dates
     const daysToGenerate = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     
-    // Calculate total meals needed based on selected meal types
-    const mealsPerDay = Object.values(selectedMealTypes).filter(Boolean).length;
-    const totalMealsNeeded = daysToGenerate * mealsPerDay;
-    
-    // Check if we have enough foods when no-repeat is enabled
-    if (noRepeat) {
-      let hasEnoughFoods = true;
-      if (selectedMealTypes.breakfast) {
-        const breakfastFoods = favoriteFoods.filter(food => 
-          Array.isArray(food.meal_types) && food.meal_types.includes('breakfast')
-        ).length;
-        if (breakfastFoods < daysToGenerate) hasEnoughFoods = false;
-      }
-      if (selectedMealTypes.lunch) {
-        const lunchFoods = favoriteFoods.filter(food => 
-          Array.isArray(food.meal_types) && food.meal_types.includes('lunch')
-        ).length;
-        if (lunchFoods < daysToGenerate) hasEnoughFoods = false;
-      }
-      if (selectedMealTypes.dinner) {
-        const dinnerFoods = favoriteFoods.filter(food => 
-          Array.isArray(food.meal_types) && food.meal_types.includes('dinner')
-        ).length;
-        if (dinnerFoods < daysToGenerate) hasEnoughFoods = false;
-      }
-      
-      if (!hasEnoughFoods) {
-        setError(`Not enough foods for a no-repeat plan. You need at least ${daysToGenerate} different foods for each selected meal type.`);
-        setIsGenerating(false);
-        return;
-      }
-    }
-
-    // Check if at least one meal type is selected
-    if (mealsPerDay === 0) {
-      setError('Please select at least one meal type (breakfast, lunch, or dinner).');
-      setIsGenerating(false);
-      return;
-    }
-    
     // Generate a random meal plan
     const plan: WeeklyPlan = {};
-    
-    // If no-repeat is enabled, create copies of foods array for each meal type
-    let availableBreakfastFoods = favoriteFoods.filter(food => 
-      Array.isArray(food.meal_types) && food.meal_types.includes('breakfast')
-    );
-    let availableLunchFoods = favoriteFoods.filter(food => 
-      Array.isArray(food.meal_types) && food.meal_types.includes('lunch')
-    );
-    let availableDinnerFoods = favoriteFoods.filter(food => 
-      Array.isArray(food.meal_types) && food.meal_types.includes('dinner')
-    );
     
     // Generate meals for each day in the date range
     let currentDate = new Date(start);
@@ -212,41 +160,10 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
       
       // Initialize meals for this day
       const dayMeals: DayMeal = {
-        breakfast: null,
-        lunch: null,
-        dinner: null
+        breakfast: selectedMealTypes.breakfast ? getRandomFood(favoriteFoods, 'breakfast') : null,
+        lunch: selectedMealTypes.lunch ? getRandomFood(favoriteFoods, 'lunch') : null,
+        dinner: selectedMealTypes.dinner ? getRandomFood(favoriteFoods, 'dinner') : null
       };
-      
-      // Generate meals only for selected types
-      if (selectedMealTypes.breakfast) {
-        if (noRepeat) {
-          const randomIndex = Math.floor(Math.random() * availableBreakfastFoods.length);
-          dayMeals.breakfast = availableBreakfastFoods[randomIndex];
-          availableBreakfastFoods = availableBreakfastFoods.filter((_, i) => i !== randomIndex);
-        } else {
-          dayMeals.breakfast = getRandomFood(favoriteFoods, 'breakfast');
-        }
-      }
-      
-      if (selectedMealTypes.lunch) {
-        if (noRepeat) {
-          const randomIndex = Math.floor(Math.random() * availableLunchFoods.length);
-          dayMeals.lunch = availableLunchFoods[randomIndex];
-          availableLunchFoods = availableLunchFoods.filter((_, i) => i !== randomIndex);
-        } else {
-          dayMeals.lunch = getRandomFood(favoriteFoods, 'lunch');
-        }
-      }
-      
-      if (selectedMealTypes.dinner) {
-        if (noRepeat) {
-          const randomIndex = Math.floor(Math.random() * availableDinnerFoods.length);
-          dayMeals.dinner = availableDinnerFoods[randomIndex];
-          availableDinnerFoods = availableDinnerFoods.filter((_, i) => i !== randomIndex);
-        } else {
-          dayMeals.dinner = getRandomFood(favoriteFoods, 'dinner');
-        }
-      }
       
       plan[day] = dayMeals;
       
@@ -1210,7 +1127,6 @@ export default function MealPlansPanel({ isOpen, onClose, onMealPlanAdded, user 
                         <button
                           key={food.id}
                           onClick={() => {
-                            // Convert FavoriteFood to simplified meal format
                             handleMealChange(selectingMeal.day, selectingMeal.type, { name: food.name });
                             setSelectingMeal(null);
                           }}
