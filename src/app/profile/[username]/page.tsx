@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { FaSpinner, FaPlus, FaCheck, FaFilter, FaUserPlus } from 'react-icons/fa';
+import { FaSpinner, FaPlus, FaCheck, FaFilter, FaUserPlus, FaArrowLeft } from 'react-icons/fa';
 import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
 
@@ -244,8 +244,12 @@ export default function UserProfilePage() {
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <p className="text-red-500 mb-4">{error || 'Profile not found'}</p>
-            <Link href="/dashboard" className="text-accent hover:underline">
-              Back to Dashboard
+            <Link 
+              href="/dashboard/explore" 
+              className="text-[#319141] hover:text-[#0F1E0F] transition-colors flex items-center gap-2"
+            >
+              <FaArrowLeft />
+              Back to Explore
             </Link>
           </div>
         </div>
@@ -258,23 +262,12 @@ export default function UserProfilePage() {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <Link
-              href="/dashboard"
-              className="text-text-secondary hover:text-primary transition-colors inline-flex items-center gap-2"
+            <Link 
+              href="/dashboard/explore" 
+              className="text-[#319141] hover:text-[#0F1E0F] transition-colors flex items-center gap-2"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Back to Dashboard
+              <FaArrowLeft />
+              Back to Explore
             </Link>
           </div>
 

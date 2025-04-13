@@ -78,7 +78,6 @@ const levels = [
 const xpActions = [
   { action: 'Create a new recipe post', xp: 50 },
   { action: 'Receive likes on your recipes', xp: 10 },
-  { action: 'Receive comments on your recipes', xp: 15 }
 ];
 
 export default function LevelInfoModal({ isOpen, onClose, currentXP, nextLevelXP }: LevelInfoModalProps) {
@@ -103,10 +102,10 @@ export default function LevelInfoModal({ isOpen, onClose, currentXP, nextLevelXP
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
 
       {/* Full-screen container */}
-      <div className="fixed inset-0 flex items-start justify-center sm:items-center p-0">
-        <Dialog.Panel className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-lg bg-white sm:rounded-2xl shadow-xl overflow-hidden">
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <Dialog.Panel className="w-full max-w-lg bg-white rounded-2xl shadow-xl flex flex-col max-h-[90vh]">
           {/* Sticky Header */}
-          <div className="sticky top-0 bg-white z-10 px-4 py-3 sm:p-4 border-b border-gray-100 flex justify-between items-center">
+          <div className="flex justify-between items-center px-4 py-3 sm:p-4 border-b border-gray-100">
             <Dialog.Title className="text-xl sm:text-2xl font-bold text-[#0F1E0F]">
               Level Progress & Rewards
             </Dialog.Title>
@@ -120,8 +119,8 @@ export default function LevelInfoModal({ isOpen, onClose, currentXP, nextLevelXP
           </div>
 
           {/* Scrollable Content */}
-          <div className="overflow-y-auto h-[calc(100%-60px)] sm:h-auto">
-            <div className="p-4 pb-20 sm:p-6 space-y-6">
+          <div className="overflow-y-auto flex-1">
+            <div className="p-4 sm:p-6 space-y-6">
               {/* Current Progress */}
               <div className="bg-gray-50 rounded-xl p-4">
                 <h3 className="text-base sm:text-lg font-semibold text-[#319141] mb-3">Your Progress</h3>
@@ -161,7 +160,7 @@ export default function LevelInfoModal({ isOpen, onClose, currentXP, nextLevelXP
               {/* Level Progression */}
               <div>
                 <h3 className="text-base sm:text-lg font-semibold text-[#0F1E0F] mb-3">Level Progression</h3>
-                <div className="space-y-3 overflow-y-auto">
+                <div className="space-y-3">
                   {levels.map((level, index) => (
                     <div 
                       key={level.title}
@@ -169,7 +168,7 @@ export default function LevelInfoModal({ isOpen, onClose, currentXP, nextLevelXP
                         currentXP >= level.xpRequired 
                           ? 'border-[#319141] bg-[#319141]/5' 
                           : 'border-gray-200'
-                      } ${index === levels.length - 1 ? 'mb-40 sm:mb-12' : ''}`}
+                      }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
                         <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-lg sm:text-xl ${

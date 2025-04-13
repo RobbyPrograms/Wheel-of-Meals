@@ -180,8 +180,8 @@ export default function HomePage() {
                   features: ["Smart recommendations", "Recipe generation", "Taste learning"]
                 },
                 {
-                  title: "Random Meal Wheel",
-                  description: "Can't decide? Let our wheel pick your next meal from your favorites.",
+                  title: "Random Meal Cards",
+                  description: "Can't decide? Let our cards pick your next meal from your favorites.",
                   icon: <FaDharmachakra className="text-5xl text-[#319141] mb-6" />,
                   features: ["Quick decisions", "Customizable options", "Fun interface"]
                 },
