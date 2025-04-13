@@ -452,27 +452,59 @@ export default function UserProfilePage() {
                         <div>
                           <h4 className="font-medium text-gray-700 mb-2">Recipe</h4>
                           <div className="space-y-2">
-                            {Array.isArray(food.recipe) ? (
-                              food.recipe.map((step, idx) => (
-                                <div key={idx} className="flex items-start gap-3">
-                                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm font-medium">
-                                    {idx + 1}
-                                  </div>
-                                  <p className="text-gray-600 text-sm flex-1 pt-1">{step}</p>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="space-y-2">
-                                {food.recipe.split(/\n|\./).filter(step => step.trim()).map((step, idx) => (
-                                  <div key={idx} className="flex items-start gap-3">
-                                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm font-medium">
-                                      {idx + 1}
+                            {(() => {
+                              try {
+                                let steps: string[] = [];
+                                
+                                if (Array.isArray(food.recipe)) {
+                                  steps = food.recipe;
+                                } else if (typeof food.recipe === 'string') {
+                                  // Try to parse if it's a JSON string
+                                  if (food.recipe.startsWith('[') && food.recipe.endsWith(']')) {
+                                    steps = JSON.parse(food.recipe);
+                                  } else {
+                                    // Split by newlines or periods
+                                    steps = food.recipe
+                                      .split(/(?:\r?\n|\.(?=\s|$))/)
+                                      .map(step => step.trim())
+                                      .filter(step => step.length > 0);
+                                  }
+                                }
+
+                                return steps.map((step, idx) => {
+                                  // Clean the step text
+                                  let cleanedStep = step;
+                                  if (typeof cleanedStep === 'string') {
+                                    // Remove quotes if present
+                                    if (cleanedStep.startsWith('"') && cleanedStep.endsWith('"')) {
+                                      cleanedStep = cleanedStep.substring(1, cleanedStep.length - 1);
+                                    }
+                                    // Remove brackets if present
+                                    cleanedStep = cleanedStep.replace(/^\[|\]$/g, '');
+                                    // Remove any leading quotes or special characters
+                                    cleanedStep = cleanedStep.replace(/^["'`]|["'`]$/g, '');
+                                    // Remove backslashes
+                                    cleanedStep = cleanedStep.replace(/\\/g, '');
+                                    // Remove any "Step X:" prefixes
+                                    cleanedStep = cleanedStep.replace(/^(Step\s*\d+:?\s*)/i, '');
+                                    // Trim whitespace
+                                    cleanedStep = cleanedStep.trim();
+                                  }
+                                  
+                                  return (
+                                    <div key={idx} className="flex items-start gap-3">
+                                      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm font-medium">
+                                        {idx + 1}
+                                      </div>
+                                      <p className="text-gray-600 text-sm flex-1 pt-1">{cleanedStep}</p>
                                     </div>
-                                    <p className="text-gray-600 text-sm flex-1 pt-1">{step.trim()}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                                  );
+                                });
+                              } catch (error) {
+                                console.error('Error parsing recipe:', error);
+                                return <p className="text-text-secondary text-sm">Recipe format not supported</p>;
+                              }
+                            })()}
                           </div>
                         </div>
                       </div>
