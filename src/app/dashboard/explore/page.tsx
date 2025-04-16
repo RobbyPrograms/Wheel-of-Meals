@@ -687,7 +687,10 @@ export default function ExplorePage() {
 
                     {/* Post Header */}
                     <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-4">
+                      <Link 
+                        href={`/profile/${post.username}`}
+                        className="flex items-center gap-4 hover:opacity-80 transition-opacity"
+                      >
                         <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
                           {post.avatar_url ? (
                             <Image
@@ -709,7 +712,7 @@ export default function ExplorePage() {
                             @{post.username}
                           </div>
                         </div>
-                      </div>
+                      </Link>
 
                       {user && post.user_id === user.id && (
                         <div className="relative">
