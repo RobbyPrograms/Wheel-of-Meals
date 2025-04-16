@@ -12,6 +12,8 @@ import {
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { usePathname } from 'next/navigation';
+import ImageUpload from '@/components/ImageUpload';
+import Image from 'next/image';
 
 type Post = {
   id: string;
@@ -37,6 +39,7 @@ type Post = {
   repost_created_at: string | null;
   friend_status?: 'pending' | 'accepted' | null;
   is_friend_request_sender?: boolean;
+  image_url?: string | null;
 };
 
 interface CreatePostModalProps {
@@ -51,6 +54,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
   const [loading, setLoading] = useState(true);
   const [selectedFoodId, setSelectedFoodId] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
@@ -86,12 +90,12 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
     }
     setError(null);
     try {
-      // Create the post (selectedFoodId is already a UUID string)
       const { data: postData, error: postError } = await supabase
         .rpc('create_post', {
           p_food_id: selectedFoodId,
           p_caption: caption || null,
-          p_is_explore: true
+          p_is_explore: true,
+          p_image_url: imageUrl
         });
 
       if (postError) {
@@ -99,99 +103,119 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
         throw new Error(postError.message || 'Failed to create post');
       }
 
-      if (!postData || postData.length === 0) {
+      if (!postData) {
         throw new Error('No post data returned');
       }
 
-      // Transform the data to match our frontend Post type
       const transformedPost: Post = {
-        ...postData[0],
-        id: postData[0].id,
-        food_id: postData[0].food_id,
-        likes_count: postData[0].likes_count || 0,
-        reposts_count: postData[0].reposts_count || 0,
-        is_liked: postData[0].is_liked || false,
-        is_reposted: postData[0].is_reposted || false,
+        id: postData.id,
+        user_id: postData.user_id,
+        food_id: postData.food_id,
+        caption: postData.caption,
+        created_at: postData.created_at,
+        is_explore: postData.is_explore,
+        food_name: postData.food_name,
+        food_ingredients: postData.food_ingredients || [],
+        food_recipe: postData.food_recipe,
+        food_meal_types: postData.food_meal_types || [],
+        food_visibility: postData.food_visibility,
+        username: postData.username,
+        display_name: postData.display_name,
+        avatar_url: postData.avatar_url,
+        likes_count: postData.likes_count || 0,
+        reposts_count: postData.reposts_count || 0,
+        is_liked: postData.is_liked || false,
+        is_reposted: postData.is_reposted || false,
         reposted_by_username: null,
         reposted_by_display_name: null,
         repost_created_at: null,
-        food_ingredients: Array.isArray(postData[0].food_ingredients) 
-          ? postData[0].food_ingredients 
-          : [],
-        food_meal_types: Array.isArray(postData[0].food_meal_types)
-          ? postData[0].food_meal_types
-          : [],
         friend_status: null,
-        is_friend_request_sender: false
+        is_friend_request_sender: false,
+        image_url: imageUrl
       };
 
       onPostCreated(transformedPost);
       onClose();
       await onRefresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating post:', err);
-      setError(err?.message || 'Failed to create post. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to create post. Please try again.');
     }
+  };
+
+  const handleImageUpload = (url: string) => {
+    setImageUrl(url);
+  };
+
+  const handleImageClear = () => {
+    setImageUrl(null);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl my-8">
-        <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-primary">Create Post</h2>
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white rounded-t-2xl z-10">
+          <h2 className="text-2xl font-semibold text-[#0F1E0F]">Create Post</h2>
           <button
             onClick={onClose}
-            className="text-text-secondary hover:text-primary transition-colors"
+            className="text-gray-400 hover:text-[#0F1E0F] transition-colors p-2 hover:bg-gray-100 rounded-full"
           >
-            <FaTimes />
+            <FaTimes size={20} />
           </button>
         </div>
 
-        <div className="p-6">
+        {/* Content & Footer inside form */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-8 overflow-y-auto p-6 flex-1">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-500 rounded-lg">
-              {error}
+            <div className="p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-2">
+              <FaTimes className="flex-shrink-0" />
+              <p>{error}</p>
             </div>
           )}
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-primary mb-2">
+          {/* Meal Selection */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-[#0F1E0F]">
               Select a Meal to Share
-            </label>
+            </h3>
             {loading ? (
-              <div className="flex justify-center py-8">
-                <FaSpinner className="animate-spin text-accent" />
+              <div className="flex justify-center py-12">
+                <FaSpinner className="animate-spin text-[#319141] text-2xl" />
               </div>
             ) : userFoods.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-text-secondary mb-4">
+              <div className="text-center py-12 bg-gray-50 rounded-2xl">
+                <FaUtensils className="mx-auto text-4xl text-gray-300 mb-4" />
+                <p className="text-gray-600 mb-6">
                   You haven't added any meals yet.
                 </p>
                 <Link
                   href="/dashboard/foods"
-                  className="inline-block bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#319141] text-white rounded-xl hover:bg-[#0F1E0F] transition-colors"
                 >
+                  <FaPlus className="text-sm" />
                   Add Your First Meal
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {userFoods.map((food) => (
                   <button
                     key={food.id}
+                    type="button"
                     onClick={() => setSelectedFoodId(food.id)}
-                    className={`p-4 rounded-lg border text-left transition-colors ${
+                    className={`p-6 rounded-xl border-2 text-left transition-all hover:shadow-md ${
                       selectedFoodId === food.id
-                        ? 'border-accent bg-accent/5'
-                        : 'border-gray-200 hover:border-accent/50'
+                        ? 'border-[#319141] bg-[#319141]/5'
+                        : 'border-gray-100 hover:border-[#319141]/30'
                     }`}
                   >
-                    <h3 className="font-medium text-primary mb-1">{food.name}</h3>
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
-                      <span className="flex items-center gap-1">
-                        <FaUtensils />
+                    <h3 className="font-semibold text-[#0F1E0F] mb-2">{food.name}</h3>
+                    <div className="flex items-center gap-3 text-sm text-gray-500">
+                      <span className="flex items-center gap-1.5">
+                        <FaUtensils className="text-[#319141]" />
                         {food.meal_types?.[0] || 'Any meal'}
                       </span>
                     </div>
@@ -201,35 +225,84 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
             )}
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-primary mb-2">
-              Add a Caption (Optional)
-            </label>
+          {/* Image Upload */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-[#0F1E0F]">
+              Add a Photo
+            </h3>
+            <ImageUpload
+              onUpload={handleImageUpload}
+              onClear={handleImageClear}
+              url={imageUrl}
+            />
+          </div>
+
+          {/* Caption */}
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-[#0F1E0F]">
+              Add a Caption
+            </h3>
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Share your thoughts about this meal..."
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-              rows={3}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#319141] focus:border-transparent resize-none"
+              rows={4}
             />
           </div>
-        </div>
 
-        <div className="p-4 border-t border-gray-100 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-text-secondary hover:text-primary transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!selectedFoodId || loading}
-            className="px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50"
-          >
-            Post
-          </button>
-        </div>
+          {/* Live Preview */}
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-[#0F1E0F] mb-4">Post Preview</h3>
+            <div className="bg-gray-50 rounded-xl shadow p-6 flex flex-col gap-4">
+              {/* Image Preview */}
+              {imageUrl && (
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+                  <img src={imageUrl} alt="Preview" className="object-cover w-full h-full" />
+                </div>
+              )}
+              {/* Meal Name */}
+              <div className="flex items-center gap-2">
+                <FaUtensils className="text-[#319141]" />
+                <span className="font-semibold text-[#0F1E0F]">
+                  {userFoods.find(f => f.id === selectedFoodId)?.name || 'Select a meal'}
+                </span>
+              </div>
+              {/* Caption Preview */}
+              {caption && (
+                <div className="text-gray-700 italic border-l-4 border-[#319141] pl-4">{caption}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer Buttons inside form */}
+          <div className="pt-6 border-t border-gray-100 flex justify-end gap-4 bg-white rounded-b-2xl">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 text-gray-600 hover:text-[#0F1E0F] transition-colors font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!selectedFoodId || loading}
+              className="px-8 py-3 bg-[#319141] text-white rounded-xl hover:bg-[#0F1E0F] transition-colors disabled:opacity-50 disabled:hover:bg-[#319141] font-medium flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <FaSpinner className="animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <FaPlus className="text-sm" />
+                  Create Post
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -480,182 +553,186 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex flex-col gap-4">
-        {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <h1 className="text-2xl font-bold text-[#0F1E0F]">Explore</h1>
-          <button
-            onClick={() => setIsCreatePostModalOpen(true)}
-            className="bg-[#319141] text-white px-4 py-2 rounded-xl hover:bg-[#0F1E0F] transition-colors flex items-center justify-center gap-2 sm:ml-auto"
-          >
-            <FaPlus className="text-sm" /> Create Post
-          </button>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex flex-wrap gap-2 bg-white rounded-xl shadow-sm p-2">
-          <button
-            onClick={() => setViewMode('explore')}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm transition-colors ${
-              viewMode === 'explore'
-                ? 'bg-[#319141] text-white'
-                : 'text-[#0F1E0F] hover:bg-gray-50'
-            }`}
-          >
-            <FaGlobe className="text-sm" />
-            <span>Explore</span>
-          </button>
-          <button
-            onClick={() => setViewMode('trending')}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm transition-colors ${
-              viewMode === 'trending'
-                ? 'bg-[#319141] text-white'
-                : 'text-[#0F1E0F] hover:bg-gray-50'
-            }`}
-          >
-            <FaChartLine className="text-sm" />
-            <span>Trending</span>
-          </button>
-          <button
-            onClick={() => setViewMode('my-posts')}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm transition-colors ${
-              viewMode === 'my-posts'
-                ? 'bg-[#319141] text-white'
-                : 'text-[#0F1E0F] hover:bg-gray-50'
-            }`}
-          >
-            <FaUser className="text-sm" />
-            <span>My Posts</span>
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="mt-6 p-4 bg-red-50 text-red-500 rounded-xl">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <FaSpinner className="animate-spin text-[#319141] text-2xl" />
-        </div>
-      ) : posts.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-text-secondary mb-4">
-            {viewMode === 'explore' 
-              ? 'No posts yet. Be the first to share!'
-              : viewMode === 'trending'
-              ? 'No trending posts yet. Check back later for new posts!'
-              : 'You haven\'t created any posts yet.'}
-          </p>
-          <button
-            onClick={() => setIsCreatePostModalOpen(true)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#319141] text-white rounded-lg hover:bg-[#0F1E0F] transition-colors"
-          >
-            <FaPlus /> Create Post
-          </button>
-        </div>
-      ) : (
-        <div className="grid gap-6 mt-8">
-          {posts.map((post) => (
-            <div 
-              key={post.reposted_by_username 
-                ? `repost-${post.id}-${post.reposted_by_username}-${post.repost_created_at}` 
-                : post.id
-              } 
-              className="bg-white rounded-xl shadow-sm overflow-hidden"
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="flex flex-col gap-6">
+          {/* Header Section */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm">
+            <h1 className="text-3xl font-bold text-[#0F1E0F]">Explore</h1>
+            <button
+              onClick={() => setIsCreatePostModalOpen(true)}
+              className="bg-[#319141] text-white px-6 py-3 rounded-xl hover:bg-[#0F1E0F] transition-colors flex items-center justify-center gap-2 sm:ml-auto text-lg font-medium"
             >
-              {/* Repost Info */}
-              {post.reposted_by_username && (
-                <div className="px-6 pt-4 flex items-center gap-2 text-sm text-text-secondary">
-                  <FaRetweet className="text-green-500" />
-                  <span>
-                    {post.reposted_by_display_name || post.reposted_by_username} reposted
-                  </span>
-                </div>
-              )}
+              <FaPlus className="text-sm" /> Create Post
+            </button>
+          </div>
 
-              {/* Post Header */}
-              <div className="p-4 border-b border-gray-100">
-                <div className="flex flex-col gap-3">
-                  {/* User Info Row */}
-                  <div className="flex items-start justify-between gap-3">
-                    <Link 
-                      href={`/profile/${post.username}`}
-                      className="flex items-start gap-3 hover:opacity-80 transition-opacity min-w-0"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-accent/10 flex-shrink-0 flex items-center justify-center">
+          {/* Navigation Tabs */}
+          <div className="flex flex-wrap gap-3 bg-white rounded-2xl shadow-sm p-3">
+            <button
+              onClick={() => setViewMode('explore')}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-base font-medium transition-colors ${
+                viewMode === 'explore'
+                  ? 'bg-[#319141] text-white'
+                  : 'text-[#0F1E0F] hover:bg-gray-50'
+              }`}
+            >
+              <FaGlobe className="text-lg" />
+              <span>Explore</span>
+            </button>
+            <button
+              onClick={() => setViewMode('trending')}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-base font-medium transition-colors ${
+                viewMode === 'trending'
+                  ? 'bg-[#319141] text-white'
+                  : 'text-[#0F1E0F] hover:bg-gray-50'
+              }`}
+            >
+              <FaChartLine className="text-lg" />
+              <span>Trending</span>
+            </button>
+            <button
+              onClick={() => setViewMode('my-posts')}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-base font-medium transition-colors ${
+                viewMode === 'my-posts'
+                  ? 'bg-[#319141] text-white'
+                  : 'text-[#0F1E0F] hover:bg-gray-50'
+              }`}
+            >
+              <FaUser className="text-lg" />
+              <span>My Posts</span>
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mt-6 p-6 bg-red-50 text-red-500 rounded-2xl text-lg flex items-center gap-3">
+            <FaTimes className="flex-shrink-0" />
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <FaSpinner className="animate-spin text-[#319141] text-3xl" />
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-2xl mt-6 shadow-sm">
+            <FaUtensils className="mx-auto text-5xl text-gray-300 mb-4" />
+            <p className="text-gray-600 text-lg mb-6">
+              {viewMode === 'explore' 
+                ? 'No posts yet. Be the first to share!'
+                : viewMode === 'trending'
+                ? 'No trending posts yet. Check back later for new posts!'
+                : 'You haven\'t created any posts yet.'}
+            </p>
+            <button
+              onClick={() => setIsCreatePostModalOpen(true)}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-[#319141] text-white rounded-xl hover:bg-[#0F1E0F] transition-colors text-lg font-medium"
+            >
+              <FaPlus /> Create Post
+            </button>
+          </div>
+        ) : (
+          <div className="grid gap-8 mt-6">
+            {posts.map((post) => (
+              <div 
+                key={post.reposted_by_username 
+                  ? `repost-${post.id}-${post.reposted_by_username}-${post.repost_created_at}` 
+                  : post.id
+                } 
+                className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+              >
+                {/* Repost Info */}
+                {post.reposted_by_username && (
+                  <div className="px-8 pt-6 flex items-center gap-2 text-base text-gray-600">
+                    <FaRetweet className="text-green-500" />
+                    <span>
+                      {post.reposted_by_display_name || post.reposted_by_username} reposted
+                    </span>
+                  </div>
+                )}
+
+                {/* Post Content */}
+                <div className="p-8">
+                  {/* Post Image */}
+                  {post.image_url && (
+                    <div className="relative w-full aspect-video mb-8 rounded-xl overflow-hidden">
+                      <Image
+                        src={post.image_url}
+                        alt={post.food_name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+
+                  {/* Post Header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
                         {post.avatar_url ? (
-                          <img
+                          <Image
                             src={post.avatar_url}
                             alt={post.username}
-                            className="w-full h-full rounded-full object-cover"
+                            width={48}
+                            height={48}
+                            className="object-cover"
                           />
                         ) : (
-                          <FaUser className="text-accent" />
+                          <FaUserCircle className="text-3xl text-gray-400" />
                         )}
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-primary hover:text-[#2B5C40] transition-colors truncate">
+                      <div>
+                        <div className="font-medium text-lg text-[#0F1E0F]">
                           {post.display_name || post.username}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                          <span className="text-text-secondary truncate">@{post.username}</span>
-                          {post.friend_status === 'accepted' && (
-                            <span className="text-accent flex items-center gap-1 whitespace-nowrap">
-                              <FaCheck className="text-xs" /> Friends
-                            </span>
-                          )}
                         </div>
-                      </div>
-                    </Link>
-                    <div className="flex items-start gap-2 flex-shrink-0">
-                      {user && post.user_id === user.id && (
-                        <div className="relative">
-                          <button
-                            onClick={() => setDeleteConfirm(deleteConfirm === post.id ? null : post.id)}
-                            className="text-text-secondary hover:text-primary transition-colors p-1"
-                          >
-                            <FaEllipsisV />
-                          </button>
-                          {deleteConfirm === post.id && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
-                              <button
-                                onClick={() => handleDeletePost(post.id)}
-                                className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
-                              >
-                                <FaTrash className="text-xs" />
-                                Delete Post
-                              </button>
-                            </div>
-                          )}
+                        <div className="text-base text-gray-600">
+                          @{post.username}
                         </div>
-                      )}
-                      <div className="text-sm text-text-secondary whitespace-nowrap">
-                        {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                       </div>
                     </div>
+
+                    {user && post.user_id === user.id && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setDeleteConfirm(deleteConfirm === post.id ? null : post.id)}
+                          className="text-gray-600 hover:text-[#0F1E0F] transition-colors p-2"
+                        >
+                          <FaEllipsisV />
+                        </button>
+                        {deleteConfirm === post.id && (
+                          <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg py-2 z-10">
+                            <button
+                              onClick={() => handleDeletePost(post.id)}
+                              className="w-full text-left px-6 py-3 text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
+                            >
+                              <FaTrash className="text-sm" />
+                              Delete Post
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  
+
                   {/* Friend Request Button Row */}
                   {user && post.user_id !== user.id && post.friend_status !== 'accepted' && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-6">
                       {post.friend_status === 'pending' ? (
                         post.is_friend_request_sender ? (
-                          <span className="text-sm text-text-secondary">Request sent</span>
+                          <span className="text-base text-gray-600">Request sent</span>
                         ) : (
                           <button
                             onClick={() => handleAcceptFriend(post.user_id, post.username)}
                             disabled={sendingFriendRequest === post.user_id}
-                            className="text-sm bg-accent text-white px-3 py-1 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-1"
+                            className="text-base bg-[#319141] text-white px-6 py-2 rounded-xl hover:bg-[#0F1E0F] transition-colors flex items-center gap-2 font-medium"
                           >
                             {sendingFriendRequest === post.user_id ? (
                               <FaSpinner className="animate-spin" />
                             ) : (
                               <>
-                                <FaCheck className="text-xs" /> Accept
+                                <FaCheck className="text-sm" /> Accept
                               </>
                             )}
                           </button>
@@ -664,155 +741,148 @@ export default function ExplorePage() {
                         <button
                           onClick={() => handleFriendRequest(post.user_id, post.username)}
                           disabled={sendingFriendRequest === post.user_id}
-                          className="text-sm bg-accent/10 text-accent px-3 py-1 rounded-md hover:bg-accent/20 transition-colors flex items-center gap-1"
+                          className="text-base bg-[#319141]/10 text-[#319141] px-6 py-2 rounded-xl hover:bg-[#319141]/20 transition-colors flex items-center gap-2 font-medium"
                         >
                           {sendingFriendRequest === post.user_id ? (
                             <FaSpinner className="animate-spin" />
                           ) : (
                             <>
-                              <FaUserPlus className="text-xs" /> Add Friend
+                              <FaUserPlus className="text-sm" /> Add Friend
                             </>
                           )}
                         </button>
                       )}
                     </div>
                   )}
-                </div>
-              </div>
 
-              {/* Meal Content */}
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-primary">{post.food_name}</h2>
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1 text-sm text-text-secondary">
-                      <FaUtensils className="text-accent" />
-                      {Array.isArray(post.food_meal_types) && post.food_meal_types.length > 0
-                        ? post.food_meal_types[0]
-                        : 'Any meal'}
-                    </span>
-                  </div>
-                </div>
-
-                {post.caption && (
-                  <p className="text-text-secondary mb-4 italic">"{post.caption}"</p>
-                )}
-
-                {/* Ingredients */}
-                <div className="mb-4">
-                  <h3 className="font-medium text-primary mb-2">Ingredients</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {Array.isArray(post.food_ingredients) ? (
-                      post.food_ingredients.map((ingredient, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-1 bg-accent/5 text-accent rounded-md text-sm"
-                        >
-                          {ingredient}
+                  {/* Meal Content */}
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-semibold text-[#0F1E0F]">{post.food_name}</h2>
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-2 text-base text-gray-600">
+                          <FaUtensils className="text-[#319141]" />
+                          {Array.isArray(post.food_meal_types) && post.food_meal_types.length > 0
+                            ? post.food_meal_types[0]
+                            : 'Any meal'}
                         </span>
-                      ))
-                    ) : (
-                      <span className="text-text-secondary text-sm">No ingredients listed</span>
+                      </div>
+                    </div>
+
+                    {post.caption && (
+                      <p className="text-gray-600 text-lg italic">"{post.caption}"</p>
+                    )}
+
+                    {/* Ingredients */}
+                    <div>
+                      <h3 className="font-medium text-lg text-[#0F1E0F] mb-3">Ingredients</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.isArray(post.food_ingredients) ? (
+                          post.food_ingredients.map((ingredient, idx) => (
+                            <span
+                              key={idx}
+                              className="px-4 py-2 bg-[#319141]/5 text-[#319141] rounded-xl text-base"
+                            >
+                              {ingredient}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-600 text-base">No ingredients listed</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Recipe */}
+                    {post.food_recipe && (
+                      <div>
+                        <h3 className="font-medium text-lg text-[#0F1E0F] mb-3">Recipe</h3>
+                        <div className="space-y-4">
+                          {(() => {
+                            try {
+                              let steps: string[] = [];
+                              
+                              if (Array.isArray(post.food_recipe)) {
+                                steps = post.food_recipe;
+                              } else if (typeof post.food_recipe === 'string') {
+                                if (post.food_recipe.startsWith('[') && post.food_recipe.endsWith(']')) {
+                                  steps = JSON.parse(post.food_recipe);
+                                } else {
+                                  steps = post.food_recipe
+                                    .split(/(?:\r?\n|\.(?=\s|$))/)
+                                    .map(step => step.trim())
+                                    .filter(step => step.length > 0);
+                                }
+                              }
+
+                              return steps.map((step, idx) => {
+                                let cleanedStep = step;
+                                if (typeof cleanedStep === 'string') {
+                                  if (cleanedStep.startsWith('"') && cleanedStep.endsWith('"')) {
+                                    cleanedStep = cleanedStep.substring(1, cleanedStep.length - 1);
+                                  }
+                                  cleanedStep = cleanedStep.replace(/^\[|\]$/g, '');
+                                  cleanedStep = cleanedStep.replace(/\\/g, '');
+                                  cleanedStep = cleanedStep.trim();
+                                }
+                                
+                                return (
+                                  <div key={idx} className="flex gap-3">
+                                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-[#319141]/10 text-[#319141] flex items-center justify-center text-base font-medium">
+                                      {idx + 1}
+                                    </span>
+                                    <p className="text-gray-600 text-base leading-relaxed pt-1">{cleanedStep}</p>
+                                  </div>
+                                );
+                              });
+                            } catch (error) {
+                              console.error('Error parsing recipe:', error);
+                              return <p className="text-gray-600 text-base">Recipe format not supported</p>;
+                            }
+                          })()}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Recipe */}
-                {post.food_recipe && (
-                  <div>
-                    <h3 className="font-medium text-primary mb-2">Recipe</h3>
-                    <div className="space-y-2">
-                      {(() => {
-                        try {
-                          // First try to parse as JSON array
-                          let steps: string[] = [];
-                          
-                          if (Array.isArray(post.food_recipe)) {
-                            steps = post.food_recipe;
-                          } else if (typeof post.food_recipe === 'string') {
-                            if (post.food_recipe.startsWith('[') && post.food_recipe.endsWith(']')) {
-                              steps = JSON.parse(post.food_recipe);
-                            } else {
-                              // Split by newlines or periods
-                              steps = post.food_recipe
-                                .split(/(?:\r?\n|\.(?=\s|$))/)
-                                .map(step => step.trim())
-                                .filter(step => step.length > 0);
-                            }
-                          }
+                {/* Post Actions */}
+                <div className="px-8 py-6 border-t border-gray-100 flex items-center gap-8">
+                  <button
+                    onClick={() => handleLikePost(post.id)}
+                    className={`flex items-center gap-3 text-base transition-colors ${
+                      post.is_liked
+                        ? 'text-red-500 hover:text-red-600'
+                        : 'text-gray-600 hover:text-red-500'
+                    }`}
+                  >
+                    {post.is_liked ? <FaHeart className="text-xl" /> : <FaRegHeart className="text-xl" />}
+                    <span className="font-medium">{post.likes_count || ''}</span>
+                  </button>
 
-                          return steps.map((step, idx) => {
-                            // Clean the step text
-                            let cleanedStep = step;
-                            if (typeof cleanedStep === 'string') {
-                              // Remove quotes if present
-                              if (cleanedStep.startsWith('"') && cleanedStep.endsWith('"')) {
-                                cleanedStep = cleanedStep.substring(1, cleanedStep.length - 1);
-                              }
-                              // Remove brackets if present
-                              cleanedStep = cleanedStep.replace(/^\[|\]$/g, '');
-                              // Remove backslashes
-                              cleanedStep = cleanedStep.replace(/\\/g, '');
-                              // Trim whitespace
-                              cleanedStep = cleanedStep.trim();
-                            }
-                            
-                            return (
-                              <div key={idx} className="flex gap-2">
-                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm">
-                                  {idx + 1}
-                                </span>
-                                <p className="text-text-secondary text-sm">{cleanedStep}</p>
-                              </div>
-                            );
-                          });
-                        } catch (error) {
-                          console.error('Error parsing recipe:', error);
-                          return <p className="text-text-secondary text-sm">Recipe format not supported</p>;
-                        }
-                      })()}
-                    </div>
-                  </div>
-                )}
+                  <button
+                    onClick={() => handleRepostPost(post.id)}
+                    className={`flex items-center gap-3 text-base transition-colors ${
+                      post.is_reposted
+                        ? 'text-green-500 hover:text-green-600'
+                        : 'text-gray-600 hover:text-green-500'
+                    }`}
+                  >
+                    <FaRetweet className="text-xl" />
+                    <span className="font-medium">{post.reposts_count || ''}</span>
+                  </button>
+                </div>
               </div>
+            ))}
+          </div>
+        )}
 
-              {/* Post Actions */}
-              <div className="px-6 py-4 border-t border-gray-100 flex items-center gap-6">
-                <button
-                  onClick={() => handleLikePost(post.id)}
-                  className={`flex items-center gap-2 text-sm transition-colors ${
-                    post.is_liked
-                      ? 'text-red-500 hover:text-red-600'
-                      : 'text-text-secondary hover:text-red-500'
-                  }`}
-                >
-                  {post.is_liked ? <FaHeart /> : <FaRegHeart />}
-                  <span>{post.likes_count || ''}</span>
-                </button>
-
-                <button
-                  onClick={() => handleRepostPost(post.id)}
-                  className={`flex items-center gap-2 text-sm transition-colors ${
-                    post.is_reposted
-                      ? 'text-green-500 hover:text-green-600'
-                      : 'text-text-secondary hover:text-green-500'
-                  }`}
-                >
-                  <FaRetweet />
-                  <span>{post.reposts_count || ''}</span>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <CreatePostModal
-        isOpen={isCreatePostModalOpen}
-        onClose={() => setIsCreatePostModalOpen(false)}
-        onPostCreated={handlePostCreated}
-        onRefresh={fetchPosts}
-      />
+        <CreatePostModal
+          isOpen={isCreatePostModalOpen}
+          onClose={() => setIsCreatePostModalOpen(false)}
+          onPostCreated={handlePostCreated}
+          onRefresh={fetchPosts}
+        />
+      </div>
     </div>
   );
 } 

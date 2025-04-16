@@ -1,6 +1,10 @@
 -- Drop existing functions and tables
 DROP FUNCTION IF EXISTS create_post(UUID, TEXT, BOOLEAN);
 DROP FUNCTION IF EXISTS get_explore_posts();
+
+-- Drop dependent tables first
+DROP TABLE IF EXISTS post_reposts;
+DROP TABLE IF EXISTS comments;
 DROP TABLE IF EXISTS post_reshares;
 DROP TABLE IF EXISTS post_comments;
 DROP TABLE IF EXISTS post_likes;
@@ -12,6 +16,7 @@ CREATE TABLE posts (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   food_id UUID REFERENCES favorite_foods(id) ON DELETE CASCADE NOT NULL,
   caption TEXT,
+  image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   is_explore BOOLEAN DEFAULT false
 );
@@ -31,11 +36,12 @@ CREATE POLICY "Users can view all posts"
 CREATE OR REPLACE FUNCTION create_post(
   p_food_id UUID,
   p_caption TEXT DEFAULT NULL,
-  p_is_explore BOOLEAN DEFAULT false
+  p_is_explore BOOLEAN DEFAULT false,
+  p_image_url TEXT DEFAULT NULL
 )
 RETURNS posts AS $$
-  INSERT INTO posts (user_id, food_id, caption, is_explore)
-  VALUES (auth.uid(), p_food_id, p_caption, p_is_explore)
+  INSERT INTO posts (user_id, food_id, caption, is_explore, image_url)
+  VALUES (auth.uid(), p_food_id, p_caption, p_is_explore, p_image_url)
   RETURNING *;
 $$ LANGUAGE sql SECURITY DEFINER;
 
