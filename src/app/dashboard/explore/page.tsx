@@ -154,8 +154,8 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mt-[5vh] mb-4 max-h-[90vh] flex flex-col relative">
         {/* Header */}
         <div className="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white rounded-t-2xl z-10">
           <h2 className="text-2xl font-semibold text-[#0F1E0F]">Create Post</h2>
@@ -569,8 +569,8 @@ export default function ExplorePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex flex-col gap-6">
+      <div className="sticky top-0 z-20 bg-gray-50 pb-4">
+        <div className="container mx-auto px-4 max-w-6xl">
           {/* Header Section */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm">
             <h1 className="text-3xl font-bold text-[#0F1E0F]">Explore</h1>
@@ -583,7 +583,7 @@ export default function ExplorePage() {
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex flex-wrap gap-3 bg-white rounded-2xl shadow-sm p-3">
+          <div className="flex flex-wrap gap-3 bg-white rounded-2xl shadow-sm p-3 mt-4">
             <button
               onClick={() => setViewMode('explore')}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-base font-medium transition-colors ${
@@ -619,277 +619,281 @@ export default function ExplorePage() {
             </button>
           </div>
         </div>
+      </div>
 
-        {error && (
-          <div className="mt-6 p-6 bg-red-50 text-red-500 rounded-2xl text-lg flex items-center gap-3">
-            <FaTimes className="flex-shrink-0" />
-            {error}
-          </div>
-        )}
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="flex flex-col gap-6">
+          {error && (
+            <div className="mt-6 p-6 bg-red-50 text-red-500 rounded-2xl text-lg flex items-center gap-3">
+              <FaTimes className="flex-shrink-0" />
+              {error}
+            </div>
+          )}
 
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <FaSpinner className="animate-spin text-[#319141] text-3xl" />
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl mt-6 shadow-sm">
-            <FaUtensils className="mx-auto text-5xl text-gray-300 mb-4" />
-            <p className="text-gray-600 text-lg mb-6">
-              {viewMode === 'explore' 
-                ? 'No posts yet. Be the first to share!'
-                : viewMode === 'trending'
-                ? 'No trending posts yet. Check back later for new posts!'
-                : 'You haven\'t created any posts yet.'}
-            </p>
-            <button
-              onClick={() => setIsCreatePostModalOpen(true)}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-[#319141] text-white rounded-xl hover:bg-[#0F1E0F] transition-colors text-lg font-medium"
-            >
-              <FaPlus /> Create Post
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-8 mt-6">
-            {posts.map((post) => (
-              <div 
-                key={post.reposted_by_username 
-                  ? `repost-${post.id}-${post.reposted_by_username}-${post.repost_created_at}` 
-                  : post.id
-                } 
-                className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+          {loading ? (
+            <div className="flex justify-center py-16">
+              <FaSpinner className="animate-spin text-[#319141] text-3xl" />
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl mt-6 shadow-sm">
+              <FaUtensils className="mx-auto text-5xl text-gray-300 mb-4" />
+              <p className="text-gray-600 text-lg mb-6">
+                {viewMode === 'explore' 
+                  ? 'No posts yet. Be the first to share!'
+                  : viewMode === 'trending'
+                  ? 'No trending posts yet. Check back later for new posts!'
+                  : 'You haven\'t created any posts yet.'}
+              </p>
+              <button
+                onClick={() => setIsCreatePostModalOpen(true)}
+                className="inline-flex items-center gap-2 px-8 py-4 bg-[#319141] text-white rounded-xl hover:bg-[#0F1E0F] transition-colors text-lg font-medium"
               >
-                {/* Repost Info */}
-                {post.reposted_by_username && (
-                  <div className="px-8 pt-6 flex items-center gap-2 text-base text-gray-600">
-                    <FaRetweet className="text-green-500" />
-                    <span>
-                      {post.reposted_by_display_name || post.reposted_by_username} reposted
-                    </span>
-                  </div>
-                )}
-
-                {/* Post Content */}
-                <div className="p-8">
-                  {/* Post Image */}
-                  {post.image_url && (
-                    <div className="relative w-full aspect-video mb-8 rounded-xl overflow-hidden">
-                      <Image
-                        src={post.image_url}
-                        alt={post.food_name}
-                        fill
-                        className="object-cover"
-                      />
+                <FaPlus /> Create Post
+              </button>
+            </div>
+          ) : (
+            <div className="grid gap-8 mt-6">
+              {posts.map((post) => (
+                <div 
+                  key={post.reposted_by_username 
+                    ? `repost-${post.id}-${post.reposted_by_username}-${post.repost_created_at}` 
+                    : post.id
+                  } 
+                  className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                >
+                  {/* Repost Info */}
+                  {post.reposted_by_username && (
+                    <div className="px-8 pt-6 flex items-center gap-2 text-base text-gray-600">
+                      <FaRetweet className="text-green-500" />
+                      <span>
+                        {post.reposted_by_display_name || post.reposted_by_username} reposted
+                      </span>
                     </div>
                   )}
 
-                  {/* Post Header */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                        {post.avatar_url ? (
-                          <Image
-                            src={post.avatar_url}
-                            alt={post.username}
-                            width={48}
-                            height={48}
-                            className="object-cover"
-                          />
-                        ) : (
-                          <FaUserCircle className="text-3xl text-gray-400" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-medium text-lg text-[#0F1E0F]">
-                          {post.display_name || post.username}
-                        </div>
-                        <div className="text-base text-gray-600">
-                          @{post.username}
-                        </div>
-                      </div>
-                    </div>
-
-                    {user && post.user_id === user.id && (
-                      <div className="relative">
-                        <button
-                          onClick={() => setDeleteConfirm(deleteConfirm === post.id ? null : post.id)}
-                          className="text-gray-600 hover:text-[#0F1E0F] transition-colors p-2"
-                        >
-                          <FaEllipsisV />
-                        </button>
-                        {deleteConfirm === post.id && (
-                          <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg py-2 z-10">
-                            <button
-                              onClick={() => handleDeletePost(post.id)}
-                              className="w-full text-left px-6 py-3 text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
-                            >
-                              <FaTrash className="text-sm" />
-                              Delete Post
-                            </button>
-                          </div>
-                        )}
+                  {/* Post Content */}
+                  <div className="p-8">
+                    {/* Post Image */}
+                    {post.image_url && (
+                      <div className="relative w-full aspect-video mb-8 rounded-xl overflow-hidden">
+                        <Image
+                          src={post.image_url}
+                          alt={post.food_name}
+                          fill
+                          className="object-cover"
+                        />
                       </div>
                     )}
-                  </div>
 
-                  {/* Friend Request Button Row */}
-                  {user && post.user_id !== user.id && post.friend_status !== 'accepted' && (
-                    <div className="flex items-center gap-2 mb-6">
-                      {post.friend_status === 'pending' ? (
-                        post.is_friend_request_sender ? (
-                          <span className="text-base text-gray-600">Request sent</span>
+                    {/* Post Header */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                          {post.avatar_url ? (
+                            <Image
+                              src={post.avatar_url}
+                              alt={post.username}
+                              width={48}
+                              height={48}
+                              className="object-cover"
+                            />
+                          ) : (
+                            <FaUserCircle className="text-3xl text-gray-400" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-medium text-lg text-[#0F1E0F]">
+                            {post.display_name || post.username}
+                          </div>
+                          <div className="text-base text-gray-600">
+                            @{post.username}
+                          </div>
+                        </div>
+                      </div>
+
+                      {user && post.user_id === user.id && (
+                        <div className="relative">
+                          <button
+                            onClick={() => setDeleteConfirm(deleteConfirm === post.id ? null : post.id)}
+                            className="text-gray-600 hover:text-[#0F1E0F] transition-colors p-2"
+                          >
+                            <FaEllipsisV />
+                          </button>
+                          {deleteConfirm === post.id && (
+                            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg py-2 z-10">
+                              <button
+                                onClick={() => handleDeletePost(post.id)}
+                                className="w-full text-left px-6 py-3 text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
+                              >
+                                <FaTrash className="text-sm" />
+                                Delete Post
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Friend Request Button Row */}
+                    {user && post.user_id !== user.id && post.friend_status !== 'accepted' && (
+                      <div className="flex items-center gap-2 mb-6">
+                        {post.friend_status === 'pending' ? (
+                          post.is_friend_request_sender ? (
+                            <span className="text-base text-gray-600">Request sent</span>
+                          ) : (
+                            <button
+                              onClick={() => handleAcceptFriend(post.user_id, post.username)}
+                              disabled={sendingFriendRequest === post.user_id}
+                              className="text-base bg-[#319141] text-white px-6 py-2 rounded-xl hover:bg-[#0F1E0F] transition-colors flex items-center gap-2 font-medium"
+                            >
+                              {sendingFriendRequest === post.user_id ? (
+                                <FaSpinner className="animate-spin" />
+                              ) : (
+                                <>
+                                  <FaCheck className="text-sm" /> Accept
+                                </>
+                              )}
+                            </button>
+                          )
                         ) : (
                           <button
-                            onClick={() => handleAcceptFriend(post.user_id, post.username)}
+                            onClick={() => handleFriendRequest(post.user_id, post.username)}
                             disabled={sendingFriendRequest === post.user_id}
-                            className="text-base bg-[#319141] text-white px-6 py-2 rounded-xl hover:bg-[#0F1E0F] transition-colors flex items-center gap-2 font-medium"
+                            className="text-base bg-[#319141]/10 text-[#319141] px-6 py-2 rounded-xl hover:bg-[#319141]/20 transition-colors flex items-center gap-2 font-medium"
                           >
                             {sendingFriendRequest === post.user_id ? (
                               <FaSpinner className="animate-spin" />
                             ) : (
                               <>
-                                <FaCheck className="text-sm" /> Accept
+                                <FaUserPlus className="text-sm" /> Add Friend
                               </>
                             )}
                           </button>
-                        )
-                      ) : (
-                        <button
-                          onClick={() => handleFriendRequest(post.user_id, post.username)}
-                          disabled={sendingFriendRequest === post.user_id}
-                          className="text-base bg-[#319141]/10 text-[#319141] px-6 py-2 rounded-xl hover:bg-[#319141]/20 transition-colors flex items-center gap-2 font-medium"
-                        >
-                          {sendingFriendRequest === post.user_id ? (
-                            <FaSpinner className="animate-spin" />
-                          ) : (
-                            <>
-                              <FaUserPlus className="text-sm" /> Add Friend
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Meal Content */}
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-2xl font-semibold text-[#0F1E0F]">{post.food_name}</h2>
-                      <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-2 text-base text-gray-600">
-                          <FaUtensils className="text-[#319141]" />
-                          {Array.isArray(post.food_meal_types) && post.food_meal_types.length > 0
-                            ? post.food_meal_types[0]
-                            : 'Any meal'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {post.caption && (
-                      <p className="text-gray-600 text-lg italic">"{post.caption}"</p>
-                    )}
-
-                    {/* Ingredients */}
-                    <div>
-                      <h3 className="font-medium text-lg text-[#0F1E0F] mb-3">Ingredients</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {Array.isArray(post.food_ingredients) ? (
-                          post.food_ingredients.map((ingredient, idx) => (
-                            <span
-                              key={idx}
-                              className="px-4 py-2 bg-[#319141]/5 text-[#319141] rounded-xl text-base"
-                            >
-                              {ingredient}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-gray-600 text-base">No ingredients listed</span>
                         )}
                       </div>
-                    </div>
+                    )}
 
-                    {/* Recipe */}
-                    {post.food_recipe && (
-                      <div>
-                        <h3 className="font-medium text-lg text-[#0F1E0F] mb-3">Recipe</h3>
-                        <div className="space-y-4">
-                          {(() => {
-                            try {
-                              let steps: string[] = [];
-                              
-                              if (Array.isArray(post.food_recipe)) {
-                                steps = post.food_recipe;
-                              } else if (typeof post.food_recipe === 'string') {
-                                if (post.food_recipe.startsWith('[') && post.food_recipe.endsWith(']')) {
-                                  steps = JSON.parse(post.food_recipe);
-                                } else {
-                                  steps = post.food_recipe
-                                    .split(/(?:\r?\n|\.(?=\s|$))/)
-                                    .map(step => step.trim())
-                                    .filter(step => step.length > 0);
-                                }
-                              }
-
-                              return steps.map((step, idx) => {
-                                let cleanedStep = step;
-                                if (typeof cleanedStep === 'string') {
-                                  if (cleanedStep.startsWith('"') && cleanedStep.endsWith('"')) {
-                                    cleanedStep = cleanedStep.substring(1, cleanedStep.length - 1);
-                                  }
-                                  cleanedStep = cleanedStep.replace(/^\[|\]$/g, '');
-                                  cleanedStep = cleanedStep.replace(/\\/g, '');
-                                  cleanedStep = cleanedStep.trim();
-                                }
-                                
-                                return (
-                                  <div key={idx} className="flex gap-3">
-                                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-[#319141]/10 text-[#319141] flex items-center justify-center text-base font-medium">
-                                      {idx + 1}
-                                    </span>
-                                    <p className="text-gray-600 text-base leading-relaxed pt-1">{cleanedStep}</p>
-                                  </div>
-                                );
-                              });
-                            } catch (error) {
-                              console.error('Error parsing recipe:', error);
-                              return <p className="text-gray-600 text-base">Recipe format not supported</p>;
-                            }
-                          })()}
+                    {/* Meal Content */}
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-semibold text-[#0F1E0F]">{post.food_name}</h2>
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center gap-2 text-base text-gray-600">
+                            <FaUtensils className="text-[#319141]" />
+                            {Array.isArray(post.food_meal_types) && post.food_meal_types.length > 0
+                              ? post.food_meal_types[0]
+                              : 'Any meal'}
+                          </span>
                         </div>
                       </div>
-                    )}
+
+                      {post.caption && (
+                        <p className="text-gray-600 text-lg italic">"{post.caption}"</p>
+                      )}
+
+                      {/* Ingredients */}
+                      <div>
+                        <h3 className="font-medium text-lg text-[#0F1E0F] mb-3">Ingredients</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {Array.isArray(post.food_ingredients) ? (
+                            post.food_ingredients.map((ingredient, idx) => (
+                              <span
+                                key={idx}
+                                className="px-4 py-2 bg-[#319141]/5 text-[#319141] rounded-xl text-base"
+                              >
+                                {ingredient}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-600 text-base">No ingredients listed</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Recipe */}
+                      {post.food_recipe && (
+                        <div>
+                          <h3 className="font-medium text-lg text-[#0F1E0F] mb-3">Recipe</h3>
+                          <div className="space-y-4">
+                            {(() => {
+                              try {
+                                let steps: string[] = [];
+                                
+                                if (Array.isArray(post.food_recipe)) {
+                                  steps = post.food_recipe;
+                                } else if (typeof post.food_recipe === 'string') {
+                                  if (post.food_recipe.startsWith('[') && post.food_recipe.endsWith(']')) {
+                                    steps = JSON.parse(post.food_recipe);
+                                  } else {
+                                    steps = post.food_recipe
+                                      .split(/(?:\r?\n|\.(?=\s|$))/)
+                                      .map(step => step.trim())
+                                      .filter(step => step.length > 0);
+                                  }
+                                }
+
+                                return steps.map((step, idx) => {
+                                  let cleanedStep = step;
+                                  if (typeof cleanedStep === 'string') {
+                                    if (cleanedStep.startsWith('"') && cleanedStep.endsWith('"')) {
+                                      cleanedStep = cleanedStep.substring(1, cleanedStep.length - 1);
+                                    }
+                                    cleanedStep = cleanedStep.replace(/^\[|\]$/g, '');
+                                    cleanedStep = cleanedStep.replace(/\\/g, '');
+                                    cleanedStep = cleanedStep.trim();
+                                  }
+                                  
+                                  return (
+                                    <div key={idx} className="flex gap-3">
+                                      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-[#319141]/10 text-[#319141] flex items-center justify-center text-base font-medium">
+                                        {idx + 1}
+                                      </span>
+                                      <p className="text-gray-600 text-base leading-relaxed pt-1">{cleanedStep}</p>
+                                    </div>
+                                  );
+                                });
+                              } catch (error) {
+                                console.error('Error parsing recipe:', error);
+                                return <p className="text-gray-600 text-base">Recipe format not supported</p>;
+                              }
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Post Actions */}
+                  <div className="px-8 py-6 border-t border-gray-100 flex items-center gap-8">
+                    <button
+                      onClick={() => handleLikePost(post.id)}
+                      className={`flex items-center gap-3 text-base transition-colors ${
+                        post.is_liked
+                          ? 'text-red-500 hover:text-red-600'
+                          : 'text-gray-600 hover:text-red-500'
+                      }`}
+                    >
+                      {post.is_liked ? <FaHeart className="text-xl" /> : <FaRegHeart className="text-xl" />}
+                      <span className="font-medium">{post.likes_count || ''}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleRepostPost(post.id)}
+                      className={`flex items-center gap-3 text-base transition-colors ${
+                        post.is_reposted
+                          ? 'text-green-500 hover:text-green-600'
+                          : 'text-gray-600 hover:text-green-500'
+                      }`}
+                    >
+                      <FaRetweet className="text-xl" />
+                      <span className="font-medium">{post.reposts_count || ''}</span>
+                    </button>
                   </div>
                 </div>
-
-                {/* Post Actions */}
-                <div className="px-8 py-6 border-t border-gray-100 flex items-center gap-8">
-                  <button
-                    onClick={() => handleLikePost(post.id)}
-                    className={`flex items-center gap-3 text-base transition-colors ${
-                      post.is_liked
-                        ? 'text-red-500 hover:text-red-600'
-                        : 'text-gray-600 hover:text-red-500'
-                    }`}
-                  >
-                    {post.is_liked ? <FaHeart className="text-xl" /> : <FaRegHeart className="text-xl" />}
-                    <span className="font-medium">{post.likes_count || ''}</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleRepostPost(post.id)}
-                    className={`flex items-center gap-3 text-base transition-colors ${
-                      post.is_reposted
-                        ? 'text-green-500 hover:text-green-600'
-                        : 'text-gray-600 hover:text-green-500'
-                    }`}
-                  >
-                    <FaRetweet className="text-xl" />
-                    <span className="font-medium">{post.reposts_count || ''}</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
 
         <CreatePostModal
           isOpen={isCreatePostModalOpen}
