@@ -127,10 +127,13 @@ export default function UserProfilePage() {
           ingredients: food.ingredients,
           recipe: food.recipe,
           user_id: user.id,
+          meal_types: food.meal_types,
+          visibility: 'private' // Default to private when adding someone else's food
         }]);
 
       if (addError) throw addError;
 
+      // Update the local state to show the "Added" state
       setAddedFoods(prev => new Set([...Array.from(prev), food.name]));
       setError(null);
     } catch (err) {
@@ -410,17 +413,30 @@ export default function UserProfilePage() {
                             ))}
                           </div>
                         </div>
-                        {user && user.id !== profile.id && !addedFoods.has(food.name) && (
+                        {user && user.id !== profile.id && (
                           <button
                             onClick={() => addToMyFoods(food)}
-                            disabled={addingFood === food.id}
-                            className="flex-shrink-0 text-sm bg-accent/10 text-accent px-3 py-1.5 rounded-full hover:bg-accent/20 transition-colors flex items-center gap-1"
+                            disabled={addedFoods.has(food.name) || addingFood === food.id}
+                            className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
+                              addedFoods.has(food.name)
+                                ? 'bg-[#319141]/10 text-[#319141] cursor-default'
+                                : 'bg-[#319141] text-white hover:bg-[#0F1E0F]'
+                            }`}
                           >
                             {addingFood === food.id ? (
-                              <FaSpinner className="animate-spin" />
+                              <>
+                                <FaSpinner className="animate-spin" />
+                                Adding...
+                              </>
+                            ) : addedFoods.has(food.name) ? (
+                              <>
+                                <FaCheck className="text-sm" />
+                                Added
+                              </>
                             ) : (
                               <>
-                                <FaPlus className="text-xs" /> Add
+                                <FaPlus className="text-sm" />
+                                Add
                               </>
                             )}
                           </button>
