@@ -326,7 +326,7 @@ export default function ExplorePage() {
         setError('Please sign in to view posts');
         return;
       }
-
+  
       setLoading(true);
       setError(null);
       
@@ -337,17 +337,21 @@ export default function ExplorePage() {
         functionName = 'get_trending_posts';
       }
 
-      console.log('Fetching posts with function:', functionName);
-      console.log('Current user:', user.id);
       
-      // Get posts
+      // Get posts with detailed error logging
       const { data: postsData, error: rpcError } = await supabase.rpc(
         functionName, 
         functionName === 'get_user_posts' ? { p_user_id: user.id } : {}
       );
       
       if (rpcError) {
-        console.error('Supabase RPC error details:', rpcError);
+        console.error('Supabase RPC error details:', {
+          message: rpcError.message,
+          details: rpcError.details,
+          hint: rpcError.hint,
+          code: rpcError.code,
+          functionName
+        });
         if (rpcError.message.includes('permission denied')) {
           setError('Permission denied. Please check your access rights.');
         } else if (rpcError.message.includes('Not authenticated')) {
@@ -448,18 +452,29 @@ export default function ExplorePage() {
 
   const handleRepostPost = async (postId: string) => {
     try {
+      
       const { data, error } = await supabase.rpc('toggle_post_repost', {
         p_post_id: postId
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error in toggle_post_repost:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('No data returned from toggle_post_repost');
+      }
 
-      setPosts(prev => prev.map(post => {
+      const { is_reposted, reposts_count } = data[0];
+      
+      // Update the local state immediately
+      setPosts(prevPosts => prevPosts.map(post => {
         if (post.id === postId) {
           return {
             ...post,
-            is_reposted: data[0].is_reposted,
-            reposts_count: data[0].reposts_count
+            is_reposted,
+            reposts_count
           };
         }
         return post;
