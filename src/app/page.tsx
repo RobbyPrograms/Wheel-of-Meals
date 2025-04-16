@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import Navbar from '@/components/Navbar';
-import { FaArrowDown, FaUtensils, FaDharmachakra, FaCalendarAlt, FaLightbulb, FaCheck, FaChartLine, FaUsers } from 'react-icons/fa';
+import { FaArrowDown, FaUtensils, FaDharmachakra, FaCalendarAlt, FaLightbulb, FaCheck, FaChartLine, FaUsers, FaShare, FaUserFriends, FaHeart, FaComments, FaMobileAlt } from 'react-icons/fa';
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -83,13 +83,34 @@ export default function HomePage() {
                      transform: `translateZ(${scrollY * 0.05}px)`,
                    }}>
                 <p className="text-xl md:text-2xl font-medium mb-4 text-[#319141]">
-                  Your Next Great Meal Awaits
+                  Share & Discover Homemade Recipes with Friends
                 </p>
                 <p className="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed">
-                  Discover your next favorite meal with our intelligent food selection and 
-                  meal planning platform, connect with friends, and share recipes. No more decision fatigue when it comes to what to eat.
+                  Join our community of home cooks! Share your favorite recipes, discover new dishes from friends, 
+                  and build your personal collection of tried-and-true meals. Connect with fellow food lovers and 
+                  make meal planning fun and social.
                 </p>
               </div>
+
+              {/* Quick Feature Highlights */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
+                <div className="bg-white/80 backdrop-blur-md rounded-xl p-6 shadow-lg">
+                  <FaUsers className="text-3xl text-[#319141] mb-3 mx-auto" />
+                  <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">Connect with Friends</h3>
+                  <p className="text-sm text-gray-600">Share recipes and discover what your friends are cooking</p>
+                </div>
+                <div className="bg-white/80 backdrop-blur-md rounded-xl p-6 shadow-lg">
+                  <FaUtensils className="text-3xl text-[#319141] mb-3 mx-auto" />
+                  <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">Share Your Recipes</h3>
+                  <p className="text-sm text-gray-600">Build and share your collection of favorite homemade meals</p>
+                </div>
+                <div className="bg-white/80 backdrop-blur-md rounded-xl p-6 shadow-lg">
+                  <FaLightbulb className="text-3xl text-[#319141] mb-3 mx-auto" />
+                  <h3 className="text-lg font-semibold text-[#0F1E0F] mb-2">Get Inspired</h3>
+                  <p className="text-sm text-gray-600">Explore new recipes and cooking ideas from the community</p>
+                </div>
+              </div>
+
               <div className="flex flex-col sm:flex-row justify-center gap-6 transform transition-transform duration-500 mb-12"
                    style={{ 
                      transform: `translateZ(${scrollY * 0.02}px)`,
@@ -147,80 +168,72 @@ export default function HomePage() {
         </section>
 
         {/* Features Section */}
-        <section 
-          ref={featuresRef}
-          className="py-32 bg-light relative overflow-hidden"
-        >
-          <div className="container relative z-10">
-            <h2 className="text-5xl md:text-6xl font-bold text-center mb-24 text-[#0F1E0F] transform transition-all duration-700"
-                style={{ 
-                  transform: `translateZ(${Math.max(0, (scrollY - 1000) * 0.1)}px)`,
-                  opacity: Math.min(1, Math.max(0, (scrollY - 900) / 300))
-                }}>
-              How It Works
+        <section className="py-16 bg-gradient-to-b from-[#E8F5E9] to-white">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-[#0F1E0F]">
+              Why Choose SavoryCircle?
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 max-w-7xl mx-auto">
-              {[
-                {
-                  title: "Food Management",
-                  description: "Add your favorite meals, ingredients, and recipes. Rate dishes and track your culinary preferences.",
-                  icon: <FaUtensils className="text-5xl text-[#319141] mb-6" />,
-                  features: ["Personal food library", "Rating system", "Ingredient tracking"]
-                },
-                {
-                  title: "Smart Meal Planning",
-                  description: "Plan your meals effortlessly with our intelligent scheduling system.",
-                  icon: <FaCalendarAlt className="text-5xl text-[#319141] mb-6" />,
-                  features: ["Weekly meal plans", "Customizable schedules", "Shopping lists"]
-                },
-                {
-                  title: "AI-Powered Suggestions",
-                  description: "Get personalized recipe recommendations based on your preferences and past choices.",
-                  icon: <FaLightbulb className="text-5xl text-[#319141] mb-6" />,
-                  features: ["Smart recommendations", "Recipe generation", "Taste learning"]
-                },
-                {
-                  title: "Random Meal Cards",
-                  description: "Can't decide? Let our cards pick your next meal from your favorites.",
-                  icon: <FaDharmachakra className="text-5xl text-[#319141] mb-6" />,
-                  features: ["Quick decisions", "Customizable options", "Fun interface"]
-                },
-                {
-                  title: "Progress Tracking",
-                  description: "Track your culinary journey with our XP system and achievements.",
-                  icon: <FaChartLine className="text-5xl text-[#319141] mb-6" />,
-                  features: ["XP system", "Achievement badges", "Level progression"]
-                },
-                {
-                  title: "Social Features",
-                  description: "Connect with friends, share recipes, and discover new meal ideas together.",
-                  icon: <FaUsers className="text-5xl text-[#319141] mb-6" />,
-                  features: ["Friend connections", "Recipe sharing", "Community engagement"]
-                }
-              ].map((feature, index) => (
-                <div
-                  key={index}
-                  className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:scale-105"
-                  style={{ 
-                    transform: `translateZ(${Math.max(0, (scrollY - 1000) * 0.05)}px)`,
-                    opacity: Math.min(1, Math.max(0, (scrollY - 900 - index * 50) / 300))
-                  }}
-                >
-                  <div className="flex flex-col items-center text-center">
-                    {feature.icon}
-                    <h3 className="text-2xl font-bold mb-4 text-[#0F1E0F]">{feature.title}</h3>
-                    <p className="text-gray-600 mb-6">{feature.description}</p>
-                    <ul className="space-y-2 text-left w-full">
-                      {feature.features.map((item, i) => (
-                        <li key={i} className="flex items-center text-[#319141]">
-                          <FaCheck className="mr-2 flex-shrink-0" />
-                          <span className="text-gray-700">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="p-6 bg-white rounded-xl shadow-lg">
+                <div className="flex items-center mb-4">
+                  <FaShare className="text-2xl text-[#319141] mr-3" />
+                  <h3 className="text-xl font-semibold">Share Your Recipes</h3>
                 </div>
-              ))}
+                <p className="text-gray-600">
+                  Create and share your favorite homemade recipes with friends. Add photos, ingredients, 
+                  and detailed instructions to help others recreate your dishes.
+                </p>
+              </div>
+              <div className="p-6 bg-white rounded-xl shadow-lg">
+                <div className="flex items-center mb-4">
+                  <FaUserFriends className="text-2xl text-[#319141] mr-3" />
+                  <h3 className="text-xl font-semibold">Connect with Friends</h3>
+                </div>
+                <p className="text-gray-600">
+                  Follow friends, discover their favorite meals, and build a community of food lovers. 
+                  Get inspired by what others are cooking.
+                </p>
+              </div>
+              <div className="p-6 bg-white rounded-xl shadow-lg">
+                <div className="flex items-center mb-4">
+                  <FaCalendarAlt className="text-2xl text-[#319141] mr-3" />
+                  <h3 className="text-xl font-semibold">Smart Meal Planning</h3>
+                </div>
+                <p className="text-gray-600">
+                  Plan your meals effortlessly by saving recipes from friends and the community. 
+                  Organize your favorite dishes for easy access.
+                </p>
+              </div>
+              <div className="p-6 bg-white rounded-xl shadow-lg">
+                <div className="flex items-center mb-4">
+                  <FaHeart className="text-2xl text-[#319141] mr-3" />
+                  <h3 className="text-xl font-semibold">Save Favorites</h3>
+                </div>
+                <p className="text-gray-600">
+                  Build your personal collection of tried-and-true recipes. Save recipes from friends 
+                  and customize them to your taste.
+                </p>
+              </div>
+              <div className="p-6 bg-white rounded-xl shadow-lg">
+                <div className="flex items-center mb-4">
+                  <FaComments className="text-2xl text-[#319141] mr-3" />
+                  <h3 className="text-xl font-semibold">Engage & Discuss</h3>
+                </div>
+                <p className="text-gray-600">
+                  Comment on recipes, share tips, and discuss cooking techniques with other food enthusiasts. 
+                  Learn from the community's experience.
+                </p>
+              </div>
+              <div className="p-6 bg-white rounded-xl shadow-lg">
+                <div className="flex items-center mb-4">
+                  <FaMobileAlt className="text-2xl text-[#319141] mr-3" />
+                  <h3 className="text-xl font-semibold">Access Anywhere</h3>
+                </div>
+                <p className="text-gray-600">
+                  Access your recipe collection and meal plans from any device. Perfect for grocery 
+                  shopping or cooking at home.
+                </p>
+              </div>
             </div>
           </div>
         </section>
