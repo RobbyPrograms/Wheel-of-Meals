@@ -1,5 +1,6 @@
 # SavoryCircle -Created by Robby Rolison
 
+Live at SavoryCircle.com
 SavoryCircle is an interactive web application that helps users discover new meals based on their favorite foods. It includes features like user authentication, meal generation, meal planning, and AI-powered recipe suggestions.
 
 ## Features
